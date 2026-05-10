@@ -1,7 +1,9 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ButtonLink } from "@/components/button-link";
+import { ProjectGallerySlider } from "@/components/project-gallery-slider";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getPublicProjectBySlug, getPublicProjects } from "@/lib/data/public";
@@ -31,6 +33,17 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       <main>
         <section className="container-shell grid gap-10 py-14 md:grid-cols-[0.72fr_1fr] md:py-20">
           <div>
+            <nav className="mb-8 flex flex-wrap items-center gap-2 text-sm text-muted" aria-label="Хлебные крошки">
+              <Link className="hover:text-ink" href="/portfolio">
+                Портфолио
+              </Link>
+              <span>/</span>
+              <Link className="hover:text-ink" href="/services">
+                Услуги
+              </Link>
+              <span>/</span>
+              <span className="text-ink">{project.title}</span>
+            </nav>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
               Кейс
             </p>
@@ -76,21 +89,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               Назад к работам
             </ButtonLink>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            {[project.coverImageUrl, ...project.gallery.map((image) => image.publicUrl)]
+          <ProjectGallerySlider
+            slides={[project.coverImageUrl, ...project.gallery.map((image) => image.publicUrl)]
               .filter(Boolean)
-              .map((imageUrl, index) => (
-                <div className="relative aspect-[4/3] overflow-hidden bg-line" key={`${imageUrl}-${index}`}>
-                  <Image
-                    alt={`${project.title}, изображение ${index + 1}`}
-                    className="object-cover"
-                    fill
-                    sizes="(min-width: 900px) 50vw, 100vw"
-                    src={imageUrl}
-                  />
-                </div>
-              ))}
-          </div>
+              .map((imageUrl, index) => ({
+                src: imageUrl,
+                alt: `${project.title}, изображение ${index + 1}`,
+                caption: index === 0 ? project.title : project.gallery[index - 1]?.caption
+              }))}
+          />
         </section>
       </main>
       <SiteFooter />

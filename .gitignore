@@ -6,11 +6,28 @@ coverage/
 playwright-report/
 test-results/
 *.tsbuildinfo
+.vercel/
+.turbo/
+.cache/
 
 .env
 .env.local
 .env.*.local
+.env*.local
 
 .idea/
 .vs/
 .DS_Store
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local agent/codex workspace files
+AGENTS.md
+PLANS.md
+EXECPLAN*.md
+.agent/
+.agents/
+.codex/

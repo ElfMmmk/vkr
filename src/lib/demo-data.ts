@@ -157,7 +157,17 @@ export const demoProjects: Project[] = [
     createdAt: projectDate,
     services: [demoServices[1]],
     tags: [demoTags[1], demoTags[3]],
-    gallery: []
+    gallery: [
+      {
+        id: "image-frame-identity",
+        storagePath: "",
+        publicUrl: "/assets/botanica-lab-cover.png",
+        caption: "Пример визуальной системы в другой пропорции",
+        parentType: "project",
+        parentId: "project-frame",
+        sortOrder: 10
+      }
+    ]
   },
   {
     id: "project-forum",

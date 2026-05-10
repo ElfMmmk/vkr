@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ButtonLink } from "@/components/button-link";
 import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
@@ -17,18 +19,24 @@ export default async function ServicesPage() {
         <SectionHeading title={page.title} description={page.body} />
         <div className="mt-12 divide-y divide-line border-y border-line bg-white">
           {services.map((service) => (
-            <article className="grid gap-6 py-8 md:grid-cols-[0.65fr_1fr_auto]" key={service.id}>
-              <div>
+            <article
+              className="grid gap-6 px-5 py-8 md:grid-cols-[minmax(220px,0.65fr)_minmax(0,1fr)_auto] md:items-center md:px-8"
+              key={service.id}
+            >
+              <div className="min-w-0">
                 <p className="text-sm text-muted">0{service.displayOrder / 10}</p>
                 <h2 className="mt-2 text-3xl font-semibold">{service.title}</h2>
               </div>
-              <div>
+              <div className="min-w-0 md:pr-6">
                 <p className="text-lg leading-8 text-ink">{service.description}</p>
                 <p className="mt-3 text-sm leading-6 text-muted">{service.details}</p>
               </div>
-              <ButtonLink href={`/portfolio?service=${service.slug}`} variant="secondary">
+              <Link
+                className="focus-ring inline-flex min-h-12 min-w-28 items-center justify-center self-start border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink md:self-center"
+                href={`/portfolio?service=${service.slug}`}
+              >
                 Работы
-              </ButtonLink>
+              </Link>
             </article>
           ))}
         </div>

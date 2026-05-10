@@ -15,6 +15,7 @@ type PortfolioPageProps = {
 
 export default async function PortfolioPage({ searchParams }: PortfolioPageProps) {
   const params = await searchParams;
+  const hasActiveFilter = Boolean(params.service || params.tag);
   const [services, tags, projects] = await Promise.all([
     getPublicServices(),
     getPublicTags(),
@@ -29,40 +30,69 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
           title="Портфолио"
           description="Кейсы сгруппированы по услугам и тегам, чтобы быстрее найти близкую задачу и перейти к заявке."
         />
-        <div className="mt-10 grid gap-4 border-y border-line py-5">
-          <div className="flex flex-wrap gap-2">
-            <Link
-              className="focus-ring border border-line bg-white px-3 py-2 text-sm font-semibold hover:border-ink"
-              href="/portfolio"
-            >
-              Все проекты
-            </Link>
-            {services.map((service) => (
+        <div className="mt-10 border-y border-line py-6">
+          <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+              Фильтры проектов
+            </p>
+            {hasActiveFilter ? (
               <Link
-                className={`focus-ring border px-3 py-2 text-sm font-semibold hover:border-ink ${
-                  params.service === service.slug
-                    ? "border-ink bg-ink text-white"
-                    : "border-line bg-white"
-                }`}
-                href={`/portfolio?service=${service.slug}`}
-                key={service.id}
+                className="focus-ring inline-flex min-h-10 items-center justify-center border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink"
+                href="/portfolio"
               >
-                {service.title}
+                Сбросить фильтры
               </Link>
-            ))}
+            ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <Link
-                className={`focus-ring border px-3 py-2 text-sm text-muted hover:border-ink hover:text-ink ${
-                  params.tag === tag.slug ? "border-cobalt bg-cobalt text-white" : "border-line bg-white"
-                }`}
-                href={`/portfolio?tag=${tag.slug}`}
-                key={tag.id}
-              >
-                #{tag.title}
-              </Link>
-            ))}
+          <div className="grid gap-5">
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                По услугам
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  className={`focus-ring border px-3 py-2 text-sm font-semibold hover:border-ink ${
+                    !hasActiveFilter ? "border-ink bg-ink text-white" : "border-line bg-white"
+                  }`}
+                  href="/portfolio"
+                >
+                  Все проекты
+                </Link>
+                {services.map((service) => (
+                  <Link
+                    className={`focus-ring border px-3 py-2 text-sm font-semibold hover:border-ink ${
+                      params.service === service.slug
+                        ? "border-ink bg-ink text-white"
+                        : "border-line bg-white"
+                    }`}
+                    href={`/portfolio?service=${service.slug}`}
+                    key={service.id}
+                  >
+                    {service.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                По тегам
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <Link
+                    className={`focus-ring border px-3 py-2 text-sm text-muted hover:border-ink hover:text-ink ${
+                      params.tag === tag.slug
+                        ? "border-cobalt bg-cobalt text-white"
+                        : "border-line bg-white"
+                    }`}
+                    href={`/portfolio?tag=${tag.slug}`}
+                    key={tag.id}
+                  >
+                    #{tag.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         {projects.length ? (

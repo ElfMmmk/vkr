@@ -9,10 +9,12 @@ import { createSlug } from "@/lib/slug";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
 import {
   pageSchema,
+  pageKeySchema,
   projectSchema,
   requestStatusSchema,
   serviceSchema,
-  tagSchema
+  tagSchema,
+  imageParentTypeSchema
 } from "@/lib/validation";
 
 function cleanId(value: string): string | null {
@@ -222,7 +224,7 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
 export async function savePageAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const client = getSupabaseAdminOrThrow();
-  const pageKey = formString(formData, "pageKey");
+  const pageKey = pageKeySchema.parse(formString(formData, "pageKey"));
   const rawBlocks = formString(formData, "blocks");
   const parsed = pageSchema.parse({
     title: formString(formData, "title"),
@@ -306,7 +308,7 @@ export async function uploadImageAction(formData: FormData): Promise<void> {
     throw new Error("Choose an image file.");
   }
 
-  const parentType = formString(formData, "parentType") || "free";
+  const parentType = imageParentTypeSchema.parse(formString(formData, "parentType") || "free");
   const parentId = cleanId(formString(formData, "parentId"));
   const caption = formString(formData, "caption");
   const sortOrder = Number(formString(formData, "sortOrder") || "100");

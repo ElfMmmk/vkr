@@ -4,7 +4,11 @@ import { filterProjects } from "@/lib/data/public";
 import { demoProjects } from "@/lib/demo-data";
 import { isRequestStatus } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
-import { orderRequestSchema } from "@/lib/validation";
+import {
+  imageParentTypeSchema,
+  orderRequestSchema,
+  pageKeySchema
+} from "@/lib/validation";
 
 describe("validation helpers", () => {
   it("accepts a valid order request", () => {
@@ -38,6 +42,13 @@ describe("validation helpers", () => {
   it("keeps request statuses constrained", () => {
     expect(isRequestStatus("new")).toBe(true);
     expect(isRequestStatus("archived")).toBe(false);
+  });
+
+  it("keeps admin hidden/select values constrained", () => {
+    expect(pageKeySchema.safeParse("contacts").success).toBe(true);
+    expect(pageKeySchema.safeParse("admin").success).toBe(false);
+    expect(imageParentTypeSchema.safeParse("project").success).toBe(true);
+    expect(imageParentTypeSchema.safeParse("script").success).toBe(false);
   });
 
   it("filters public projects by service and tag", () => {

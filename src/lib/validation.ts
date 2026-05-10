@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { requestStatuses } from "@/lib/request-status";
 
+export const pageKeySchema = z.enum(["home", "about", "services", "contacts"]);
+
+export const imageParentTypeSchema = z.enum(["project", "page", "service", "free"]);
+
 export const orderRequestSchema = z.object({
   clientName: z
     .string()
