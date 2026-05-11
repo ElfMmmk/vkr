@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdmin } from "@/lib/auth";
+import { clearPreviewAdminSession, requireWritableAdmin } from "@/lib/auth";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { createSlug } from "@/lib/slug";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
@@ -27,6 +27,8 @@ function mutationError(error: unknown): never {
 }
 
 export async function signOutAction(): Promise<void> {
+  await clearPreviewAdminSession();
+
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const client = await createSupabaseServerClient();
 
@@ -38,7 +40,7 @@ export async function signOutAction(): Promise<void> {
 }
 
 export async function saveServiceAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
   const parsed = serviceSchema.parse({
@@ -73,7 +75,7 @@ export async function saveServiceAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteServiceAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
@@ -91,7 +93,7 @@ export async function deleteServiceAction(formData: FormData): Promise<void> {
 }
 
 export async function saveTagAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
   const parsed = tagSchema.parse({
@@ -119,7 +121,7 @@ export async function saveTagAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteTagAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
@@ -137,7 +139,7 @@ export async function deleteTagAction(formData: FormData): Promise<void> {
 }
 
 export async function saveProjectAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
   const serviceIds = formStringArray(formData, "serviceIds");
@@ -204,7 +206,7 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteProjectAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
@@ -222,7 +224,7 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
 }
 
 export async function savePageAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const pageKey = pageKeySchema.parse(formString(formData, "pageKey"));
   const rawBlocks = formString(formData, "blocks");
@@ -262,7 +264,7 @@ export async function savePageAction(formData: FormData): Promise<void> {
 }
 
 export async function updateRequestStatusAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const id = cleanId(formString(formData, "id"));
   const status = requestStatusSchema.parse(formString(formData, "status"));
 
@@ -283,7 +285,7 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
 }
 
 export async function deleteRequestAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
@@ -300,7 +302,7 @@ export async function deleteRequestAction(formData: FormData): Promise<void> {
 }
 
 export async function uploadImageAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const file = formData.get("file");
 
@@ -349,7 +351,7 @@ export async function uploadImageAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteImageAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
   const storagePath = cleanId(formString(formData, "storagePath"));

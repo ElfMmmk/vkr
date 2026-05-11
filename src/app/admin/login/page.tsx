@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { LoginForm } from "@/components/login-form";
-import { getAdminEmail } from "@/lib/auth";
+import { getAdminEmail, isAdminPreviewEnabled } from "@/lib/auth";
 import { hasSupabasePublicEnv } from "@/lib/supabase/server";
 
 export default function AdminLoginPage() {
   const setupReady = hasSupabasePublicEnv() && Boolean(getAdminEmail());
+  const previewEnabled = isAdminPreviewEnabled();
 
   return (
     <main className="grid min-h-screen place-items-center bg-paper px-4 py-10">
@@ -23,7 +24,7 @@ export default function AdminLoginPage() {
           </div>
         ) : null}
         <div className="mt-8">
-          <LoginForm />
+          <LoginForm previewEnabled={previewEnabled} />
         </div>
       </section>
     </main>

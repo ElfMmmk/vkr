@@ -9,6 +9,10 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run dev",
+    env: {
+      ADMIN_PREVIEW_EMAIL: "admin-preview@local.test",
+      ADMIN_PREVIEW_MODE: "true"
+    },
     url: "http://127.0.0.1:3000",
     reuseExistingServer: true,
     timeout: 120_000

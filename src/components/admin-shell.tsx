@@ -14,9 +14,13 @@ const adminNav = [
 
 export function AdminShell({
   email,
+  mode,
+  canWrite,
   children
 }: {
   email: string;
+  mode: "supabase" | "preview";
+  canWrite: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -43,7 +47,14 @@ export function AdminShell({
           </button>
         </form>
       </aside>
-      <main className="min-w-0 p-5 md:p-8">{children}</main>
+      <main className="min-w-0 p-5 md:p-8">
+        {!canWrite && mode === "preview" ? (
+          <div className="mb-6 border border-accent/30 bg-accent/10 px-4 py-3 text-sm leading-6 text-accent">
+            Режим просмотра админки: Supabase не подключён, формы сохранения, удаления, загрузки и смены статуса отключены.
+          </div>
+        ) : null}
+        {children}
+      </main>
     </div>
   );
 }

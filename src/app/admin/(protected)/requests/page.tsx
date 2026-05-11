@@ -1,7 +1,9 @@
 import { AdminCard } from "@/components/admin-card";
+import { AdminFormFieldset, adminDangerButtonClass, adminSmallPrimaryButtonClass } from "@/components/admin-form-lock";
 import { Field, inputClass, selectClass } from "@/components/form-controls";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteRequestAction, updateRequestStatusAction } from "@/lib/actions/admin";
+import { requireAdmin } from "@/lib/auth";
 import { listAdminRequests } from "@/lib/data/admin";
 import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
 
@@ -13,6 +15,7 @@ type AdminRequestsPageProps = {
 };
 
 export default async function AdminRequestsPage({ searchParams }: AdminRequestsPageProps) {
+  const admin = await requireAdmin();
   const params = await searchParams;
   const requests = await listAdminRequests({
     query: params.query,
@@ -61,23 +64,23 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
               </div>
               <div className="space-y-3">
                 <form action={updateRequestStatusAction} className="grid gap-3">
-                  <input name="id" type="hidden" value={request.id} />
-                  <select className={selectClass} defaultValue={request.status} name="status">
-                    {requestStatuses.map((status) => (
-                      <option key={status} value={status}>
-                        {requestStatusLabels[status]}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="focus-ring border border-ink bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-accent">
-                    Изменить статус
-                  </button>
+                  <AdminFormFieldset canWrite={admin.canWrite} className="grid gap-3">
+                    <input name="id" type="hidden" value={request.id} />
+                    <select className={selectClass} defaultValue={request.status} name="status">
+                      {requestStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {requestStatusLabels[status]}
+                        </option>
+                      ))}
+                    </select>
+                    <button className={adminSmallPrimaryButtonClass}>Изменить статус</button>
+                  </AdminFormFieldset>
                 </form>
                 <form action={deleteRequestAction}>
-                  <input name="id" type="hidden" value={request.id} />
-                  <button className="focus-ring w-full border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent hover:text-white">
-                    Удалить заявку
-                  </button>
+                  <AdminFormFieldset canWrite={admin.canWrite} className="grid">
+                    <input name="id" type="hidden" value={request.id} />
+                    <button className={`${adminDangerButtonClass} w-full`}>Удалить заявку</button>
+                  </AdminFormFieldset>
                 </form>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { getAdminEmail } from "@/lib/auth";
+import { createPreviewAdminSession, getAdminEmail, isAdminPreviewEnabled } from "@/lib/auth";
 import { formString } from "@/lib/form";
 import { createSupabaseServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
 
@@ -15,6 +15,15 @@ const loginSchema = z.object({
 export type LoginState = {
   message?: string;
 };
+
+export async function previewLoginAction(): Promise<void> {
+  if (!isAdminPreviewEnabled()) {
+    redirect("/admin/login");
+  }
+
+  await createPreviewAdminSession();
+  redirect("/admin");
+}
 
 export async function loginAction(
   _previousState: LoginState,
