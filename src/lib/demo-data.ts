@@ -113,6 +113,12 @@ export const demoPages: PageContent[] = [
 ];
 
 const projectDate = "2026-05-10T00:00:00.000Z";
+const projectDates = {
+  botanica: "2026-05-10T00:00:00.000Z",
+  coffee: "2026-04-18T00:00:00.000Z",
+  frame: "2026-03-24T00:00:00.000Z",
+  forum: "2026-05-01T00:00:00.000Z"
+};
 
 export const demoProjects: Project[] = [
   {
@@ -124,9 +130,10 @@ export const demoProjects: Project[] = [
       "Задача проекта заключалась в том, чтобы соединить лабораторную чистоту и мягкую природную эстетику. В результате появилась система с лаконичным знаком, спокойной палитрой и гибкими макетами для упаковки.",
     coverImageId: null,
     coverImageUrl: "/assets/botanica-lab-cover.png",
+    displayOrder: 20,
     isFeatured: true,
     isPublished: true,
-    createdAt: projectDate,
+    createdAt: projectDates.botanica,
     services: [demoServices[0], demoServices[2]],
     tags: [demoTags[0], demoTags[2], demoTags[3]],
     gallery: []
@@ -141,9 +148,10 @@ export const demoProjects: Project[] = [
     coverImageId: null,
     coverImageUrl:
       "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1400&q=80",
+    displayOrder: 10,
     isFeatured: true,
     isPublished: true,
-    createdAt: projectDate,
+    createdAt: projectDates.coffee,
     services: [demoServices[0], demoServices[2]],
     tags: [demoTags[0], demoTags[2]],
     gallery: []
@@ -158,9 +166,10 @@ export const demoProjects: Project[] = [
     coverImageId: null,
     coverImageUrl:
       "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1400&q=80",
+    displayOrder: 40,
     isFeatured: false,
     isPublished: true,
-    createdAt: projectDate,
+    createdAt: projectDates.frame,
     services: [demoServices[1]],
     tags: [demoTags[1], demoTags[3]],
     gallery: [
@@ -186,9 +195,10 @@ export const demoProjects: Project[] = [
     coverImageId: null,
     coverImageUrl:
       "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1400&q=80",
+    displayOrder: 30,
     isFeatured: true,
     isPublished: true,
-    createdAt: projectDate,
+    createdAt: projectDates.forum,
     services: [demoServices[3]],
     tags: [demoTags[1]],
     gallery: []

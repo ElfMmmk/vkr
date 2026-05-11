@@ -4,7 +4,12 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getPublicServices } from "@/lib/data/public";
 
-export default async function OrderPage() {
+export default async function OrderPage({
+  searchParams
+}: {
+  searchParams: Promise<{ service?: string }>;
+}) {
+  const params = await searchParams;
   const services = await getPublicServices();
 
   return (
@@ -16,7 +21,7 @@ export default async function OrderPage() {
           description="Опишите задачу, выберите направление и оставьте удобный способ связи. После отправки заявка появится в административной панели."
         />
         <section className="border border-line bg-white p-6 md:p-8">
-          <OrderForm services={services} />
+          <OrderForm selectedServiceSlug={params.service} services={services} />
         </section>
       </main>
       <SiteFooter />

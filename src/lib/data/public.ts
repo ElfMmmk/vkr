@@ -28,8 +28,19 @@ function isMissingFeaturedColumn(error: { message?: string } | null): boolean {
   return Boolean(error?.message?.includes("is_featured"));
 }
 
+function isMissingDisplayOrderColumn(error: { message?: string } | null): boolean {
+  return Boolean(error?.message?.includes("display_order"));
+}
+
 export function filterProjects(projects: Project[], filter: PortfolioFilter): Project[] {
-  const sortDirection = filter.sort === "oldest" ? 1 : -1;
+  const serviceSlugs = filter.services?.length
+    ? filter.services
+    : filter.service
+      ? [filter.service]
+      : [];
+  const tagSlugs = filter.tags?.length ? filter.tags : filter.tag ? [filter.tag] : [];
+  const sort = filter.sort ?? "default";
+  const sortDirection = sort === "oldest" ? 1 : -1;
 
   return projects
     .filter((project) => {
@@ -37,11 +48,14 @@ export function filterProjects(projects: Project[], filter: PortfolioFilter): Pr
         return false;
       }
 
-      if (filter.service && !project.services.some((service) => service.slug === filter.service)) {
+      if (
+        serviceSlugs.length &&
+        !project.services.some((service) => serviceSlugs.includes(service.slug))
+      ) {
         return false;
       }
 
-      if (filter.tag && !project.tags.some((tag) => tag.slug === filter.tag)) {
+      if (tagSlugs.length && !project.tags.some((tag) => tagSlugs.includes(tag.slug))) {
         return false;
       }
 
@@ -49,8 +63,12 @@ export function filterProjects(projects: Project[], filter: PortfolioFilter): Pr
     })
     .slice()
     .sort((a, b) => {
-      if (a.isFeatured !== b.isFeatured) {
+      if (sort === "default" && a.isFeatured !== b.isFeatured) {
         return a.isFeatured ? -1 : 1;
+      }
+
+      if (sort === "default" && a.displayOrder !== b.displayOrder) {
+        return a.displayOrder - b.displayOrder;
       }
 
       return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * sortDirection;
@@ -133,9 +151,10 @@ export async function getPublicProjects(filter: PortfolioFilter = {}): Promise<P
     .select("*, project_services(services(*)), project_tags(tags(*))")
     .eq("is_published", true)
     .order("is_featured", { ascending: false })
+    .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (isMissingFeaturedColumn(error)) {
+  if (isMissingFeaturedColumn(error) || isMissingDisplayOrderColumn(error)) {
     const fallback = await client
       .from("projects")
       .select("*, project_services(services(*)), project_tags(tags(*))")

@@ -185,6 +185,35 @@ export async function reorderServicesAction(formData: FormData): Promise<void> {
   revalidatePath("/portfolio");
 }
 
+export async function reorderProjectsAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const projectIds = Array.from(new Set(formStringArray(formData, "projectIds").map(cleanId)))
+    .filter((projectId): projectId is string => Boolean(projectId));
+
+  if (!projectIds.length) {
+    return;
+  }
+
+  const updates = await Promise.all(
+    projectIds.map((projectId, index) =>
+      client
+        .from("projects")
+        .update({ display_order: (index + 1) * 10 })
+        .eq("id", projectId)
+    )
+  );
+  const failed = updates.find((result) => result.error);
+
+  if (failed?.error) {
+    mutationError(failed.error);
+  }
+
+  revalidatePath("/admin/projects");
+  revalidatePath("/");
+  revalidatePath("/portfolio");
+}
+
 export async function saveTagAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
@@ -242,6 +271,7 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     .filter((imageId): imageId is string => Boolean(imageId));
   const coverImageId = cleanId(formString(formData, "coverImageId"));
   const coverImageUrl = coverImageId ? "" : formString(formData, "coverImageUrl");
+  let displayOrder: number | null = null;
   let previousSlug: string | null = null;
 
   if (id) {
@@ -256,6 +286,18 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     }
 
     previousSlug = typeof data?.slug === "string" ? data.slug : null;
+  } else {
+    const { data, error } = await client
+      .from("projects")
+      .select("display_order")
+      .order("display_order", { ascending: false })
+      .limit(1);
+
+    if (error && !getMutationErrorMessage(error).includes("display_order")) {
+      mutationError(error);
+    }
+
+    displayOrder = error ? null : (((data?.[0]?.display_order as number | undefined) ?? 90) + 10);
   }
 
   const parsed = projectSchema.parse({
@@ -297,7 +339,8 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     cover_image_id: coverImageId,
     cover_image_url: parsed.coverImageUrl,
     is_featured: parsed.isFeatured,
-    is_published: parsed.isPublished
+    is_published: parsed.isPublished,
+    ...(displayOrder === null ? {} : { display_order: displayOrder })
   };
 
   const result = id

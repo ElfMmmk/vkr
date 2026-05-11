@@ -22,7 +22,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
   if (!activeSlide) {
     return (
       <div className="grid min-h-72 place-items-center border border-line bg-white text-sm text-muted">
-        Изображения для галереи пока не добавлены.
+        Изображения для галереи пока не добавлены
       </div>
     );
   }
@@ -37,8 +37,8 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
 
   return (
     <section aria-label="Галерея проекта" className="space-y-4">
-      <div className="relative overflow-hidden border border-line bg-white">
-        <div className="relative aspect-[16/10] w-full bg-paper md:aspect-[16/9]">
+      <div className="overflow-hidden border border-line bg-white">
+        <div className="group/slider relative aspect-[16/10] w-full bg-paper md:aspect-[16/9]">
           <Image
             alt={activeSlide.alt}
             className="object-contain"
@@ -47,34 +47,36 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
             sizes="(min-width: 900px) 980px, 100vw"
             src={activeSlide.src}
           />
-        </div>
-        <div className="flex flex-col gap-3 border-t border-line bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">{activeSlide.caption ?? activeSlide.alt}</p>
-            <p className="mt-1 text-xs text-muted">
-              {activeIndex + 1} / {slides.length}
-            </p>
-          </div>
           {hasMultipleSlides ? (
-            <div className="flex items-center gap-2">
+            <>
               <button
                 aria-label="Предыдущее изображение"
-                className="focus-ring inline-grid h-11 w-11 place-items-center border border-line bg-white text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
+                className="focus-ring absolute inset-y-0 left-0 grid w-20 place-items-center bg-ink/0 text-white opacity-75 transition hover:bg-ink/15 hover:opacity-100 active:bg-ink/25 md:opacity-0 md:group-hover/slider:opacity-100"
                 onClick={goToPrevious}
                 type="button"
               >
-                <ChevronLeft aria-hidden="true" size={18} />
+                <span className="grid h-11 w-11 place-items-center border border-white/40 bg-ink/45 backdrop-blur">
+                  <ChevronLeft aria-hidden="true" size={20} />
+                </span>
               </button>
               <button
                 aria-label="Следующее изображение"
-                className="focus-ring inline-grid h-11 w-11 place-items-center border border-line bg-white text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
+                className="focus-ring absolute inset-y-0 right-0 grid w-20 place-items-center bg-ink/0 text-white opacity-75 transition hover:bg-ink/15 hover:opacity-100 active:bg-ink/25 md:opacity-0 md:group-hover/slider:opacity-100"
                 onClick={goToNext}
                 type="button"
               >
-                <ChevronRight aria-hidden="true" size={18} />
+                <span className="grid h-11 w-11 place-items-center border border-white/40 bg-ink/45 backdrop-blur">
+                  <ChevronRight aria-hidden="true" size={20} />
+                </span>
               </button>
-            </div>
+            </>
           ) : null}
+        </div>
+        <div className="border-t border-line bg-white px-4 py-4">
+          <p className="text-sm font-semibold text-ink">{activeSlide.caption ?? activeSlide.alt}</p>
+          <p className="mt-1 text-xs text-muted">
+            {activeIndex + 1} / {slides.length}
+          </p>
         </div>
       </div>
       {hasMultipleSlides ? (

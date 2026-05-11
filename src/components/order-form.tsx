@@ -112,15 +112,22 @@ function ServiceCombobox({
   );
 }
 
-export function OrderForm({ services }: { services: Service[] }) {
+export function OrderForm({
+  services,
+  selectedServiceSlug
+}: {
+  services: Service[];
+  selectedServiceSlug?: string;
+}) {
   const initialState: OrderFormState = {};
+  const initialService = services.find((service) => service.slug === selectedServiceSlug);
   const [state, formAction] = useActionState(submitOrderAction, initialState);
   const formStartedAtRef = useRef<HTMLInputElement>(null);
   const [clientName, setClientName] = useState("");
   const [contactMethod, setContactMethod] = useState("Telegram");
   const [contactValue, setContactValue] = useState("");
-  const [selectedServiceId, setSelectedServiceId] = useState("");
-  const [serviceTitle, setServiceTitle] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState(initialService?.id ?? "");
+  const [serviceTitle, setServiceTitle] = useState(initialService?.title ?? "");
   const [comment, setComment] = useState("");
 
   useEffect(() => {

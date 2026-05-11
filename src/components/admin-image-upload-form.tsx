@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 import {
@@ -30,21 +30,33 @@ function SubmitButton({ canWrite }: { canWrite: boolean }) {
 
 export function AdminImageUploadForm({ canWrite }: { canWrite: boolean }) {
   const [state, formAction] = useActionState(uploadImageAction, initialState);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state.ok) {
+      formRef.current?.reset();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [state.ok, state.message]);
 
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action={formAction} className="grid gap-4" ref={formRef}>
       <AdminFormFieldset canWrite={canWrite}>
         <Field label="Файл">
           <input
             accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
             className={inputClass}
             name="file"
+            ref={fileInputRef}
             type="file"
           />
         </Field>
         <Field
           label="Название"
-          hint="Короткое имя для поиска в медиатеке, например: Обложка Botanica."
+          hint="Короткое имя для поиска в медиатеке, например: Обложка Botanica"
         >
           <input className={inputClass} name="title" placeholder="Обложка проекта" />
         </Field>

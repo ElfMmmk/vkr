@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { PortfolioSortSelect } from "@/components/portfolio-sort-select";
 import { ProjectCard } from "@/components/project-card";
 import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
@@ -8,24 +9,44 @@ import { getPublicProjects, getPublicServices, getPublicTags } from "@/lib/data/
 
 type PortfolioPageProps = {
   searchParams: Promise<{
-    service?: string;
-    tag?: string;
+    service?: string | string[];
+    tag?: string | string[];
     sort?: string;
   }>;
 };
 
-function portfolioHref(params: { service?: string; tag?: string; sort?: string }) {
+type PortfolioSort = "default" | "newest" | "oldest";
+
+function toList(value?: string | string[]): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return (Array.isArray(value) ? value : [value]).filter(Boolean);
+}
+
+function toggleValue(values: string[], value: string): string[] {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+function portfolioHref(params: {
+  services?: string[];
+  tags?: string[];
+  sort?: PortfolioSort;
+}) {
   const search = new URLSearchParams();
 
-  if (params.service) {
-    search.set("service", params.service);
+  for (const service of params.services ?? []) {
+    search.append("service", service);
   }
 
-  if (params.tag) {
-    search.set("tag", params.tag);
+  for (const tag of params.tags ?? []) {
+    search.append("tag", tag);
   }
 
-  if (params.sort && params.sort !== "newest") {
+  if (params.sort && params.sort !== "default") {
     search.set("sort", params.sort);
   }
 
@@ -36,15 +57,19 @@ function portfolioHref(params: { service?: string; tag?: string; sort?: string }
 
 export default async function PortfolioPage({ searchParams }: PortfolioPageProps) {
   const params = await searchParams;
-  const sort = params.sort === "oldest" ? "oldest" : "newest";
-  const hasActiveFilter = Boolean(params.service || params.tag);
+  const selectedServices = toList(params.service);
+  const selectedTags = toList(params.tag);
+  const sort: PortfolioSort =
+    params.sort === "oldest" ? "oldest" : params.sort === "newest" ? "newest" : "default";
+  const hasActiveFilter = Boolean(selectedServices.length || selectedTags.length);
+  const hasCustomState = hasActiveFilter || sort !== "default";
   const [services, tags, projects] = await Promise.all([
     getPublicServices(),
     getPublicTags(),
-    getPublicProjects({ service: params.service, tag: params.tag, sort })
+    getPublicProjects({ services: selectedServices, tags: selectedTags, sort })
   ]);
-  const selectedService = services.find((service) => service.slug === params.service);
-  const selectedTag = tags.find((tag) => tag.slug === params.tag);
+  const selectedServiceItems = services.filter((service) => selectedServices.includes(service.slug));
+  const selectedTagItems = tags.filter((tag) => selectedTags.includes(tag.slug));
 
   return (
     <>
@@ -52,32 +77,9 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
       <main className="container-shell py-16 md:py-24">
         <SectionHeading
           title="Портфолио"
-          description="Кейсы сгруппированы по услугам и тегам, чтобы быстрее найти близкую задачу и перейти к заявке"
+          description="Кейсы можно отфильтровать по нескольким услугам и тегам. Внутри одной группы выбранные пункты работают как «или», между услугами и тегами — как «и»."
         />
         <div className="mt-10 border-y border-line py-6">
-          <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
-              Фильтры проектов
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                className={`focus-ring inline-flex min-h-10 items-center justify-center border px-4 py-2 text-sm font-semibold transition hover:border-ink active:translate-y-px ${
-                  sort === "newest" ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:bg-paper"
-                }`}
-                href={portfolioHref({ service: params.service, tag: params.tag, sort: "newest" })}
-              >
-                Сначала новые
-              </Link>
-              <Link
-                className={`focus-ring inline-flex min-h-10 items-center justify-center border px-4 py-2 text-sm font-semibold transition hover:border-ink active:translate-y-px ${
-                  sort === "oldest" ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:bg-paper"
-                }`}
-                href={portfolioHref({ service: params.service, tag: params.tag, sort: "oldest" })}
-              >
-                Сначала старые
-              </Link>
-            </div>
-          </div>
           <div className="grid gap-5">
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
@@ -86,25 +88,31 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
               <div className="flex flex-wrap gap-2">
                 <Link
                   className={`focus-ring inline-flex min-h-10 items-center border px-3 py-2 text-sm font-semibold transition hover:border-ink active:translate-y-px ${
-                    !params.service ? "border-ink bg-ink text-white" : "border-line bg-white"
+                    !selectedServices.length ? "border-ink bg-ink text-white" : "border-line bg-white"
                   }`}
-                  href={portfolioHref({ tag: params.tag, sort })}
+                  href={portfolioHref({ tags: selectedTags, sort })}
                 >
                   Все услуги
                 </Link>
-                {services.map((service) => (
-                  <Link
-                    className={`focus-ring inline-flex min-h-10 items-center border px-3 py-2 text-sm font-semibold transition hover:border-ink active:translate-y-px ${
-                      params.service === service.slug
-                        ? "border-ink bg-ink text-white"
-                        : "border-line bg-white"
-                    }`}
-                    href={portfolioHref({ service: service.slug, tag: params.tag, sort })}
-                    key={service.id}
-                  >
-                    {service.title}
-                  </Link>
-                ))}
+                {services.map((service) => {
+                  const isSelected = selectedServices.includes(service.slug);
+
+                  return (
+                    <Link
+                      className={`focus-ring inline-flex min-h-10 items-center border px-3 py-2 text-sm font-semibold transition hover:border-ink active:translate-y-px ${
+                        isSelected ? "border-ink bg-ink text-white" : "border-line bg-white hover:bg-paper"
+                      }`}
+                      href={portfolioHref({
+                        services: toggleValue(selectedServices, service.slug),
+                        tags: selectedTags,
+                        sort
+                      })}
+                      key={service.id}
+                    >
+                      {service.title}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -112,19 +120,35 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
                 По тегам
               </p>
               <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Link
-                    className={`focus-ring inline-flex min-h-10 items-center border px-3 py-2 text-sm text-muted transition hover:border-ink hover:text-ink active:translate-y-px ${
-                      params.tag === tag.slug
-                        ? "border-cobalt bg-cobalt text-white"
-                        : "border-line bg-white"
-                    }`}
-                    href={portfolioHref({ service: params.service, tag: tag.slug, sort })}
-                    key={tag.id}
-                  >
-                    #{tag.title}
-                  </Link>
-                ))}
+                <Link
+                  className={`focus-ring inline-flex min-h-10 items-center border px-3 py-2 text-sm font-semibold transition hover:border-cobalt active:translate-y-px ${
+                    !selectedTags.length ? "border-cobalt bg-cobalt text-white" : "border-line bg-white text-muted hover:bg-paper hover:text-ink"
+                  }`}
+                  href={portfolioHref({ services: selectedServices, sort })}
+                >
+                  Все теги
+                </Link>
+                {tags.map((tag) => {
+                  const isSelected = selectedTags.includes(tag.slug);
+
+                  return (
+                    <Link
+                      className={`focus-ring inline-flex min-h-10 items-center border px-3 py-2 text-sm transition active:translate-y-px ${
+                        isSelected
+                          ? "border-cobalt bg-cobalt text-white"
+                          : "border-line bg-white text-muted hover:border-cobalt hover:bg-cobalt/10 hover:text-cobalt"
+                      }`}
+                      href={portfolioHref({
+                        services: selectedServices,
+                        tags: toggleValue(selectedTags, tag.slug),
+                        sort
+                      })}
+                      key={tag.id}
+                    >
+                      #{tag.title}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
             {hasActiveFilter ? (
@@ -132,24 +156,34 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
                   Выбрано
                 </span>
-                {selectedService ? (
+                {selectedServiceItems.map((service) => (
                   <Link
                     className="focus-ring inline-flex min-h-9 items-center gap-2 border border-ink bg-ink px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-accent active:translate-y-px"
-                    href={portfolioHref({ tag: params.tag, sort })}
+                    href={portfolioHref({
+                      services: selectedServices.filter((item) => item !== service.slug),
+                      tags: selectedTags,
+                      sort
+                    })}
+                    key={service.id}
                   >
-                    {selectedService.title}
+                    {service.title}
                     <span aria-hidden="true">×</span>
                   </Link>
-                ) : null}
-                {selectedTag ? (
+                ))}
+                {selectedTagItems.map((tag) => (
                   <Link
                     className="focus-ring inline-flex min-h-9 items-center gap-2 border border-cobalt bg-cobalt px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-ink active:translate-y-px"
-                    href={portfolioHref({ service: params.service, sort })}
+                    href={portfolioHref({
+                      services: selectedServices,
+                      tags: selectedTags.filter((item) => item !== tag.slug),
+                      sort
+                    })}
+                    key={tag.id}
                   >
-                    #{selectedTag.title}
+                    #{tag.title}
                     <span aria-hidden="true">×</span>
                   </Link>
-                ) : null}
+                ))}
                 <Link
                   className="focus-ring inline-flex min-h-9 items-center border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
                   href={portfolioHref({ sort })}
@@ -159,6 +193,23 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
               </div>
             ) : null}
           </div>
+        </div>
+        <div className="mt-8 flex flex-col justify-between gap-4 border-b border-line pb-5 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-semibold text-ink">
+              Найдено проектов: {projects.length}
+            </p>
+            {hasCustomState ? (
+              <Link className="focus-ring mt-2 inline-flex text-sm font-semibold text-accent hover:text-ink" href="/portfolio">
+                Сбросить всё
+              </Link>
+            ) : null}
+          </div>
+          <PortfolioSortSelect
+            currentSort={sort}
+            selectedServices={selectedServices}
+            selectedTags={selectedTags}
+          />
         </div>
         {projects.length ? (
           <div className="mt-12 grid gap-10 md:grid-cols-2 lg:grid-cols-3">

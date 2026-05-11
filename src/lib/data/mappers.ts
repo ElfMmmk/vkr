@@ -59,6 +59,7 @@ export type ProjectRow = {
   full_description: string | null;
   cover_image_id?: string | null;
   cover_image_url: string | null;
+  display_order?: number | null;
   is_featured?: boolean | null;
   is_published: boolean | null;
   created_at: string;
@@ -165,6 +166,7 @@ export function mapProject(row: ProjectRow): Project {
     fullDescription: row.full_description ?? "",
     coverImageId: row.cover_image_id ?? null,
     coverImageUrl: row.cover_image?.public_url ?? row.cover_image_url ?? "",
+    displayOrder: row.display_order ?? 100,
     isFeatured: row.is_featured ?? false,
     isPublished: row.is_published ?? false,
     createdAt: row.created_at,

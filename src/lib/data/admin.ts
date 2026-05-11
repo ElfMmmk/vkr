@@ -45,6 +45,10 @@ function isMissingFeaturedColumn(error: { message?: string } | null): boolean {
   return Boolean(error?.message?.includes("is_featured"));
 }
 
+function isMissingDisplayOrderColumn(error: { message?: string } | null): boolean {
+  return Boolean(error?.message?.includes("display_order"));
+}
+
 export async function listAdminPages(): Promise<PageContent[]> {
   const client = getOptionalSupabaseAdmin();
 
@@ -96,6 +100,10 @@ export async function listAdminProjects(): Promise<Project[]> {
         return a.isFeatured ? -1 : 1;
       }
 
+      if (a.displayOrder !== b.displayOrder) {
+        return a.displayOrder - b.displayOrder;
+      }
+
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }
@@ -104,9 +112,10 @@ export async function listAdminProjects(): Promise<Project[]> {
     .from("projects")
     .select("*, project_services(services(*)), project_tags(tags(*))")
     .order("is_featured", { ascending: false })
+    .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (isMissingFeaturedColumn(error)) {
+  if (isMissingFeaturedColumn(error) || isMissingDisplayOrderColumn(error)) {
     const fallback = await client
       .from("projects")
       .select("*, project_services(services(*)), project_tags(tags(*))")
@@ -189,6 +198,7 @@ export async function listAdminImages(): Promise<PortfolioImage[]> {
 
 export async function listAdminRequests(options: {
   query?: string;
+  serviceId?: string;
   status?: string;
   sort?: "newest" | "oldest";
 } = {}): Promise<OrderRequest[]> {
@@ -198,13 +208,14 @@ export async function listAdminRequests(options: {
     return demoRequests.filter((request) => {
       const query = normalizeRequestSearch(options.query);
       const statusMatches = !options.status || request.status === options.status;
+      const serviceMatches = !options.serviceId || request.serviceId === options.serviceId;
       const queryMatches =
         !query ||
-        `${request.clientName} ${request.contactValue} ${request.serviceTitle}`
+        `${request.clientName} ${request.contactValue}`
           .toLowerCase()
           .includes(query);
 
-      return statusMatches && queryMatches;
+      return statusMatches && serviceMatches && queryMatches;
     }).sort((a, b) => {
       const direction = options.sort === "oldest" ? 1 : -1;
 
@@ -223,6 +234,10 @@ export async function listAdminRequests(options: {
     requestQuery = requestQuery.eq("status", options.status);
   }
 
+  if (options.serviceId) {
+    requestQuery = requestQuery.eq("service_id", options.serviceId);
+  }
+
   const { data, error } = await requestQuery;
   const rows = requireAdminData(data as RequestRow[] | null, error, "admin requests").map(mapRequest);
 
@@ -231,7 +246,7 @@ export async function listAdminRequests(options: {
   }
 
   return rows.filter((request) =>
-    `${request.clientName} ${request.contactValue} ${request.serviceTitle} ${request.comment}`
+    `${request.clientName} ${request.contactValue}`
       .toLowerCase()
       .includes(query)
   );

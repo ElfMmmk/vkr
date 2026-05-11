@@ -38,6 +38,7 @@ create table if not exists public.projects (
   short_description text not null default '',
   full_description text not null default '',
   cover_image_url text not null default '',
+  display_order integer not null default 100,
   is_featured boolean not null default false,
   is_published boolean not null default true,
   created_at timestamptz not null default now(),
@@ -77,6 +78,9 @@ add column if not exists cover_image_id uuid references public.images(id) on del
 alter table public.projects
 add column if not exists is_featured boolean not null default false;
 
+alter table public.projects
+add column if not exists display_order integer not null default 100;
+
 create table if not exists public.project_images (
   project_id uuid not null references public.projects(id) on delete cascade,
   image_id uuid not null references public.images(id) on delete cascade,
@@ -102,7 +106,7 @@ create table if not exists public.requests (
 
 create index if not exists services_active_order_idx on public.services (is_active, display_order);
 create index if not exists projects_published_created_idx on public.projects (is_published, created_at desc);
-create index if not exists projects_featured_created_idx on public.projects (is_published, is_featured desc, created_at desc);
+create index if not exists projects_featured_created_idx on public.projects (is_published, is_featured desc, display_order, created_at desc);
 create index if not exists projects_cover_image_idx on public.projects (cover_image_id);
 create index if not exists project_services_service_idx on public.project_services (service_id);
 create index if not exists project_tags_tag_idx on public.project_tags (tag_id);
@@ -110,10 +114,11 @@ create index if not exists images_parent_idx on public.images (parent_type, pare
 create index if not exists project_images_project_order_idx on public.project_images (project_id, sort_order);
 create index if not exists project_images_image_idx on public.project_images (image_id);
 create index if not exists requests_status_created_idx on public.requests (status, created_at desc);
+create index if not exists requests_service_created_idx on public.requests (service_id, created_at desc);
 create index if not exists requests_source_created_idx on public.requests (source_hash, created_at desc)
 where source_hash <> '';
 create index if not exists requests_contact_search_idx on public.requests using gin (
-  to_tsvector('simple', client_name || ' ' || contact_value || ' ' || service_title)
+  to_tsvector('simple', client_name || ' ' || contact_value)
 );
 
 create or replace function public.set_updated_at()

@@ -1,0 +1,53 @@
+"use client";
+
+import { useRef, useTransition } from "react";
+
+import { AdminFormFieldset } from "@/components/admin-form-lock";
+import { selectClass } from "@/components/form-controls";
+import { updateRequestStatusAction } from "@/lib/actions/admin";
+import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
+import type { RequestStatus } from "@/lib/types";
+
+export function AdminRequestStatusForm({
+  id,
+  status,
+  canWrite
+}: {
+  id: string;
+  status: RequestStatus;
+  canWrite: boolean;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <form action={updateRequestStatusAction} className="grid gap-3" key={`${id}-${status}`} ref={formRef}>
+      <AdminFormFieldset canWrite={canWrite} className="grid gap-3">
+        <input name="id" type="hidden" value={id} />
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+          Текущий статус: {requestStatusLabels[status]}
+        </p>
+        <select
+          className={selectClass}
+          defaultValue={status}
+          disabled={!canWrite || isPending}
+          name="status"
+          onChange={() => {
+            startTransition(() => {
+              formRef.current?.requestSubmit();
+            });
+          }}
+        >
+          {requestStatuses.map((requestStatus) => (
+            <option key={requestStatus} value={requestStatus}>
+              {requestStatusLabels[requestStatus]}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs leading-5 text-muted">
+          Статус сохраняется сразу после выбора
+        </p>
+      </AdminFormFieldset>
+    </form>
+  );
+}

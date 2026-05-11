@@ -65,6 +65,18 @@ describe("validation helpers", () => {
     expect(digitalProjects.every((project) => project.tags.some((tag) => tag.slug === "digital"))).toBe(true);
   });
 
+  it("filters public projects by multiple values and sorts by date", () => {
+    const filteredProjects = filterProjects(demoProjects, {
+      services: ["brand-identity", "presentation-design"],
+      tags: ["digital"],
+      sort: "newest"
+    });
+    const oldestProjects = filterProjects(demoProjects, { sort: "oldest" });
+
+    expect(filteredProjects.map((project) => project.slug)).toEqual(["urban-forum-deck"]);
+    expect(oldestProjects[0]?.slug).toBe("studio-frame");
+  });
+
   it("keeps portfolio image uploads within free plan constraints", () => {
     expect(
       validatePortfolioImageUpload({

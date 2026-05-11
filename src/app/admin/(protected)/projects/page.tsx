@@ -2,6 +2,8 @@ import Image from "next/image";
 
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import { AdminProjectOrderForm } from "@/components/admin-project-order-form";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
 import { deleteProjectAction, saveProjectAction } from "@/lib/actions/admin";
 import { requireAdmin } from "@/lib/auth";
@@ -140,7 +142,7 @@ function ProjectForm({
             />
           </Field>
         </div>
-          <Field label="Галерея проекта" hint="Отметьте изображения, которые должны появиться в галерее кейса. Один файл можно использовать в нескольких проектах">
+        <Field label="Галерея проекта" hint="Отметьте изображения, которые должны появиться в галерее кейса. Один файл можно использовать в нескольких проектах">
           <ImageChecks
             images={images}
             selectedIds={project?.gallery.map((image) => image.id) ?? []}
@@ -192,6 +194,9 @@ export default async function AdminProjectsPage() {
       <AdminCard title="Новый проект" description="Можно закрепить до 6 проектов: они будут показываться первыми на главной и в портфолио">
         <ProjectForm canWrite={admin.canWrite} images={images} services={services} tags={tags} />
       </AdminCard>
+      <AdminCard title="Порядок на сайте" description="Перетащите проекты в нужной последовательности и сохраните порядок. Закреплённые проекты всё равно будут показываться выше остальных">
+        <AdminProjectOrderForm canWrite={admin.canWrite} projects={projects} />
+      </AdminCard>
       <div className="space-y-4">
         {projects.map((project) => (
           <AdminCard key={project.id} title={project.title} description={project.shortDescription}>
@@ -212,10 +217,16 @@ export default async function AdminProjectsPage() {
                 )}
               </div>
               <div>
-                <p className="text-sm text-muted">
-                  {project.isFeatured ? "Закреплён сверху · " : ""}
-                  {project.isPublished ? "Показывается на сайте" : "Скрыт"} · {project.slug}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                  {project.isFeatured ? (
+                    <span className="border border-accent/25 bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">
+                      Закреплён
+                    </span>
+                  ) : null}
+                  <span>{project.isPublished ? "Показывается на сайте" : "Скрыт"}</span>
+                  <span>·</span>
+                  <span>{project.slug}</span>
+                </div>
                 <details className="mt-4">
                   <summary className="cursor-pointer text-sm font-semibold text-accent">Редактировать</summary>
                   <div className="mt-5">
@@ -231,7 +242,12 @@ export default async function AdminProjectsPage() {
                 <form action={deleteProjectAction} className="mt-4">
                   <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
                     <input name="id" type="hidden" value={project.id} />
-                    <button className={adminDangerButtonClass}>Удалить</button>
+                    <ConfirmSubmitButton
+                      className={adminDangerButtonClass}
+                      message="Подтвердите удаление проекта. Это действие нельзя отменить."
+                    >
+                      Удалить
+                    </ConfirmSubmitButton>
                   </AdminFormFieldset>
                 </form>
               </div>

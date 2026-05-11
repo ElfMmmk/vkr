@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 import { ButtonLink } from "@/components/button-link";
 import { FeaturedProjectRotator } from "@/components/featured-project-rotator";
+import { PageExtraBlocks } from "@/components/page-extra-blocks";
 import { ProjectCard } from "@/components/project-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -33,31 +34,31 @@ export default async function HomePage() {
                 {home.blocks.secondaryCta ?? "Смотреть портфолио"}
               </ButtonLink>
             </div>
-            <div className="mt-12 hidden border-t border-line pt-6 md:block">
-              <div className="grid gap-4 lg:grid-cols-5">
-                {services.slice(0, 5).map((service) => (
-                  <Link
-                    className="focus-ring group block min-w-0"
-                    href={`/portfolio?service=${service.slug}`}
-                    key={service.id}
-                  >
-                    <p className="text-sm font-semibold text-ink">{service.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted group-hover:text-ink">
-                      {service.description}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-              <Link
-                className="focus-ring mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent transition hover:text-ink active:translate-y-px"
-                href="/services"
-              >
-                Смотреть другие услуги
-                <ArrowRight aria-hidden="true" size={16} />
-              </Link>
-            </div>
           </div>
           <FeaturedProjectRotator projects={featured} />
+          <div className="border-t border-line pt-6 md:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {services.slice(0, 5).map((service) => (
+                <Link
+                  className="focus-ring group block min-w-0 border border-transparent p-3 transition hover:border-line hover:bg-white active:translate-y-px"
+                  href={`/portfolio?service=${service.slug}`}
+                  key={service.id}
+                >
+                  <p className="text-sm font-semibold text-ink">{service.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-muted group-hover:text-ink">
+                    {service.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+            <Link
+              className="focus-ring mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent transition hover:text-ink active:translate-y-px"
+              href="/services"
+            >
+              Смотреть другие услуги
+              <ArrowRight aria-hidden="true" size={16} />
+            </Link>
+          </div>
         </section>
 
         <section className="border-y border-line bg-white py-16">
@@ -80,6 +81,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+        <PageExtraBlocks blocks={home.blocks} exclude={["cta", "secondaryCta"]} />
       </main>
       <SiteFooter />
     </>

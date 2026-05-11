@@ -32,13 +32,18 @@ test("admin login renders setup notice or Supabase form", async ({ page }) => {
 
 test("services page keeps service ctas compact", async ({ page }) => {
   await page.goto("/services");
-  const serviceCta = page.getByRole("link", { name: "Работы" }).first();
+  const serviceCta = page.getByRole("link", { name: "Пример работ" }).first();
+  const orderCta = page.getByRole("link", { name: "Заказать" }).first();
 
   await expect(serviceCta).toBeVisible();
+  await expect(orderCta).toBeVisible();
 
   const box = await serviceCta.boundingBox();
   expect(box?.height).toBeLessThan(70);
   expect(box?.width).toBeGreaterThan(80);
+
+  await orderCta.click();
+  await expect(page).toHaveURL(/\/order\?service=/);
 });
 
 test("contacts page wraps contact values at narrow widths", async ({ page }) => {
@@ -84,6 +89,16 @@ test("portfolio filters can be reset", async ({ page }) => {
 
   await page.getByRole("link", { name: "Сбросить фильтры" }).click();
   await expect(page).toHaveURL(/\/portfolio$/);
+});
+
+test("portfolio supports multi-select filters and sorting", async ({ page }) => {
+  await page.goto("/portfolio?service=brand-identity&service=presentation-design&tag=digital&sort=oldest");
+
+  await expect(page.getByText("Выбрано")).toBeVisible();
+  await expect(page.getByLabel("Сортировка")).toHaveValue("oldest");
+  await expect(page).toHaveURL(/service=brand-identity/);
+  await expect(page).toHaveURL(/service=presentation-design/);
+  await expect(page).toHaveURL(/tag=digital/);
 });
 
 test("mobile portfolio keeps filters and cards inside viewport", async ({ page }) => {
@@ -193,7 +208,7 @@ test("preview admin can browse read-only admin sections", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Загрузить" })).toBeDisabled();
 
   await page.goto("/admin/requests");
-  await expect(page.getByRole("button", { name: "Изменить статус" }).first()).toBeDisabled();
+  await expect(page.locator('select[name="status"]').first()).toBeDisabled();
 });
 
 test("mobile preview admin uses compact section navigation", async ({ page }) => {

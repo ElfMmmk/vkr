@@ -52,6 +52,7 @@ export type Project = {
   fullDescription: string;
   coverImageId: string | null;
   coverImageUrl: string;
+  displayOrder: number;
   isFeatured: boolean;
   isPublished: boolean;
   createdAt: string;
@@ -77,5 +78,7 @@ export type OrderRequest = {
 export type PortfolioFilter = {
   service?: string;
   tag?: string;
-  sort?: "newest" | "oldest";
+  services?: string[];
+  tags?: string[];
+  sort?: "default" | "newest" | "oldest";
 };

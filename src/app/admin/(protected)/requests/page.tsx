@@ -1,17 +1,20 @@
 import Link from "next/link";
 
 import { AdminCard } from "@/components/admin-card";
-import { AdminFormFieldset, adminDangerButtonClass, adminSmallPrimaryButtonClass } from "@/components/admin-form-lock";
+import { AdminFormFieldset, adminDangerButtonClass } from "@/components/admin-form-lock";
+import { AdminRequestStatusForm } from "@/components/admin-request-status-form";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Field, inputClass, selectClass } from "@/components/form-controls";
 import { StatusBadge } from "@/components/status-badge";
-import { deleteRequestAction, updateRequestStatusAction } from "@/lib/actions/admin";
+import { deleteRequestAction } from "@/lib/actions/admin";
 import { requireAdmin } from "@/lib/auth";
-import { listAdminRequests } from "@/lib/data/admin";
+import { listAdminRequests, listAdminServices } from "@/lib/data/admin";
 import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
 
 type AdminRequestsPageProps = {
   searchParams: Promise<{
     query?: string;
+    serviceId?: string;
     status?: string;
     sort?: string;
   }>;
@@ -21,12 +24,23 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
   const admin = await requireAdmin();
   const params = await searchParams;
   const sort = params.sort === "oldest" ? "oldest" : "newest";
-  const requests = await listAdminRequests({
-    query: params.query,
-    status: params.status,
-    sort
-  });
-  const hasFilter = Boolean(params.query || params.status || params.sort === "oldest");
+  const [services, requests] = await Promise.all([
+    listAdminServices(),
+    listAdminRequests({
+      query: params.query,
+      serviceId: params.serviceId,
+      status: params.status,
+      sort
+    })
+  ]);
+  const selectedService = services.find((service) => service.id === params.serviceId);
+  const activeFilters = [
+    params.query ? `Поиск: ${params.query}` : null,
+    selectedService ? `Услуга: ${selectedService.title}` : null,
+    params.status ? `Статус: ${requestStatusLabels[params.status as keyof typeof requestStatusLabels]}` : null,
+    params.sort === "oldest" ? "Сортировка: сначала старые" : null
+  ].filter((item): item is string => Boolean(item));
+  const hasFilter = activeFilters.length > 0;
 
   return (
     <div className="space-y-6">
@@ -35,9 +49,24 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
         <h1 className="mt-2 text-4xl font-semibold">Заявки</h1>
       </div>
       <AdminCard title="Поиск и фильтр">
-        <form className="grid gap-4 md:grid-cols-[1fr_220px_220px_auto]" method="get">
+        <form className="grid gap-4 md:grid-cols-[1fr_220px_220px_220px_auto]" method="get">
           <Field label="Поиск">
-            <input className={inputClass} defaultValue={params.query} name="query" placeholder="Имя, контакт или услуга" />
+            <input
+              className={inputClass}
+              defaultValue={params.query}
+              name="query"
+              placeholder="Имя или контакт"
+            />
+          </Field>
+          <Field label="Услуга">
+            <select className={selectClass} defaultValue={params.serviceId ?? ""} name="serviceId">
+              <option value="">Все услуги</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.title}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Статус">
             <select className={selectClass} defaultValue={params.status ?? ""} name="status">
@@ -60,7 +89,15 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
           </button>
         </form>
         {hasFilter ? (
-          <div className="mt-4 border-t border-line pt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Установлено
+            </span>
+            {activeFilters.map((filter) => (
+              <span className="border border-line bg-paper px-3 py-1.5 text-sm text-ink" key={filter}>
+                {filter}
+              </span>
+            ))}
             <Link
               className="focus-ring inline-flex min-h-10 items-center justify-center border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
               href="/admin/requests"
@@ -85,26 +122,16 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
                 <p className="text-muted">{request.comment}</p>
               </div>
               <div className="space-y-3">
-                <form action={updateRequestStatusAction} className="grid gap-3" key={`${request.id}-${request.status}`}>
-                  <AdminFormFieldset canWrite={admin.canWrite} className="grid gap-3">
-                    <input name="id" type="hidden" value={request.id} />
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                      Текущий статус: {requestStatusLabels[request.status]}
-                    </p>
-                    <select className={selectClass} defaultValue={request.status} name="status">
-                      {requestStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {requestStatusLabels[status]}
-                        </option>
-                      ))}
-                    </select>
-                    <button className={adminSmallPrimaryButtonClass}>Изменить статус</button>
-                  </AdminFormFieldset>
-                </form>
+                <AdminRequestStatusForm canWrite={admin.canWrite} id={request.id} status={request.status} />
                 <form action={deleteRequestAction}>
                   <AdminFormFieldset canWrite={admin.canWrite} className="grid">
                     <input name="id" type="hidden" value={request.id} />
-                    <button className={`${adminDangerButtonClass} w-full`}>Удалить заявку</button>
+                    <ConfirmSubmitButton
+                      className={`${adminDangerButtonClass} w-full`}
+                      message="Подтвердите удаление заявки. Это действие нельзя отменить."
+                    >
+                      Удалить заявку
+                    </ConfirmSubmitButton>
                   </AdminFormFieldset>
                 </form>
               </div>
