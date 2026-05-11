@@ -34,11 +34,11 @@ function imageLabel(image: PortfolioImage): string {
 }
 
 function findCoverImageId(project: Project | undefined, images: PortfolioImage[]): string {
-  if (!project?.coverImageUrl) {
+  if (!project?.coverImageUrl && !project?.coverImageId) {
     return "";
   }
 
-  return images.find((image) => image.publicUrl === project.coverImageUrl)?.id ?? "";
+  return project.coverImageId ?? images.find((image) => image.publicUrl === project.coverImageUrl)?.id ?? "";
 }
 
 function ImageChecks({
@@ -51,16 +51,21 @@ function ImageChecks({
   if (!images.length) {
     return (
       <p className="border border-line bg-paper px-4 py-3 text-sm text-muted">
-        Сначала загрузите изображения в разделе «Изображения».
+        Сначала загрузите изображения в разделе «Изображения»
       </p>
     );
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className="grid gap-3 sm:grid-cols-2">
       {images.map((image) => (
-        <label className="flex items-center gap-2 border border-line bg-white px-3 py-2 text-sm" key={image.id}>
+        <label className="flex items-center gap-3 border border-line bg-white p-2 text-sm transition hover:border-ink" key={image.id}>
           <input defaultChecked={selectedIds.includes(image.id)} name="galleryImageIds" type="checkbox" value={image.id} />
+          {image.publicUrl ? (
+            <span className="relative h-12 w-16 shrink-0 overflow-hidden bg-line">
+              <Image alt="" className="object-cover" fill sizes="64px" src={image.publicUrl} />
+            </span>
+          ) : null}
           <span className="min-w-0 truncate">{imageLabel(image)}</span>
         </label>
       ))}
@@ -94,12 +99,12 @@ function ProjectForm({
           </Field>
           <Field
             label="Адрес страницы"
-            hint="Можно оставить пустым: адрес создастся автоматически из названия."
+            hint="Можно оставить пустым: адрес создастся автоматически из названия"
           >
             <input className={inputClass} defaultValue={project?.slug} name="slug" placeholder="botanica-lab" />
           </Field>
         </div>
-        <Field label="Краткое описание" hint="Показывается в карточке проекта.">
+        <Field label="Краткое описание" hint="Показывается в карточке проекта">
           <textarea
             className={textareaClass}
             defaultValue={project?.shortDescription}
@@ -107,7 +112,7 @@ function ProjectForm({
             placeholder="Коротко о задаче и результате"
           />
         </Field>
-        <Field label="Полное описание" hint="Текст внутри страницы кейса.">
+        <Field label="Полное описание" hint="Текст внутри страницы кейса">
           <textarea
             className={`${textareaClass} min-h-44`}
             defaultValue={project?.fullDescription}
@@ -126,7 +131,7 @@ function ProjectForm({
               ))}
             </select>
           </Field>
-          <Field label="Внешняя ссылка на обложку" hint="Необязательно, если выбрана обложка из медиатеки.">
+          <Field label="Внешняя ссылка на обложку" hint="Необязательно, если выбрана обложка из медиатеки">
             <input
               className={inputClass}
               defaultValue={manualCoverUrl}
@@ -135,7 +140,7 @@ function ProjectForm({
             />
           </Field>
         </div>
-        <Field label="Изображения проекта" hint="Отмеченные файлы появятся в галерее кейса.">
+          <Field label="Галерея проекта" hint="Отметьте изображения, которые должны появиться в галерее кейса. Один файл можно использовать в нескольких проектах">
           <ImageChecks
             images={images}
             selectedIds={project?.gallery.map((image) => image.id) ?? []}
@@ -151,10 +156,16 @@ function ProjectForm({
         <Field label="Теги">
           <RelationChecks items={tags} name="tagIds" selectedIds={project?.tags.map((tag) => tag.id) ?? []} />
         </Field>
-        <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
-          <input defaultChecked={project?.isPublished ?? true} name="isPublished" type="checkbox" />
-          Показывать на сайте
-        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
+            <input defaultChecked={project?.isFeatured ?? false} name="isFeatured" type="checkbox" />
+            Закрепить сверху
+          </label>
+          <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
+            <input defaultChecked={project?.isPublished ?? true} name="isPublished" type="checkbox" />
+            Показывать на сайте
+          </label>
+        </div>
         <button className={adminPrimaryButtonClass}>
           {project ? "Сохранить проект" : "Создать проект"}
         </button>
@@ -178,7 +189,7 @@ export default async function AdminProjectsPage() {
         <p className="text-sm uppercase tracking-[0.18em] text-muted">Портфолио</p>
         <h1 className="mt-2 text-4xl font-semibold">Проекты</h1>
       </div>
-      <AdminCard title="Новый проект">
+      <AdminCard title="Новый проект" description="Можно закрепить до 6 проектов: они будут показываться первыми на главной и в портфолио">
         <ProjectForm canWrite={admin.canWrite} images={images} services={services} tags={tags} />
       </AdminCard>
       <div className="space-y-4">
@@ -187,7 +198,13 @@ export default async function AdminProjectsPage() {
             <div className="grid gap-5 md:grid-cols-[180px_1fr]">
               <div className="relative aspect-[4/3] overflow-hidden bg-line">
                 {project.coverImageUrl ? (
-                  <Image alt={project.title} className="object-cover" fill src={project.coverImageUrl} />
+                  <Image
+                    alt={project.title}
+                    className="object-cover"
+                    fill
+                    sizes="180px"
+                    src={project.coverImageUrl}
+                  />
                 ) : (
                   <div className="grid h-full place-items-center px-4 text-center text-xs text-muted">
                     Без обложки
@@ -196,6 +213,7 @@ export default async function AdminProjectsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted">
+                  {project.isFeatured ? "Закреплён сверху · " : ""}
                   {project.isPublished ? "Показывается на сайте" : "Скрыт"} · {project.slug}
                 </p>
                 <details className="mt-4">

@@ -6,23 +6,21 @@ export const pageKeySchema = z.enum(["home", "about", "services", "contacts"]);
 
 export const imageParentTypeSchema = z.enum(["project", "page", "service", "free"]);
 
+export const contactMethodSchema = z.enum(["Telegram", "Email", "Телефон", "Другой способ"]);
+
 export const orderRequestSchema = z.object({
   clientName: z
     .string()
     .trim()
     .min(2, "Укажите имя")
     .max(120, "Имя слишком длинное"),
-  contactMethod: z
-    .string()
-    .trim()
-    .min(2, "Укажите способ связи")
-    .max(40, "Способ связи слишком длинный"),
+  contactMethod: contactMethodSchema,
   contactValue: z
     .string()
     .trim()
     .min(3, "Укажите контакт")
     .max(180, "Контакт слишком длинный"),
-  serviceId: z.string().trim().optional(),
+  serviceId: z.string().trim().min(1, "Выберите услугу"),
   serviceTitle: z.string().trim().max(160).optional(),
   comment: z
     .string()
@@ -58,6 +56,7 @@ export const projectSchema = z.object({
   shortDescription: z.string().trim().min(5).max(500),
   fullDescription: z.string().trim().min(20).max(6000),
   coverImageUrl: z.string().trim().max(1200).default(""),
+  isFeatured: z.boolean(),
   isPublished: z.boolean()
 });
 

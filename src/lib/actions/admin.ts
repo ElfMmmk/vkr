@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -7,7 +8,11 @@ import { clearPreviewAdminSession, requireWritableAdmin } from "@/lib/auth";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { createSlug } from "@/lib/slug";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
-import { getPortfolioImageExtension, validatePortfolioImageUpload } from "@/lib/uploads";
+import {
+  getPortfolioImageExtension,
+  validatePortfolioImageBytes,
+  validatePortfolioImageUpload
+} from "@/lib/uploads";
 import {
   pageSchema,
   pageKeySchema,
@@ -18,6 +23,11 @@ import {
 } from "@/lib/validation";
 
 export type UploadImageState = {
+  ok: boolean;
+  message: string;
+};
+
+export type AdminFormState = {
   ok: boolean;
   message: string;
 };
@@ -66,12 +76,42 @@ export async function saveServiceAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
+  let displayOrder = formString(formData, "displayOrder");
+
+  if (!displayOrder && id) {
+    const { data, error } = await client
+      .from("services")
+      .select("display_order")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      mutationError(error);
+    }
+
+    displayOrder = String(data?.display_order ?? 100);
+  }
+
+  if (!displayOrder) {
+    const { data, error } = await client
+      .from("services")
+      .select("display_order")
+      .order("display_order", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      mutationError(error);
+    }
+
+    displayOrder = String(((data?.[0]?.display_order as number | undefined) ?? 90) + 10);
+  }
+
   const parsed = serviceSchema.parse({
     title: formString(formData, "title"),
     slug: formString(formData, "slug") || createSlug(formString(formData, "title")),
     description: formString(formData, "description"),
     details: formString(formData, "details"),
-    displayOrder: formString(formData, "displayOrder") || "100",
+    displayOrder,
     isActive: formBoolean(formData, "isActive")
   });
 
@@ -113,6 +153,36 @@ export async function deleteServiceAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
+  revalidatePath("/portfolio");
+}
+
+export async function reorderServicesAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const serviceIds = Array.from(new Set(formStringArray(formData, "serviceIds").map(cleanId)))
+    .filter((serviceId): serviceId is string => Boolean(serviceId));
+
+  if (!serviceIds.length) {
+    return;
+  }
+
+  const updates = await Promise.all(
+    serviceIds.map((serviceId, index) =>
+      client
+        .from("services")
+        .update({ display_order: (index + 1) * 10 })
+        .eq("id", serviceId)
+    )
+  );
+  const failed = updates.find((result) => result.error);
+
+  if (failed?.error) {
+    mutationError(failed.error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/services");
+  revalidatePath("/portfolio");
 }
 
 export async function saveTagAction(formData: FormData): Promise<void> {
@@ -171,20 +241,21 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     .map(cleanId)
     .filter((imageId): imageId is string => Boolean(imageId));
   const coverImageId = cleanId(formString(formData, "coverImageId"));
-  let coverImageUrl = formString(formData, "coverImageUrl");
+  const coverImageUrl = coverImageId ? "" : formString(formData, "coverImageUrl");
+  let previousSlug: string | null = null;
 
-  if (!coverImageUrl && coverImageId) {
+  if (id) {
     const { data, error } = await client
-      .from("images")
-      .select("public_url")
-      .eq("id", coverImageId)
+      .from("projects")
+      .select("slug")
+      .eq("id", id)
       .maybeSingle();
 
     if (error) {
       mutationError(error);
     }
 
-    coverImageUrl = typeof data?.public_url === "string" ? data.public_url : "";
+    previousSlug = typeof data?.slug === "string" ? data.slug : null;
   }
 
   const parsed = projectSchema.parse({
@@ -193,21 +264,45 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     shortDescription: formString(formData, "shortDescription"),
     fullDescription: formString(formData, "fullDescription"),
     coverImageUrl,
+    isFeatured: formBoolean(formData, "isFeatured"),
     isPublished: formBoolean(formData, "isPublished")
   });
+
+  if (parsed.isFeatured) {
+    let featuredQuery = client
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("is_featured", true);
+
+    if (id) {
+      featuredQuery = featuredQuery.neq("id", id);
+    }
+
+    const { count, error } = await featuredQuery;
+
+    if (error) {
+      mutationError(error);
+    }
+
+    if ((count ?? 0) >= 6) {
+      throw new Error("Можно закрепить не больше 6 проектов. Снимите закрепление с одного из текущих проектов.");
+    }
+  }
 
   const payload = {
     title: parsed.title,
     slug: createSlug(parsed.slug),
     short_description: parsed.shortDescription,
     full_description: parsed.fullDescription,
+    cover_image_id: coverImageId,
     cover_image_url: parsed.coverImageUrl,
+    is_featured: parsed.isFeatured,
     is_published: parsed.isPublished
   };
 
   const result = id
-    ? await client.from("projects").update(payload).eq("id", id).select("id").single()
-    : await client.from("projects").insert(payload).select("id").single();
+    ? await client.from("projects").update(payload).eq("id", id).select("id, slug").single()
+    : await client.from("projects").insert(payload).select("id, slug").single();
 
   if (result.error || !result.data) {
     mutationError(result.error ?? new Error("Project was not saved"));
@@ -254,24 +349,25 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     }
   }
 
-  const selectedImageIds = new Set(galleryImageIds);
-  const { error: detachImagesError } = await client
-    .from("images")
-    .update({ parent_type: "free", parent_id: null })
-    .eq("parent_type", "project")
-    .eq("parent_id", projectId);
+  const { error: deleteImagesError } = await client
+    .from("project_images")
+    .delete()
+    .eq("project_id", projectId);
 
-  if (detachImagesError) {
-    mutationError(detachImagesError);
+  if (deleteImagesError) {
+    mutationError(deleteImagesError);
   }
 
-  const imageIds = Array.from(selectedImageIds);
+  const imageIds = Array.from(new Set(galleryImageIds));
 
   if (imageIds.length > 0) {
-    const { error } = await client
-      .from("images")
-      .update({ parent_type: "project", parent_id: projectId })
-      .in("id", imageIds);
+    const { error } = await client.from("project_images").insert(
+      imageIds.map((imageId, index) => ({
+        project_id: projectId,
+        image_id: imageId,
+        sort_order: (index + 1) * 10
+      }))
+    );
 
     if (error) {
       mutationError(error);
@@ -281,6 +377,11 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/projects");
   revalidatePath("/admin/images");
   revalidatePath("/portfolio");
+  revalidatePath(`/portfolio/${result.data.slug}`);
+
+  if (previousSlug && previousSlug !== result.data.slug) {
+    revalidatePath(`/portfolio/${previousSlug}`);
+  }
 }
 
 export async function deleteProjectAction(formData: FormData): Promise<void> {
@@ -290,16 +391,6 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
 
   if (!id) {
     return;
-  }
-
-  const { error: detachImagesError } = await client
-    .from("images")
-    .update({ parent_type: "free", parent_id: null })
-    .eq("parent_type", "project")
-    .eq("parent_id", id);
-
-  if (detachImagesError) {
-    mutationError(detachImagesError);
   }
 
   const { error } = await client.from("projects").delete().eq("id", id);
@@ -313,7 +404,7 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
   revalidatePath("/portfolio");
 }
 
-export async function savePageAction(formData: FormData): Promise<void> {
+async function savePageMutation(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const pageKey = pageKeySchema.parse(formString(formData, "pageKey"));
@@ -351,6 +442,29 @@ export async function savePageAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/pages");
   revalidatePath("/");
   revalidatePath(`/${pageKey}`);
+}
+
+export async function savePageAction(formData: FormData): Promise<void> {
+  await savePageMutation(formData);
+}
+
+export async function savePageStateAction(
+  _previousState: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    await savePageMutation(formData);
+
+    return {
+      ok: true,
+      message: "Страница сохранена"
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: getMutationErrorMessage(error, "Не удалось сохранить страницу")
+    };
+  }
 }
 
 export async function updateRequestStatusAction(formData: FormData): Promise<void> {
@@ -395,6 +509,7 @@ export async function uploadImageAction(
   _previousState: UploadImageState,
   formData: FormData
 ): Promise<UploadImageState> {
+  try {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const file = formData.get("file");
@@ -402,7 +517,7 @@ export async function uploadImageAction(
   if (!(file instanceof File) || file.size === 0) {
     return {
       ok: false,
-      message: "Выберите изображение."
+      message: "Выберите изображение"
     };
   }
 
@@ -419,13 +534,22 @@ export async function uploadImageAction(
   const caption = formString(formData, "caption");
   const sortOrder = Number(formString(formData, "sortOrder") || "100");
   const extension = getPortfolioImageExtension(file);
-  const safeName = `${Date.now()}-${createSlug(file.name.replace(/\.[^.]+$/, ""))}.${extension}`;
+  const safeName = `${randomUUID()}.${extension}`;
   const storagePath = `uploads/${safeName}`;
   const bytes = await file.arrayBuffer();
+  const bytesValidationError = validatePortfolioImageBytes(file, bytes);
+
+  if (bytesValidationError) {
+    return {
+      ok: false,
+      message: bytesValidationError
+    };
+  }
 
   const { error: uploadError } = await client.storage
     .from("portfolio-images")
     .upload(storagePath, bytes, {
+      cacheControl: "31536000",
       contentType: file.type || "image/jpeg",
       upsert: false
     });
@@ -433,7 +557,7 @@ export async function uploadImageAction(
   if (uploadError) {
     return {
       ok: false,
-      message: `Не удалось загрузить файл: ${getMutationErrorMessage(uploadError)}`
+      message: `Не удалось загрузить файл в bucket portfolio-images: ${getMutationErrorMessage(uploadError)}`
     };
   }
 
@@ -465,8 +589,14 @@ export async function uploadImageAction(
 
   return {
     ok: true,
-    message: "Изображение загружено."
+    message: "Изображение загружено"
   };
+  } catch (error) {
+    return {
+      ok: false,
+      message: `Не удалось загрузить изображение: ${getMutationErrorMessage(error)}`
+    };
+  }
 }
 
 export async function deleteImageAction(formData: FormData): Promise<void> {

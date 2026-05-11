@@ -47,7 +47,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
               Кейс
             </p>
-            <h1 className="mt-4 text-5xl font-semibold leading-tight">{project.title}</h1>
+            <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">{project.title}</h1>
             <p className="mt-6 text-lg leading-8 text-muted">{project.shortDescription}</p>
             <div className="mt-8 flex flex-wrap gap-2">
               {project.services.map((service) => (
@@ -71,7 +71,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 alt={project.title}
                 className="object-cover"
                 fill
-                priority
+                loading="eager"
                 sizes="(min-width: 900px) 54vw, 100vw"
                 src={project.coverImageUrl}
               />
@@ -89,7 +89,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </div>
         </section>
         <section className="container-shell py-16">
-          <div className="mb-8 flex items-end justify-between gap-4">
+          <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
             <h2 className="text-3xl font-semibold">Галерея</h2>
             <ButtonLink href="/portfolio" variant="secondary">
               Назад к работам

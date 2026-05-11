@@ -1,9 +1,22 @@
 import { AdminCard } from "@/components/admin-card";
-import { AdminFormFieldset, adminPrimaryButtonClass } from "@/components/admin-form-lock";
-import { Field, inputClass, textareaClass } from "@/components/form-controls";
-import { savePageAction } from "@/lib/actions/admin";
+import { AdminPageForm } from "@/components/admin-page-form";
 import { requireAdmin } from "@/lib/auth";
 import { listAdminPages } from "@/lib/data/admin";
+import type { PageKey } from "@/lib/types";
+
+const pageLabels: Record<PageKey, string> = {
+  home: "Главная",
+  about: "О дизайнере",
+  services: "Услуги",
+  contacts: "Контакты"
+};
+
+const pageDescriptions: Record<PageKey, string> = {
+  home: "Текст первого экрана, кнопки и короткие блоки главной страницы",
+  about: "Описание опыта, подхода и дополнительных фактов о дизайнере",
+  services: "Вводный текст страницы услуг",
+  contacts: "Контактные данные и текст страницы контактов"
+};
 
 export default async function AdminPagesPage() {
   const admin = await requireAdmin();
@@ -17,26 +30,12 @@ export default async function AdminPagesPage() {
       </div>
       <div className="space-y-4">
         {pages.map((page) => (
-          <AdminCard key={page.pageKey} title={page.title} description={page.pageKey}>
-            <form action={savePageAction} className="grid gap-4">
-              <AdminFormFieldset canWrite={admin.canWrite}>
-                <input name="pageKey" type="hidden" value={page.pageKey} />
-                <Field label="Заголовок">
-                  <input className={inputClass} defaultValue={page.title} name="title" />
-                </Field>
-                <Field label="Основной текст">
-                  <textarea className={textareaClass} defaultValue={page.body} name="body" />
-                </Field>
-                <Field label="Дополнительные блоки JSON" hint='Например: {"email":"designer@example.com"}'>
-                  <textarea
-                    className={`${textareaClass} font-mono text-xs`}
-                    defaultValue={JSON.stringify(page.blocks, null, 2)}
-                    name="blocks"
-                  />
-                </Field>
-                <button className={adminPrimaryButtonClass}>Сохранить страницу</button>
-              </AdminFormFieldset>
-            </form>
+          <AdminCard
+            key={page.pageKey}
+            title={pageLabels[page.pageKey] ?? page.title}
+            description={pageDescriptions[page.pageKey]}
+          >
+            <AdminPageForm canWrite={admin.canWrite} page={page} />
           </AdminCard>
         ))}
       </div>

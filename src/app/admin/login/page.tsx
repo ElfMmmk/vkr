@@ -16,11 +16,11 @@ export default function AdminLoginPage() {
         </Link>
         <h1 className="mt-8 text-4xl font-semibold">Вход в админку</h1>
         <p className="mt-4 text-sm leading-6 text-muted">
-          Доступ разрешён только личному администратору, email которого задан в `ADMIN_EMAIL`.
+          Войдите, чтобы перейти к управлению контентом сайта.
         </p>
         {!setupReady ? (
           <div className="mt-6 border border-accent/30 bg-accent/10 p-4 text-sm leading-6 text-accent">
-            Для входа настройте Supabase URL, publishable key и ADMIN_EMAIL в `.env.local`.
+            Для входа завершите настройку Supabase и администратора в окружении проекта.
           </div>
         ) : null}
         <div className="mt-8">

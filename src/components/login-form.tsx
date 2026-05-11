@@ -11,7 +11,7 @@ function LoginButton() {
 
   return (
     <button
-      className="focus-ring w-full border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent disabled:opacity-60"
+      className="focus-ring min-h-12 w-full border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px active:border-ink active:bg-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-y-0"
       disabled={pending}
       type="submit"
     >
@@ -41,7 +41,7 @@ export function LoginForm({ previewEnabled }: { previewEnabled: boolean }) {
       </form>
       {previewEnabled ? (
         <form action={previewLoginAction}>
-          <button className="focus-ring w-full border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink">
+          <button className="focus-ring min-h-12 w-full border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px">
             Войти в demo admin
           </button>
           <p className="mt-3 text-xs leading-5 text-muted">

@@ -7,6 +7,7 @@ import { createSlug } from "@/lib/slug";
 import {
   MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES,
   getPortfolioImageExtension,
+  validatePortfolioImageBytes,
   validatePortfolioImageUpload
 } from "@/lib/uploads";
 import {
@@ -87,5 +88,26 @@ describe("validation helpers", () => {
       })
     ).toContain("10 МБ");
     expect(getPortfolioImageExtension({ name: "cover.jpeg", size: 1024, type: "image/jpeg" })).toBe("jpg");
+  });
+
+  it("rejects mismatched image byte signatures", () => {
+    const fakePng = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]).buffer;
+    const realPng = new Uint8Array([
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a
+    ]).buffer;
+
+    expect(
+      validatePortfolioImageBytes({ name: "cover.png", size: 1024, type: "image/png" }, fakePng)
+    ).toContain("PNG");
+    expect(
+      validatePortfolioImageBytes({ name: "cover.png", size: 1024, type: "image/png" }, realPng)
+    ).toBeNull();
   });
 });

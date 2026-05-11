@@ -15,7 +15,7 @@ export function Field({ label, children, hint }: FieldProps) {
 }
 
 export const inputClass =
-  "focus-ring w-full border border-line bg-white px-4 py-3 text-sm text-ink shadow-none outline-none transition placeholder:text-muted/70 focus-visible:border-cobalt";
+  "focus-ring w-full min-w-0 border border-line bg-white px-4 py-3 text-sm text-ink shadow-none outline-none transition placeholder:text-muted/70 hover:border-muted focus-visible:border-cobalt disabled:cursor-not-allowed disabled:bg-paper disabled:text-muted";
 
 export const textareaClass = `${inputClass} min-h-32 resize-y`;
 

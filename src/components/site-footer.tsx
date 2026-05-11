@@ -25,12 +25,6 @@ export function SiteFooter() {
               Политика обработки персональных данных
             </Link>
           </nav>
-          <div className="border-t border-line pt-4 text-xs text-muted/80">
-            <span>Служебный вход: </span>
-            <Link className="underline-offset-4 hover:text-ink hover:underline" href="/admin/login">
-              Админка
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

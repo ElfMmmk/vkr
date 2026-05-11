@@ -36,6 +36,7 @@ export default async function AdminImagesPage() {
                   alt={image.title || image.caption || image.storagePath}
                   className="object-cover"
                   fill
+                  sizes="(min-width: 900px) 33vw, 100vw"
                   src={image.publicUrl}
                 />
               ) : null}

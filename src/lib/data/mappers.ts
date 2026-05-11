@@ -36,6 +36,12 @@ export type ImageRow = {
   sort_order: number | null;
 };
 
+export type ProjectImageRow = {
+  image_id: string;
+  sort_order: number | null;
+  images: ImageRow | ImageRow[] | null;
+};
+
 export type PageRow = {
   id: string;
   page_key: PageKey;
@@ -51,12 +57,16 @@ export type ProjectRow = {
   slug: string;
   short_description: string | null;
   full_description: string | null;
+  cover_image_id?: string | null;
   cover_image_url: string | null;
+  is_featured?: boolean | null;
   is_published: boolean | null;
   created_at: string;
   updated_at?: string | null;
   project_services?: { services: ServiceRow | null }[] | null;
   project_tags?: { tags: TagRow | null }[] | null;
+  project_images?: ProjectImageRow[] | null;
+  cover_image?: ImageRow | null;
   images?: ImageRow[] | null;
 };
 
@@ -107,6 +117,34 @@ export function mapImage(row: ImageRow): PortfolioImage {
   };
 }
 
+function mapProjectGallery(row: ProjectRow): PortfolioImage[] {
+  if (row.project_images) {
+    return row.project_images
+      .map((relation) => ({
+        ...relation,
+        image: Array.isArray(relation.images) ? relation.images[0] : relation.images
+      }))
+      .filter((relation): relation is ProjectImageRow & { image: ImageRow } =>
+        Boolean(relation.image)
+      )
+      .slice()
+      .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100))
+      .map((relation) =>
+        mapImage({
+          ...relation.image,
+          sort_order: relation.sort_order ?? relation.image.sort_order
+        })
+      );
+  }
+
+  return (
+    row.images
+      ?.slice()
+      .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100))
+      .map(mapImage) ?? []
+  );
+}
+
 export function mapPage(row: PageRow): PageContent {
   return {
     id: row.id,
@@ -125,7 +163,9 @@ export function mapProject(row: ProjectRow): Project {
     slug: row.slug,
     shortDescription: row.short_description ?? "",
     fullDescription: row.full_description ?? "",
-    coverImageUrl: row.cover_image_url ?? "",
+    coverImageId: row.cover_image_id ?? null,
+    coverImageUrl: row.cover_image?.public_url ?? row.cover_image_url ?? "",
+    isFeatured: row.is_featured ?? false,
     isPublished: row.is_published ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? undefined,
@@ -139,15 +179,46 @@ export function mapProject(row: ProjectRow): Project {
         ?.map((relation) => relation.tags)
         .filter((tag): tag is TagRow => Boolean(tag))
         .map(mapTag) ?? [],
-    gallery:
-      row.images
-        ?.slice()
-        .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100))
-        .map(mapImage) ?? []
+    gallery: mapProjectGallery(row)
   };
 }
 
-export function attachProjectImages(rows: ProjectRow[], images: ImageRow[]): ProjectRow[] {
+export function attachProjectMedia(
+  rows: ProjectRow[],
+  galleryRows: Array<{
+    project_id: string;
+    sort_order: number | null;
+    images: ImageRow | ImageRow[] | null;
+  }>,
+  coverImages: ImageRow[] = []
+): ProjectRow[] {
+  const galleryByProjectId = new Map<string, ProjectImageRow[]>();
+  const coverById = new Map(coverImages.map((image) => [image.id, image]));
+
+  for (const relation of galleryRows) {
+    const image = Array.isArray(relation.images) ? relation.images[0] : relation.images;
+
+    if (!image) {
+      continue;
+    }
+
+    const existing = galleryByProjectId.get(relation.project_id) ?? [];
+    existing.push({
+      image_id: image.id,
+      sort_order: relation.sort_order,
+      images: image
+    });
+    galleryByProjectId.set(relation.project_id, existing);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    cover_image: row.cover_image_id ? coverById.get(row.cover_image_id) ?? null : null,
+    project_images: galleryByProjectId.get(row.id) ?? []
+  }));
+}
+
+export function attachLegacyProjectImages(rows: ProjectRow[], images: ImageRow[]): ProjectRow[] {
   const imagesByProjectId = new Map<string, ImageRow[]>();
 
   for (const image of images) {

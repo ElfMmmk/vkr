@@ -50,7 +50,9 @@ export type Project = {
   slug: string;
   shortDescription: string;
   fullDescription: string;
+  coverImageId: string | null;
   coverImageUrl: string;
+  isFeatured: boolean;
   isPublished: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -75,4 +77,5 @@ export type OrderRequest = {
 export type PortfolioFilter = {
   service?: string;
   tag?: string;
+  sort?: "newest" | "oldest";
 };

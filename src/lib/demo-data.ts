@@ -122,7 +122,9 @@ export const demoProjects: Project[] = [
     shortDescription: "Айдентика и упаковка для камерной линейки натуральной косметики.",
     fullDescription:
       "Задача проекта заключалась в том, чтобы соединить лабораторную чистоту и мягкую природную эстетику. В результате появилась система с лаконичным знаком, спокойной палитрой и гибкими макетами для упаковки.",
+    coverImageId: null,
     coverImageUrl: "/assets/botanica-lab-cover.png",
+    isFeatured: true,
     isPublished: true,
     createdAt: projectDate,
     services: [demoServices[0], demoServices[2]],
@@ -136,8 +138,10 @@ export const demoProjects: Project[] = [
     shortDescription: "Серия упаковок и печатных материалов для кофейной обжарки.",
     fullDescription:
       "Проект строился вокруг контраста ремесленного продукта и современной навигации по вкусам. Для линейки разработаны цветовые коды, этикетки и набор POS-материалов.",
+    coverImageId: null,
     coverImageUrl:
       "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1400&q=80",
+    isFeatured: true,
     isPublished: true,
     createdAt: projectDate,
     services: [demoServices[0], demoServices[2]],
@@ -151,8 +155,10 @@ export const demoProjects: Project[] = [
     shortDescription: "Digital-система для визуальных анонсов и социальных сетей фотостудии.",
     fullDescription:
       "Для студии создана модульная сетка публикаций, набор шаблонов и визуальные правила, которые помогают команде выпускать материалы без потери качества.",
+    coverImageId: null,
     coverImageUrl:
       "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1400&q=80",
+    isFeatured: false,
     isPublished: true,
     createdAt: projectDate,
     services: [demoServices[1]],
@@ -177,8 +183,10 @@ export const demoProjects: Project[] = [
     shortDescription: "Презентация для городского образовательного форума.",
     fullDescription:
       "Слайды были перестроены вокруг ясного сценария выступления. Визуальный язык сочетает крупную типографику, карты, фотографии и спокойные акцентные блоки.",
+    coverImageId: null,
     coverImageUrl:
       "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1400&q=80",
+    isFeatured: true,
     isPublished: true,
     createdAt: projectDate,
     services: [demoServices[3]],

@@ -1,6 +1,7 @@
 import { demoPages, demoProjects, demoRequests, demoServices, demoTags } from "@/lib/demo-data";
 import {
-  attachProjectImages,
+  attachLegacyProjectImages,
+  attachProjectMedia,
   mapImage,
   mapPage,
   mapProject,
@@ -24,6 +25,26 @@ import type {
   Tag
 } from "@/lib/types";
 
+function requireAdminData<T>(data: T | null, error: { message: string } | null, label: string): T {
+  if (error || !data) {
+    throw new Error(`Failed to load ${label}: ${error?.message ?? "empty response"}`);
+  }
+
+  return data;
+}
+
+function normalizeRequestSearch(query: string | undefined): string {
+  return query?.trim().replace(/\s+/g, " ").toLowerCase() ?? "";
+}
+
+function isMissingProjectImagesRelation(error: { message?: string } | null): boolean {
+  return Boolean(error?.message?.includes("project_images"));
+}
+
+function isMissingFeaturedColumn(error: { message?: string } | null): boolean {
+  return Boolean(error?.message?.includes("is_featured"));
+}
+
 export async function listAdminPages(): Promise<PageContent[]> {
   const client = getOptionalSupabaseAdmin();
 
@@ -36,11 +57,7 @@ export async function listAdminPages(): Promise<PageContent[]> {
     .select("*")
     .order("page_key", { ascending: true });
 
-  if (error || !data) {
-    return demoPages;
-  }
-
-  return (data as PageRow[]).map(mapPage);
+  return requireAdminData(data as PageRow[] | null, error, "admin pages").map(mapPage);
 }
 
 export async function listAdminServices(): Promise<Service[]> {
@@ -55,11 +72,7 @@ export async function listAdminServices(): Promise<Service[]> {
     .select("*")
     .order("display_order", { ascending: true });
 
-  if (error || !data) {
-    return demoServices;
-  }
-
-  return (data as ServiceRow[]).map(mapService);
+  return requireAdminData(data as ServiceRow[] | null, error, "admin services").map(mapService);
 }
 
 export async function listAdminTags(): Promise<Tag[]> {
@@ -71,43 +84,92 @@ export async function listAdminTags(): Promise<Tag[]> {
 
   const { data, error } = await client.from("tags").select("*").order("title");
 
-  if (error || !data) {
-    return demoTags;
-  }
-
-  return (data as TagRow[]).map(mapTag);
+  return requireAdminData(data as TagRow[] | null, error, "admin tags").map(mapTag);
 }
 
 export async function listAdminProjects(): Promise<Project[]> {
   const client = getOptionalSupabaseAdmin();
 
   if (!client) {
-    return demoProjects;
+    return demoProjects.slice().sort((a, b) => {
+      if (a.isFeatured !== b.isFeatured) {
+        return a.isFeatured ? -1 : 1;
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
-  const { data, error } = await client
+  let { data, error } = await client
     .from("projects")
     .select("*, project_services(services(*)), project_tags(tags(*))")
+    .order("is_featured", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (error || !data) {
-    return demoProjects;
+  if (isMissingFeaturedColumn(error)) {
+    const fallback = await client
+      .from("projects")
+      .select("*, project_services(services(*)), project_tags(tags(*))")
+      .order("created_at", { ascending: false });
+
+    data = fallback.data;
+    error = fallback.error;
   }
 
-  const projectRows = data as ProjectRow[];
+  const projectRows = requireAdminData(data as ProjectRow[] | null, error, "admin projects");
+
   const projectIds = projectRows.map((project) => project.id);
+  const coverImageIds = projectRows
+    .map((project) => project.cover_image_id)
+    .filter((imageId): imageId is string => Boolean(imageId));
 
   if (!projectIds.length) {
     return [];
   }
 
-  const { data: imageData } = await client
-    .from("images")
-    .select("*")
-    .eq("parent_type", "project")
-    .in("parent_id", projectIds);
+  const [{ data: relationData, error: relationError }, { data: coverData, error: coverError }] =
+    await Promise.all([
+      client
+        .from("project_images")
+        .select("project_id, sort_order, images(*)")
+        .in("project_id", projectIds),
+      coverImageIds.length
+        ? client.from("images").select("*").in("id", coverImageIds)
+        : Promise.resolve({ data: [], error: null })
+    ]);
 
-  return attachProjectImages(projectRows, (imageData as ImageRow[] | null) ?? []).map(mapProject);
+  if (isMissingProjectImagesRelation(relationError)) {
+    const { data: legacyImageData, error: legacyImageError } = await client
+      .from("images")
+      .select("*")
+      .eq("parent_type", "project")
+      .in("parent_id", projectIds);
+
+    if (legacyImageError) {
+      throw new Error(`Failed to load legacy admin project media: ${legacyImageError.message}`);
+    }
+
+    return attachLegacyProjectImages(
+      projectRows,
+      (legacyImageData as ImageRow[] | null) ?? []
+    ).map(mapProject);
+  }
+
+  if (relationError || coverError) {
+    throw new Error(
+      `Failed to load admin project media: ${relationError?.message ?? coverError?.message}`
+    );
+  }
+
+  return attachProjectMedia(
+    projectRows,
+    (relationData as Array<{
+      project_id: string;
+      sort_order: number | null;
+      images: ImageRow | ImageRow[] | null;
+    }> | null) ?? [],
+    (coverData as ImageRow[] | null) ?? []
+  ).map(mapProject);
 }
 
 export async function listAdminImages(): Promise<PortfolioImage[]> {
@@ -122,22 +184,19 @@ export async function listAdminImages(): Promise<PortfolioImage[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error || !data) {
-    return [];
-  }
-
-  return (data as ImageRow[]).map(mapImage);
+  return requireAdminData(data as ImageRow[] | null, error, "admin images").map(mapImage);
 }
 
 export async function listAdminRequests(options: {
   query?: string;
   status?: string;
+  sort?: "newest" | "oldest";
 } = {}): Promise<OrderRequest[]> {
   const client = getOptionalSupabaseAdmin();
 
   if (!client) {
     return demoRequests.filter((request) => {
-      const query = options.query?.toLowerCase();
+      const query = normalizeRequestSearch(options.query);
       const statusMatches = !options.status || request.status === options.status;
       const queryMatches =
         !query ||
@@ -146,29 +205,34 @@ export async function listAdminRequests(options: {
           .includes(query);
 
       return statusMatches && queryMatches;
+    }).sort((a, b) => {
+      const direction = options.sort === "oldest" ? 1 : -1;
+
+      return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction;
     });
   }
 
+  const query = normalizeRequestSearch(options.query);
   let requestQuery = client
     .from("requests")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: options.sort === "oldest" })
+    .limit(query ? 500 : 200);
 
   if (options.status) {
     requestQuery = requestQuery.eq("status", options.status);
   }
 
-  if (options.query) {
-    requestQuery = requestQuery.or(
-      `client_name.ilike.%${options.query}%,contact_value.ilike.%${options.query}%,service_title.ilike.%${options.query}%`
-    );
-  }
-
   const { data, error } = await requestQuery;
+  const rows = requireAdminData(data as RequestRow[] | null, error, "admin requests").map(mapRequest);
 
-  if (error || !data) {
-    return demoRequests;
+  if (!query) {
+    return rows;
   }
 
-  return (data as RequestRow[]).map(mapRequest);
+  return rows.filter((request) =>
+    `${request.clientName} ${request.contactValue} ${request.serviceTitle} ${request.comment}`
+      .toLowerCase()
+      .includes(query)
+  );
 }

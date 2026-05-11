@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminSmallPrimaryButtonClass } from "@/components/admin-form-lock";
 import { Field, inputClass, selectClass } from "@/components/form-controls";
@@ -11,16 +13,20 @@ type AdminRequestsPageProps = {
   searchParams: Promise<{
     query?: string;
     status?: string;
+    sort?: string;
   }>;
 };
 
 export default async function AdminRequestsPage({ searchParams }: AdminRequestsPageProps) {
   const admin = await requireAdmin();
   const params = await searchParams;
+  const sort = params.sort === "oldest" ? "oldest" : "newest";
   const requests = await listAdminRequests({
     query: params.query,
-    status: params.status
+    status: params.status,
+    sort
   });
+  const hasFilter = Boolean(params.query || params.status || params.sort === "oldest");
 
   return (
     <div className="space-y-6">
@@ -29,7 +35,7 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
         <h1 className="mt-2 text-4xl font-semibold">Заявки</h1>
       </div>
       <AdminCard title="Поиск и фильтр">
-        <form className="grid gap-4 md:grid-cols-[1fr_220px_auto]" method="get">
+        <form className="grid gap-4 md:grid-cols-[1fr_220px_220px_auto]" method="get">
           <Field label="Поиск">
             <input className={inputClass} defaultValue={params.query} name="query" placeholder="Имя, контакт или услуга" />
           </Field>
@@ -43,10 +49,26 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
               ))}
             </select>
           </Field>
-          <button className="focus-ring self-end border border-ink bg-ink px-4 py-3 text-sm font-semibold text-white hover:bg-accent">
+          <Field label="Сортировка">
+            <select className={selectClass} defaultValue={sort} name="sort">
+              <option value="newest">Сначала новые</option>
+              <option value="oldest">Сначала старые</option>
+            </select>
+          </Field>
+          <button className="focus-ring inline-flex min-h-11 items-center justify-center self-end border border-ink bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px">
             Применить
           </button>
         </form>
+        {hasFilter ? (
+          <div className="mt-4 border-t border-line pt-4">
+            <Link
+              className="focus-ring inline-flex min-h-10 items-center justify-center border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
+              href="/admin/requests"
+            >
+              Сбросить фильтр
+            </Link>
+          </div>
+        ) : null}
       </AdminCard>
       <div className="space-y-4">
         {requests.map((request) => (
@@ -91,7 +113,7 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
         ))}
         {!requests.length ? (
           <AdminCard title="Заявки не найдены">
-            <p className="text-sm text-muted">Измените фильтр или дождитесь новых обращений.</p>
+            <p className="text-sm text-muted">Измените фильтр или дождитесь новых обращений</p>
           </AdminCard>
         ) : null}
       </div>

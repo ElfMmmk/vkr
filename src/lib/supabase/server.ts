@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let adminClient: SupabaseClient | null = null;
+let publicClient: SupabaseClient | null = null;
 
 function getSupabaseUrl(): string | null {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || null;
@@ -30,6 +31,26 @@ export function hasSupabasePublicEnv(): boolean {
 
 export function hasSupabaseAdminEnv(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseSecretKey());
+}
+
+export function getOptionalSupabasePublic(): SupabaseClient | null {
+  const supabaseUrl = getSupabaseUrl();
+  const publicKey = getSupabasePublicKey();
+
+  if (!supabaseUrl || !publicKey) {
+    return null;
+  }
+
+  if (!publicClient) {
+    publicClient = createClient(supabaseUrl, publicKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+  }
+
+  return publicClient;
 }
 
 export async function createSupabaseServerClient(): Promise<SupabaseClient | null> {

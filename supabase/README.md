@@ -16,6 +16,14 @@ Free plan limits to keep in mind: 500 MB database, 1 GB file storage, 5 GB egres
 5. In Authentication, create one email/password user whose email is `formaxmos@gmail.com`.
 6. Copy project URL, publishable key, and secret key into `.env.local` and later into Vercel environment variables.
 
+For an existing project created before the reusable media/security audit, run:
+
+```sql
+-- supabase/patch-2026-05-11-ui-security-code-audit.sql
+```
+
+The patch adds reusable project media links, cover image references, featured project pinning, request throttling metadata, and stricter public read policies for project media.
+
 Use these preferred variable names:
 
 ```bash

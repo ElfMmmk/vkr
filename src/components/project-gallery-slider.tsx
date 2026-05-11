@@ -59,7 +59,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
             <div className="flex items-center gap-2">
               <button
                 aria-label="Предыдущее изображение"
-                className="focus-ring inline-grid h-11 w-11 place-items-center border border-line bg-white text-ink transition hover:border-ink"
+                className="focus-ring inline-grid h-11 w-11 place-items-center border border-line bg-white text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
                 onClick={goToPrevious}
                 type="button"
               >
@@ -67,7 +67,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
               </button>
               <button
                 aria-label="Следующее изображение"
-                className="focus-ring inline-grid h-11 w-11 place-items-center border border-line bg-white text-ink transition hover:border-ink"
+                className="focus-ring inline-grid h-11 w-11 place-items-center border border-line bg-white text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
                 onClick={goToNext}
                 type="button"
               >
@@ -82,8 +82,8 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
           {slides.map((slide, index) => (
             <button
               aria-label={`Открыть изображение ${index + 1}`}
-              className={`focus-ring relative h-16 w-24 overflow-hidden border bg-white transition ${
-                index === activeIndex ? "border-ink" : "border-line hover:border-muted"
+              className={`focus-ring relative h-16 w-24 overflow-hidden border bg-white transition active:translate-y-px ${
+                index === activeIndex ? "border-ink" : "border-line hover:border-muted hover:bg-paper"
               }`}
               key={`${slide.src}-${index}`}
               onClick={() => setActiveIndex(index)}
