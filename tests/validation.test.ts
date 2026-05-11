@@ -4,6 +4,7 @@ import { filterProjects } from "@/lib/data/public";
 import { demoProjects } from "@/lib/demo-data";
 import { isRequestStatus } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
+import { fieldLimits } from "@/lib/field-limits";
 import {
   MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES,
   getPortfolioImageExtension,
@@ -11,6 +12,7 @@ import {
   validatePortfolioImageUpload
 } from "@/lib/uploads";
 import {
+  imageUploadSchema,
   imageParentTypeSchema,
   orderRequestSchema,
   pageKeySchema
@@ -55,6 +57,24 @@ describe("validation helpers", () => {
     expect(pageKeySchema.safeParse("admin").success).toBe(false);
     expect(imageParentTypeSchema.safeParse("project").success).toBe(true);
     expect(imageParentTypeSchema.safeParse("script").success).toBe(false);
+  });
+
+  it("shares field limits between schemas and form controls", () => {
+    expect(fieldLimits.project.fullDescription.max).toBe(6000);
+    expect(
+      imageUploadSchema.safeParse({
+        title: "x".repeat(fieldLimits.image.title.max + 1),
+        caption: "",
+        sortOrder: "100"
+      }).success
+    ).toBe(false);
+    expect(
+      imageUploadSchema.safeParse({
+        title: "Обложка",
+        caption: "Короткое описание",
+        sortOrder: "100"
+      }).success
+    ).toBe(true);
   });
 
   it("filters public projects by service and tag", () => {

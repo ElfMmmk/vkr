@@ -37,6 +37,7 @@ export function AdminRequestStatusForm({
               formRef.current?.requestSubmit();
             });
           }}
+          required
         >
           {requestStatuses.map((requestStatus) => (
             <option key={requestStatus} value={requestStatus}>

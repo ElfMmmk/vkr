@@ -24,6 +24,8 @@ For an existing project created before the reusable media/security audit, run:
 
 The patch adds reusable project media links, cover image references, featured project pinning, request throttling metadata, and stricter public read policies for project media.
 
+Status: this patch was applied to the hosted `vkr-portfolio` Supabase project on 2026-05-12, including the `projects.display_order` column used by project drag-and-drop ordering.
+
 Use these preferred variable names:
 
 ```bash

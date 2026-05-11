@@ -8,10 +8,18 @@ import {
   adminPrimaryButtonClass
 } from "@/components/admin-form-lock";
 import { Field, inputClass } from "@/components/form-controls";
+import { LimitedInput } from "@/components/limited-text-control";
 import {
   uploadImageAction,
   type UploadImageState
 } from "@/lib/actions/admin";
+import { fieldLimits } from "@/lib/field-limits";
+import {
+  ALLOWED_PORTFOLIO_IMAGE_TYPES,
+  MAX_PORTFOLIO_IMAGE_UPLOAD_MB,
+  MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES,
+  PORTFOLIO_IMAGE_ACCEPT
+} from "@/lib/uploads";
 
 const initialState: UploadImageState = {
   ok: false,
@@ -26,6 +34,31 @@ function SubmitButton({ canWrite }: { canWrite: boolean }) {
       {pending ? "Загрузка..." : "Загрузить"}
     </button>
   );
+}
+
+function validateFileInput(input: HTMLInputElement | null): boolean {
+  if (!input) {
+    return true;
+  }
+
+  const file = input.files?.[0];
+  let message = "";
+
+  if (!file) {
+    message = "Выберите изображение";
+  } else if (file.size > MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES) {
+    message = `Изображение должно быть не больше ${MAX_PORTFOLIO_IMAGE_UPLOAD_MB} МБ`;
+  } else if (
+    !ALLOWED_PORTFOLIO_IMAGE_TYPES.includes(
+      file.type.toLowerCase() as typeof ALLOWED_PORTFOLIO_IMAGE_TYPES[number]
+    )
+  ) {
+    message = "Загрузите JPEG, PNG, WebP, GIF или AVIF изображение";
+  }
+
+  input.setCustomValidity(message);
+
+  return !message;
 }
 
 export function AdminImageUploadForm({ canWrite }: { canWrite: boolean }) {
@@ -43,14 +76,30 @@ export function AdminImageUploadForm({ canWrite }: { canWrite: boolean }) {
   }, [state.ok, state.message]);
 
   return (
-    <form action={formAction} className="grid gap-4" ref={formRef}>
+    <form
+      action={formAction}
+      className="grid gap-4"
+      onSubmit={(event) => {
+        if (!validateFileInput(fileInputRef.current)) {
+          event.preventDefault();
+          fileInputRef.current?.reportValidity();
+        }
+      }}
+      ref={formRef}
+    >
       <AdminFormFieldset canWrite={canWrite}>
-        <Field label="Файл">
+        <Field
+          label="Файл"
+          hint={`JPEG, PNG, WebP, GIF или AVIF до ${MAX_PORTFOLIO_IMAGE_UPLOAD_MB} МБ`}
+          required
+        >
           <input
-            accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+            accept={PORTFOLIO_IMAGE_ACCEPT}
             className={inputClass}
             name="file"
+            onChange={() => validateFileInput(fileInputRef.current)}
             ref={fileInputRef}
+            required
             type="file"
           />
         </Field>
@@ -58,11 +107,17 @@ export function AdminImageUploadForm({ canWrite }: { canWrite: boolean }) {
           label="Название"
           hint="Короткое имя для поиска в медиатеке, например: Обложка Botanica"
         >
-          <input className={inputClass} name="title" placeholder="Обложка проекта" />
+          <LimitedInput
+            className={inputClass}
+            maxLength={fieldLimits.image.title.max}
+            name="title"
+            placeholder="Обложка проекта"
+          />
         </Field>
         <Field label="Описание">
-          <input
+          <LimitedInput
             className={inputClass}
+            maxLength={fieldLimits.image.caption.max}
             name="caption"
             placeholder="Что изображено или где использовать файл"
           />

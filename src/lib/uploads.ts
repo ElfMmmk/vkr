@@ -1,12 +1,15 @@
-export const MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-const allowedImageTypes = new Set([
+export const MAX_PORTFOLIO_IMAGE_UPLOAD_MB = 10;
+export const MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES = MAX_PORTFOLIO_IMAGE_UPLOAD_MB * 1024 * 1024;
+export const ALLOWED_PORTFOLIO_IMAGE_TYPES = [
   "image/avif",
   "image/gif",
   "image/jpeg",
   "image/png",
   "image/webp"
-]);
+] as const;
+export const PORTFOLIO_IMAGE_ACCEPT = ALLOWED_PORTFOLIO_IMAGE_TYPES.join(",");
+
+const allowedImageTypes = new Set<string>(ALLOWED_PORTFOLIO_IMAGE_TYPES);
 
 const imageTypeExtensions: Record<string, string> = {
   "image/avif": "avif",

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { fieldLimits } from "@/lib/field-limits";
 import { requestStatuses } from "@/lib/request-status";
 
 export const pageKeySchema = z.enum(["home", "about", "services", "contacts"]);
@@ -12,52 +13,58 @@ export const orderRequestSchema = z.object({
   clientName: z
     .string()
     .trim()
-    .min(2, "Укажите имя")
-    .max(120, "Имя слишком длинное"),
+    .min(fieldLimits.order.clientName.min, "Укажите имя")
+    .max(fieldLimits.order.clientName.max, "Имя слишком длинное"),
   contactMethod: contactMethodSchema,
   contactValue: z
     .string()
     .trim()
-    .min(3, "Укажите контакт")
-    .max(180, "Контакт слишком длинный"),
+    .min(fieldLimits.order.contactValue.min, "Укажите контакт")
+    .max(fieldLimits.order.contactValue.max, "Контакт слишком длинный"),
   serviceId: z.string().trim().min(1, "Выберите услугу"),
-  serviceTitle: z.string().trim().max(160).optional(),
+  serviceTitle: z.string().trim().max(fieldLimits.order.serviceTitle.max).optional(),
   comment: z
     .string()
     .trim()
-    .min(10, "Опишите задачу хотя бы в одном предложении")
-    .max(2000, "Комментарий слишком длинный")
+    .min(fieldLimits.order.comment.min, "Опишите задачу хотя бы в одном предложении")
+    .max(fieldLimits.order.comment.max, "Комментарий слишком длинный")
 });
 
 export const serviceSchema = z.object({
-  title: z.string().trim().min(2).max(160),
-  slug: z.string().trim().min(2).max(180),
-  description: z.string().trim().min(5).max(800),
-  details: z.string().trim().max(2000).default(""),
-  displayOrder: z.coerce.number().int().min(0).max(10000),
+  title: z.string().trim().min(fieldLimits.service.title.min).max(fieldLimits.service.title.max),
+  slug: z.string().trim().min(fieldLimits.service.slug.min).max(fieldLimits.service.slug.max),
+  description: z.string().trim().min(fieldLimits.service.description.min).max(fieldLimits.service.description.max),
+  details: z.string().trim().max(fieldLimits.service.details.max).default(""),
+  displayOrder: z.coerce.number().int().min(fieldLimits.service.displayOrder.min).max(fieldLimits.service.displayOrder.max),
   isActive: z.boolean()
 });
 
 export const tagSchema = z.object({
-  title: z.string().trim().min(2).max(120),
-  slug: z.string().trim().min(2).max(160),
-  description: z.string().trim().max(800).default("")
+  title: z.string().trim().min(fieldLimits.tag.title.min).max(fieldLimits.tag.title.max),
+  slug: z.string().trim().min(fieldLimits.tag.slug.min).max(fieldLimits.tag.slug.max),
+  description: z.string().trim().max(fieldLimits.tag.description.max).default("")
 });
 
 export const pageSchema = z.object({
-  title: z.string().trim().min(2).max(180),
-  body: z.string().trim().min(5).max(4000),
-  blocks: z.string().trim().max(8000).optional()
+  title: z.string().trim().min(fieldLimits.page.title.min).max(fieldLimits.page.title.max),
+  body: z.string().trim().min(fieldLimits.page.body.min).max(fieldLimits.page.body.max),
+  blocks: z.string().trim().max(fieldLimits.page.blocks.max).optional()
 });
 
 export const projectSchema = z.object({
-  title: z.string().trim().min(2).max(180),
-  slug: z.string().trim().min(2).max(200),
-  shortDescription: z.string().trim().min(5).max(500),
-  fullDescription: z.string().trim().min(20).max(6000),
-  coverImageUrl: z.string().trim().max(1200).default(""),
+  title: z.string().trim().min(fieldLimits.project.title.min).max(fieldLimits.project.title.max),
+  slug: z.string().trim().min(fieldLimits.project.slug.min).max(fieldLimits.project.slug.max),
+  shortDescription: z.string().trim().min(fieldLimits.project.shortDescription.min).max(fieldLimits.project.shortDescription.max),
+  fullDescription: z.string().trim().min(fieldLimits.project.fullDescription.min).max(fieldLimits.project.fullDescription.max),
+  coverImageUrl: z.string().trim().max(fieldLimits.project.coverImageUrl.max).default(""),
   isFeatured: z.boolean(),
   isPublished: z.boolean()
+});
+
+export const imageUploadSchema = z.object({
+  title: z.string().trim().max(fieldLimits.image.title.max, "Название изображения слишком длинное").default(""),
+  caption: z.string().trim().max(fieldLimits.image.caption.max, "Описание изображения слишком длинное").default(""),
+  sortOrder: z.coerce.number().int().min(fieldLimits.image.sortOrder.min).max(fieldLimits.image.sortOrder.max)
 });
 
 export const requestStatusSchema = z.enum(

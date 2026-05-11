@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createPreviewAdminSession, getAdminEmail, isAdminPreviewEnabled } from "@/lib/auth";
+import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
 import { createSupabaseServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
-  email: z.string().trim().email("Введите корректный email"),
-  password: z.string().min(6, "Введите пароль")
+  email: z.string().trim().email("Введите корректный email").max(fieldLimits.login.email.max),
+  password: z.string().min(fieldLimits.login.password.min, "Введите пароль").max(fieldLimits.login.password.max)
 });
 
 export type LoginState = {

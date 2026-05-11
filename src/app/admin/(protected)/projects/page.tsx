@@ -5,9 +5,11 @@ import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } fr
 import { AdminProjectOrderForm } from "@/components/admin-project-order-form";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
+import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteProjectAction, saveProjectAction } from "@/lib/actions/admin";
 import { requireAdmin } from "@/lib/auth";
 import { listAdminImages, listAdminProjects, listAdminServices, listAdminTags } from "@/lib/data/admin";
+import { fieldLimits } from "@/lib/field-limits";
 import type { PortfolioImage, Project, Service, Tag } from "@/lib/types";
 
 function RelationChecks({
@@ -96,30 +98,51 @@ function ProjectForm({
       <AdminFormFieldset canWrite={canWrite}>
         <input name="id" type="hidden" value={project?.id ?? ""} />
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название">
-            <input className={inputClass} defaultValue={project?.title} name="title" placeholder="Название проекта" />
+          <Field label="Название" required>
+            <LimitedInput
+              className={inputClass}
+              defaultValue={project?.title}
+              maxLength={fieldLimits.project.title.max}
+              minLength={fieldLimits.project.title.min}
+              name="title"
+              placeholder="Название проекта"
+              required
+            />
           </Field>
           <Field
             label="Адрес страницы"
             hint="Можно оставить пустым: адрес создастся автоматически из названия"
           >
-            <input className={inputClass} defaultValue={project?.slug} name="slug" placeholder="botanica-lab" />
+            <LimitedInput
+              className={inputClass}
+              defaultValue={project?.slug}
+              maxLength={fieldLimits.project.slug.max}
+              minLength={fieldLimits.project.slug.min}
+              name="slug"
+              placeholder="botanica-lab"
+            />
           </Field>
         </div>
-        <Field label="Краткое описание" hint="Показывается в карточке проекта">
-          <textarea
+        <Field label="Краткое описание" hint="Показывается в карточке проекта" required>
+          <LimitedTextarea
             className={textareaClass}
             defaultValue={project?.shortDescription}
+            maxLength={fieldLimits.project.shortDescription.max}
+            minLength={fieldLimits.project.shortDescription.min}
             name="shortDescription"
             placeholder="Коротко о задаче и результате"
+            required
           />
         </Field>
-        <Field label="Полное описание" hint="Текст внутри страницы кейса">
-          <textarea
+        <Field label="Полное описание" hint="Текст внутри страницы кейса" required>
+          <LimitedTextarea
             className={`${textareaClass} min-h-44`}
             defaultValue={project?.fullDescription}
+            maxLength={fieldLimits.project.fullDescription.max}
+            minLength={fieldLimits.project.fullDescription.min}
             name="fullDescription"
             placeholder="Опишите задачу, решение и итог проекта"
+            required
           />
         </Field>
         <div className="grid gap-4 md:grid-cols-2">
@@ -134,9 +157,10 @@ function ProjectForm({
             </select>
           </Field>
           <Field label="Внешняя ссылка на обложку" hint="Необязательно, если выбрана обложка из медиатеки">
-            <input
+            <LimitedInput
               className={inputClass}
               defaultValue={manualCoverUrl}
+              maxLength={fieldLimits.project.coverImageUrl.max}
               name="coverImageUrl"
               placeholder="https://..."
             />

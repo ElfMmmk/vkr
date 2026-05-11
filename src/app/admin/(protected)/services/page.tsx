@@ -2,9 +2,11 @@ import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminServiceOrderForm } from "@/components/admin-service-order-form";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
+import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteServiceAction, saveServiceAction } from "@/lib/actions/admin";
 import { requireAdmin } from "@/lib/auth";
 import { listAdminServices } from "@/lib/data/admin";
+import { fieldLimits } from "@/lib/field-limits";
 import type { Service } from "@/lib/types";
 
 function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boolean }) {
@@ -14,28 +16,47 @@ function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boole
         <input name="id" type="hidden" value={service?.id ?? ""} />
         <input name="displayOrder" type="hidden" value={service?.displayOrder ?? ""} />
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название">
-            <input className={inputClass} defaultValue={service?.title} name="title" placeholder="Айдентика бренда" />
+          <Field label="Название" required>
+            <LimitedInput
+              className={inputClass}
+              defaultValue={service?.title}
+              maxLength={fieldLimits.service.title.max}
+              minLength={fieldLimits.service.title.min}
+              name="title"
+              placeholder="Айдентика бренда"
+              required
+            />
           </Field>
           <Field
             label="Адрес в ссылке"
             hint="Можно оставить пустым: адрес создастся автоматически из названия"
           >
-            <input className={inputClass} defaultValue={service?.slug} name="slug" placeholder="brand-identity" />
+            <LimitedInput
+              className={inputClass}
+              defaultValue={service?.slug}
+              maxLength={fieldLimits.service.slug.max}
+              minLength={fieldLimits.service.slug.min}
+              name="slug"
+              placeholder="brand-identity"
+            />
           </Field>
         </div>
-        <Field label="Краткое описание" hint="Один-два предложения для карточки услуги">
-          <textarea
+        <Field label="Краткое описание" hint="Один-два предложения для карточки услуги" required>
+          <LimitedTextarea
             className={textareaClass}
             defaultValue={service?.description}
+            maxLength={fieldLimits.service.description.max}
+            minLength={fieldLimits.service.description.min}
             name="description"
             placeholder="Кратко опишите результат и задачи, для которых подходит услуга"
+            required
           />
         </Field>
         <Field label="Состав работы" hint="Дополнительные условия, состав работ или важные ограничения">
-          <textarea
+          <LimitedTextarea
             className={textareaClass}
             defaultValue={service?.details}
+            maxLength={fieldLimits.service.details.max}
             name="details"
             placeholder="Например: логотип, палитра, шрифтовая пара, правила применения"
           />

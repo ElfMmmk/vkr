@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 
 import { submitOrderAction, type OrderFormState } from "@/app/order/actions";
 import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
+import { CharacterCount, LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import { fieldLimits } from "@/lib/field-limits";
 import type { Service } from "@/lib/types";
 
 const contactPlaceholders: Record<string, string> = {
@@ -56,6 +58,7 @@ function ServiceCombobox({
   onTitleChange: (value: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const serviceInputRef = useRef<HTMLInputElement>(null);
   const visibleServices = useMemo(() => {
     const query = serviceTitle.trim().toLowerCase();
 
@@ -66,6 +69,12 @@ function ServiceCombobox({
     return services.filter((service) => service.title.toLowerCase().includes(query));
   }, [serviceTitle, services]);
 
+  useEffect(() => {
+    serviceInputRef.current?.setCustomValidity(
+      selectedServiceId ? "" : "Выберите услугу из списка"
+    );
+  }, [selectedServiceId]);
+
   return (
     <div className="relative">
       <input name="serviceId" type="hidden" value={selectedServiceId} />
@@ -74,6 +83,7 @@ function ServiceCombobox({
         aria-autocomplete="list"
         aria-expanded={isOpen}
         className={`${inputClass}${invalidClass(hasError)}`}
+        maxLength={fieldLimits.order.serviceTitle.max}
         onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
         onChange={(event) => {
           onTitleChange(event.target.value);
@@ -81,6 +91,8 @@ function ServiceCombobox({
         }}
         onFocus={() => setIsOpen(true)}
         placeholder="Начните вводить название услуги"
+        ref={serviceInputRef}
+        required
         role="combobox"
         type="text"
         value={serviceTitle}
@@ -108,6 +120,10 @@ function ServiceCombobox({
           )}
         </div>
       ) : null}
+      <CharacterCount
+        max={fieldLimits.order.serviceTitle.max}
+        value={serviceTitle}
+      />
     </div>
   );
 }
@@ -151,10 +167,14 @@ export function OrderForm({
         Website
         <input autoComplete="off" name="website" tabIndex={-1} type="text" />
       </label>
-      <Field label="Имя">
-        <input
+      <Field label="Имя" required>
+        <LimitedInput
+          aria-invalid={Boolean(state.fieldErrors?.clientName) || undefined}
           className={`${inputClass}${invalidClass(Boolean(state.fieldErrors?.clientName))}`}
+          maxLength={fieldLimits.order.clientName.max}
+          minLength={fieldLimits.order.clientName.min}
           name="clientName"
+          required
           onChange={(event) => setClientName(event.target.value)}
           placeholder="Как к вам обращаться"
           value={clientName}
@@ -162,7 +182,7 @@ export function OrderForm({
         <FieldError errors={state.fieldErrors?.clientName} />
       </Field>
       <div className="grid gap-5 md:grid-cols-2">
-        <Field label="Способ связи">
+        <Field label="Способ связи" required>
           <select
             className={`${selectClass}${invalidClass(Boolean(state.fieldErrors?.contactMethod))}`}
             name="contactMethod"
@@ -170,6 +190,7 @@ export function OrderForm({
               setContactMethod(event.target.value);
               setContactValue("");
             }}
+            required
             value={contactMethod}
           >
             <option>Telegram</option>
@@ -179,18 +200,23 @@ export function OrderForm({
           </select>
           <FieldError errors={state.fieldErrors?.contactMethod} />
         </Field>
-        <Field label="Контакт">
-          <input
+        <Field label="Контакт" required>
+          <LimitedInput
+            aria-invalid={Boolean(state.fieldErrors?.contactValue) || undefined}
             className={`${inputClass}${invalidClass(Boolean(state.fieldErrors?.contactValue))}`}
+            maxLength={fieldLimits.order.contactValue.max}
+            minLength={fieldLimits.order.contactValue.min}
             name="contactValue"
             onChange={(event) => setContactValue(event.target.value)}
             placeholder={contactPlaceholders[contactMethod]}
+            required
+            type={contactMethod === "Email" ? "email" : "text"}
             value={contactValue}
           />
           <FieldError errors={state.fieldErrors?.contactValue} />
         </Field>
       </div>
-      <Field label="Услуга">
+      <Field label="Услуга" required>
         <ServiceCombobox
           hasError={Boolean(state.fieldErrors?.serviceId)}
           onSelect={(service) => {
@@ -207,12 +233,16 @@ export function OrderForm({
         />
         <FieldError errors={state.fieldErrors?.serviceId} />
       </Field>
-      <Field label="Краткое описание задачи">
-        <textarea
+      <Field label="Краткое описание задачи" required>
+        <LimitedTextarea
+          aria-invalid={Boolean(state.fieldErrors?.comment) || undefined}
           className={`${textareaClass}${invalidClass(Boolean(state.fieldErrors?.comment))}`}
+          maxLength={fieldLimits.order.comment.max}
+          minLength={fieldLimits.order.comment.min}
           name="comment"
           onChange={(event) => setComment(event.target.value)}
           placeholder="Расскажите, что нужно сделать, какие есть сроки и материалы"
+          required
           value={comment}
         />
         <FieldError errors={state.fieldErrors?.comment} />

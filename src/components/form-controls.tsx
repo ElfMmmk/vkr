@@ -2,12 +2,21 @@ type FieldProps = {
   label: string;
   children: React.ReactNode;
   hint?: string;
+  required?: boolean;
 };
 
-export function Field({ label, children, hint }: FieldProps) {
+export function Field({ label, children, hint, required = false }: FieldProps) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-ink">{label}</span>
+      <span className="mb-2 block text-sm font-semibold text-ink">
+        {label}
+        {required ? (
+          <>
+            <span aria-hidden="true" className="text-accent"> *</span>
+            <span className="sr-only">, обязательное поле</span>
+          </>
+        ) : null}
+      </span>
       {children}
       {hint ? <span className="mt-2 block text-xs leading-5 text-muted">{hint}</span> : null}
     </label>

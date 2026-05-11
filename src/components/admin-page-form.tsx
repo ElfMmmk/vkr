@@ -7,6 +7,8 @@ import { savePageStateAction, type AdminFormState } from "@/lib/actions/admin";
 import type { PageContent } from "@/lib/types";
 import { AdminFormFieldset, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
+import { CharacterCount, LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import { fieldLimits } from "@/lib/field-limits";
 
 type BlockRow = {
   id: string;
@@ -53,17 +55,40 @@ export function AdminPageForm({
 
     return JSON.stringify(payload);
   }, [blocks]);
+  const isBlocksTooLong = blocksJson.length > fieldLimits.page.blocks.max;
 
   return (
-    <form action={formAction} className="grid gap-4">
+    <form
+      action={formAction}
+      className="grid gap-4"
+      onSubmit={(event) => {
+        if (isBlocksTooLong) {
+          event.preventDefault();
+        }
+      }}
+    >
       <AdminFormFieldset canWrite={canWrite}>
         <input name="pageKey" type="hidden" value={page.pageKey} />
         <input name="blocks" type="hidden" value={blocksJson} />
-        <Field label="Заголовок">
-          <input className={inputClass} defaultValue={page.title} name="title" />
+        <Field label="Заголовок" required>
+          <LimitedInput
+            className={inputClass}
+            defaultValue={page.title}
+            maxLength={fieldLimits.page.title.max}
+            minLength={fieldLimits.page.title.min}
+            name="title"
+            required
+          />
         </Field>
-        <Field label="Основной текст">
-          <textarea className={textareaClass} defaultValue={page.body} name="body" />
+        <Field label="Основной текст" required>
+          <LimitedTextarea
+            className={textareaClass}
+            defaultValue={page.body}
+            maxLength={fieldLimits.page.body.max}
+            minLength={fieldLimits.page.body.min}
+            name="body"
+            required
+          />
         </Field>
         <div className="grid gap-3">
           <div>
@@ -74,24 +99,30 @@ export function AdminPageForm({
           </div>
           {blocks.map((block) => (
             <div className="grid gap-3 border border-line bg-paper p-3 md:grid-cols-[220px_minmax(0,1fr)_auto]" key={block.id}>
-              <input
-                className={inputClass}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setBlocks((current) => current.map((item) => item.id === block.id ? { ...item, key: value } : item));
-                }}
-                placeholder="Название блока"
-                value={block.key}
-              />
-              <input
-                className={inputClass}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setBlocks((current) => current.map((item) => item.id === block.id ? { ...item, value } : item));
-                }}
-                placeholder="Текст блока"
-                value={block.value}
-              />
+              <div>
+                <LimitedInput
+                  className={inputClass}
+                  maxLength={fieldLimits.pageBlock.key.max}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setBlocks((current) => current.map((item) => item.id === block.id ? { ...item, key: value } : item));
+                  }}
+                  placeholder="Название блока"
+                  value={block.key}
+                />
+              </div>
+              <div>
+                <LimitedInput
+                  className={inputClass}
+                  maxLength={fieldLimits.pageBlock.value.max}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setBlocks((current) => current.map((item) => item.id === block.id ? { ...item, value } : item));
+                  }}
+                  placeholder="Текст блока"
+                  value={block.value}
+                />
+              </div>
               <button
                 aria-label="Удалить раздел"
                 className="focus-ring inline-grid min-h-11 place-items-center border border-line bg-white px-3 text-ink transition hover:border-accent hover:text-accent active:translate-y-px"
@@ -102,6 +133,16 @@ export function AdminPageForm({
               </button>
             </div>
           ))}
+          <CharacterCount
+            className={isBlocksTooLong ? "font-semibold" : undefined}
+            max={fieldLimits.page.blocks.max}
+            value={blocksJson}
+          />
+          {isBlocksTooLong ? (
+            <p className="text-sm text-accent">
+              Дополнительные разделы слишком длинные. Сократите текст перед сохранением.
+            </p>
+          ) : null}
           <button
             className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 border border-line bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
             onClick={() => setBlocks((current) => [...current, createBlockRow()])}
@@ -116,7 +157,7 @@ export function AdminPageForm({
             {state.message}
           </div>
         ) : null}
-        <button className={adminPrimaryButtonClass}>Сохранить страницу</button>
+        <button className={adminPrimaryButtonClass} disabled={isBlocksTooLong}>Сохранить страницу</button>
       </AdminFormFieldset>
     </form>
   );

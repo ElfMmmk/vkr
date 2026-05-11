@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { clearPreviewAdminSession, requireWritableAdmin } from "@/lib/auth";
+import { fieldLimits } from "@/lib/field-limits";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { createSlug } from "@/lib/slug";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
@@ -14,6 +15,7 @@ import {
   validatePortfolioImageUpload
 } from "@/lib/uploads";
 import {
+  imageUploadSchema,
   pageSchema,
   pageKeySchema,
   projectSchema,
@@ -573,9 +575,20 @@ export async function uploadImageAction(
     };
   }
 
-  const title = formString(formData, "title") || file.name.replace(/\.[^.]+$/, "");
-  const caption = formString(formData, "caption");
-  const sortOrder = Number(formString(formData, "sortOrder") || "100");
+  const parsed = imageUploadSchema.safeParse({
+    title: formString(formData, "title"),
+    caption: formString(formData, "caption"),
+    sortOrder: formString(formData, "sortOrder") || "100"
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Проверьте поля изображения"
+    };
+  }
+
+  const title = parsed.data.title || file.name.replace(/\.[^.]+$/, "").slice(0, fieldLimits.image.title.max);
   const extension = getPortfolioImageExtension(file);
   const safeName = `${randomUUID()}.${extension}`;
   const storagePath = `uploads/${safeName}`;
@@ -613,8 +626,8 @@ export async function uploadImageAction(
     title,
     parent_type: "free",
     parent_id: null,
-    caption,
-    sort_order: Number.isFinite(sortOrder) ? sortOrder : 100
+    caption: parsed.data.caption,
+    sort_order: parsed.data.sortOrder
   });
 
   if (error) {

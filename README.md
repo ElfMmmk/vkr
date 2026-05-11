@@ -60,6 +60,8 @@ For uploaded portfolio images, the app keeps a server-side 10 MB limit and accep
 
 Legacy Supabase key names are still supported as fallback: `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Prefer the newer `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`.
 
+The SQL patch `supabase/patch-2026-05-11-ui-security-code-audit.sql` has been applied to the hosted `vkr-portfolio` Supabase project on 2026-05-12.
+
 ## Checks
 
 ```bash

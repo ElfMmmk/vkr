@@ -142,14 +142,29 @@ test("project page has breadcrumbs and gallery slider", async ({ page }) => {
   }
 });
 
-test("order form validates empty submissions after anti-spam timestamp", async ({ page }) => {
+test("order form blocks empty submissions with browser field validation", async ({ page }) => {
   await page.goto("/order");
-  await page.locator('input[name="formStartedAt"]').evaluate((element) => {
-    (element as HTMLInputElement).value = String(Date.now() - 3000);
-  });
 
   await page.getByRole("button", { name: "Отправить заявку" }).click();
-  await expect(page.getByText("Заполните обязательные поля")).toBeVisible();
+  const clientNameState = await page.locator('input[name="clientName"]').evaluate((element) => {
+    const input = element as HTMLInputElement;
+
+    return {
+      maxLength: input.maxLength,
+      minLength: input.minLength,
+      required: input.required,
+      valueMissing: input.validity.valueMissing
+    };
+  });
+
+  expect(clientNameState).toEqual({
+    maxLength: 120,
+    minLength: 2,
+    required: true,
+    valueMissing: true
+  });
+  await expect(page.getByText("0 / 120, минимум 2")).toBeVisible();
+  await expect(page.getByText("Заполните обязательные поля")).toHaveCount(0);
 });
 
 test("public routes send baseline security headers", async ({ page }) => {

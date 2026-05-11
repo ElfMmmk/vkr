@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 
 import { loginAction, previewLoginAction, type LoginState } from "@/app/admin/login/actions";
 import { Field, inputClass } from "@/components/form-controls";
+import { LimitedInput } from "@/components/limited-text-control";
+import { fieldLimits } from "@/lib/field-limits";
 
 function LoginButton() {
   const { pending } = useFormStatus();
@@ -26,11 +28,26 @@ export function LoginForm({ previewEnabled }: { previewEnabled: boolean }) {
   return (
     <div className="space-y-5">
       <form action={formAction} className="space-y-5">
-        <Field label="Email администратора">
-          <input className={inputClass} name="email" type="email" />
+        <Field label="Email администратора" required>
+          <LimitedInput
+            autoComplete="email"
+            className={inputClass}
+            maxLength={fieldLimits.login.email.max}
+            name="email"
+            required
+            type="email"
+          />
         </Field>
-        <Field label="Пароль">
-          <input className={inputClass} name="password" type="password" />
+        <Field label="Пароль" required>
+          <LimitedInput
+            autoComplete="current-password"
+            className={inputClass}
+            maxLength={fieldLimits.login.password.max}
+            minLength={fieldLimits.login.password.min}
+            name="password"
+            required
+            type="password"
+          />
         </Field>
         {state.message ? (
           <div className="border border-accent/30 bg-accent/10 px-4 py-3 text-sm leading-6 text-accent">
