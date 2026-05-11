@@ -171,5 +171,5 @@ drop policy if exists "Public can submit requests" on public.requests;
 create policy "Public can submit requests" on public.requests
 for insert with check (status = 'new');
 
--- Admin writes are performed by the server-side Supabase service-role client.
+-- Admin writes are performed by the server-side Supabase secret/service-role client.
 -- Create a public storage bucket named `portfolio-images` in Supabase Storage.

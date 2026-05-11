@@ -4,30 +4,47 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let adminClient: SupabaseClient | null = null;
 
-export function hasSupabasePublicEnv(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+function getSupabaseUrl(): string | null {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || null;
+}
+
+function getSupabasePublicKey(): string | null {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    null
   );
+}
+
+function getSupabaseSecretKey(): string | null {
+  return (
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    null
+  );
+}
+
+export function hasSupabasePublicEnv(): boolean {
+  return Boolean(getSupabaseUrl() && getSupabasePublicKey());
 }
 
 export function hasSupabaseAdminEnv(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+  return Boolean(getSupabaseUrl() && getSupabaseSecretKey());
 }
 
 export async function createSupabaseServerClient(): Promise<SupabaseClient | null> {
-  if (!hasSupabasePublicEnv()) {
+  const supabaseUrl = getSupabaseUrl();
+  const publicKey = getSupabasePublicKey();
+
+  if (!supabaseUrl || !publicKey) {
     return null;
   }
 
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    publicKey,
     {
       cookies: {
         getAll() {
@@ -48,14 +65,17 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient | nul
 }
 
 export function getOptionalSupabaseAdmin(): SupabaseClient | null {
-  if (!hasSupabaseAdminEnv()) {
+  const supabaseUrl = getSupabaseUrl();
+  const secretKey = getSupabaseSecretKey();
+
+  if (!supabaseUrl || !secretKey) {
     return null;
   }
 
   if (!adminClient) {
     adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      supabaseUrl,
+      secretKey,
       {
         auth: {
           persistSession: false,
@@ -73,7 +93,7 @@ export function getSupabaseAdminOrThrow(): SupabaseClient {
 
   if (!client) {
     throw new Error(
-      "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+      "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY."
     );
   }
 

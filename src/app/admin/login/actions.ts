@@ -32,7 +32,7 @@ export async function loginAction(
   if (!hasSupabasePublicEnv() || !getAdminEmail()) {
     return {
       message:
-        "Админка требует NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY и ADMIN_EMAIL."
+        "Админка требует NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY и ADMIN_EMAIL."
     };
   }
 

@@ -5,6 +5,11 @@ import { demoProjects } from "@/lib/demo-data";
 import { isRequestStatus } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
 import {
+  MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES,
+  getPortfolioImageExtension,
+  validatePortfolioImageUpload
+} from "@/lib/uploads";
+import {
   imageParentTypeSchema,
   orderRequestSchema,
   pageKeySchema
@@ -57,5 +62,30 @@ describe("validation helpers", () => {
 
     expect(brandProjects.map((project) => project.slug)).toContain("botanica-lab");
     expect(digitalProjects.every((project) => project.tags.some((tag) => tag.slug === "digital"))).toBe(true);
+  });
+
+  it("keeps portfolio image uploads within free plan constraints", () => {
+    expect(
+      validatePortfolioImageUpload({
+        name: "cover.webp",
+        size: 1024,
+        type: "image/webp"
+      })
+    ).toBeNull();
+    expect(
+      validatePortfolioImageUpload({
+        name: "cover.svg",
+        size: 1024,
+        type: "image/svg+xml"
+      })
+    ).toContain("JPEG");
+    expect(
+      validatePortfolioImageUpload({
+        name: "cover.jpg",
+        size: MAX_PORTFOLIO_IMAGE_UPLOAD_BYTES + 1,
+        type: "image/jpeg"
+      })
+    ).toContain("10 МБ");
+    expect(getPortfolioImageExtension({ name: "cover.jpeg", size: 1024, type: "image/jpeg" })).toBe("jpg");
   });
 });

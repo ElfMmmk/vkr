@@ -22,11 +22,16 @@ export default async function AdminImagesPage() {
         <p className="text-sm uppercase tracking-[0.18em] text-muted">Медиа</p>
         <h1 className="mt-2 text-4xl font-semibold">Изображения</h1>
       </div>
-      <AdminCard title="Загрузить изображение" description="Файл попадёт в Supabase Storage bucket `portfolio-images`, а связь сохранится в таблице images.">
+      <AdminCard title="Загрузить изображение" description="Файл попадёт в Supabase Storage bucket `portfolio-images`, а связь сохранится в таблице images. В Free plan принимаем JPEG, PNG, WebP, GIF или AVIF до 10 МБ.">
         <form action={uploadImageAction} className="grid gap-4">
           <AdminFormFieldset canWrite={admin.canWrite}>
-            <Field label="Файл">
-              <input className={inputClass} name="file" type="file" />
+            <Field label="Файл" hint="Без платных трансформаций изображений: загружайте уже подготовленные portfolio-файлы.">
+              <input
+                accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+                className={inputClass}
+                name="file"
+                type="file"
+              />
             </Field>
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="Тип привязки">

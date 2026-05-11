@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
         </p>
         {!setupReady ? (
           <div className="mt-6 border border-accent/30 bg-accent/10 p-4 text-sm leading-6 text-accent">
-            Для входа настройте Supabase URL, anon key и ADMIN_EMAIL в `.env.local`.
+            Для входа настройте Supabase URL, publishable key и ADMIN_EMAIL в `.env.local`.
           </div>
         ) : null}
         <div className="mt-8">

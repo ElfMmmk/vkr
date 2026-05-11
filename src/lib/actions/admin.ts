@@ -7,6 +7,7 @@ import { clearPreviewAdminSession, requireWritableAdmin } from "@/lib/auth";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { createSlug } from "@/lib/slug";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
+import { getPortfolioImageExtension, validatePortfolioImageUpload } from "@/lib/uploads";
 import {
   pageSchema,
   pageKeySchema,
@@ -310,11 +311,17 @@ export async function uploadImageAction(formData: FormData): Promise<void> {
     throw new Error("Choose an image file.");
   }
 
+  const uploadValidationError = validatePortfolioImageUpload(file);
+
+  if (uploadValidationError) {
+    throw new Error(uploadValidationError);
+  }
+
   const parentType = imageParentTypeSchema.parse(formString(formData, "parentType") || "free");
   const parentId = cleanId(formString(formData, "parentId"));
   const caption = formString(formData, "caption");
   const sortOrder = Number(formString(formData, "sortOrder") || "100");
-  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const extension = getPortfolioImageExtension(file);
   const safeName = `${Date.now()}-${createSlug(file.name.replace(/\.[^.]+$/, ""))}.${extension}`;
   const storagePath = `uploads/${safeName}`;
   const bytes = await file.arrayBuffer();

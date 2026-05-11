@@ -21,9 +21,9 @@ Create `.env.local` from `.env.example`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_EMAIL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+ADMIN_EMAIL=formaxmos@gmail.com
 ```
 
 Run the app:
@@ -47,12 +47,18 @@ Then run `npm run dev`, open `/admin/login`, and choose `Войти в demo admi
 
 ## Supabase
 
-1. Create a Supabase project.
+The target demo setup uses Supabase Free plan: 500 MB database, 1 GB file storage, 5 GB egress, and up to 2 active free projects. Free projects can pause after 1 week of inactivity, so open the Supabase dashboard before a demo if the project has been idle.
+
+1. Create a Supabase project named `vkr-portfolio` on Free plan in `Europe / Central EU (Frankfurt)`.
 2. Run `supabase/schema.sql`.
 3. Run `supabase/seed.sql`.
 4. Create a public Storage bucket named `portfolio-images`.
-5. Create one Auth user for the administrator.
-6. Add environment variables locally and in Vercel.
+5. Create one Auth user for `formaxmos@gmail.com`.
+6. Copy the project URL, publishable key, and secret key into `.env.local` and later into Vercel environment variables.
+
+For uploaded portfolio images, the app keeps a server-side 10 MB limit and accepts JPEG, PNG, WebP, GIF, and AVIF. Do not enable paid Storage Image Transformations for the Free plan demo.
+
+Legacy Supabase key names are still supported as fallback: `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Prefer the newer `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`.
 
 ## Checks
 
