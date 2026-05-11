@@ -29,6 +29,7 @@ export type ImageRow = {
   id: string;
   storage_path: string;
   public_url: string | null;
+  title?: string | null;
   caption: string | null;
   parent_type: "project" | "page" | "service" | "free";
   parent_id: string | null;
@@ -98,6 +99,7 @@ export function mapImage(row: ImageRow): PortfolioImage {
     id: row.id,
     storagePath: row.storage_path,
     publicUrl: row.public_url ?? "",
+    title: row.title ?? "",
     caption: row.caption ?? "",
     parentType: row.parent_type,
     parentId: row.parent_id,
@@ -143,6 +145,25 @@ export function mapProject(row: ProjectRow): Project {
         .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100))
         .map(mapImage) ?? []
   };
+}
+
+export function attachProjectImages(rows: ProjectRow[], images: ImageRow[]): ProjectRow[] {
+  const imagesByProjectId = new Map<string, ImageRow[]>();
+
+  for (const image of images) {
+    if (image.parent_type !== "project" || !image.parent_id) {
+      continue;
+    }
+
+    const existing = imagesByProjectId.get(image.parent_id) ?? [];
+    existing.push(image);
+    imagesByProjectId.set(image.parent_id, existing);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    images: imagesByProjectId.get(row.id) ?? []
+  }));
 }
 
 export function mapRequest(row: RequestRow): OrderRequest {

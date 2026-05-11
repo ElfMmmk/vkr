@@ -12,13 +12,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
     <article className="group">
       <Link className="focus-ring block" href={`/portfolio/${project.slug}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-line">
-          <Image
-            alt={project.title}
-            className="object-cover transition duration-700 group-hover:scale-105"
-            fill
-            sizes="(min-width: 900px) 33vw, 100vw"
-            src={project.coverImageUrl}
-          />
+          {project.coverImageUrl ? (
+            <Image
+              alt={project.title}
+              className="object-cover transition duration-700 group-hover:scale-105"
+              fill
+              sizes="(min-width: 900px) 33vw, 100vw"
+              src={project.coverImageUrl}
+            />
+          ) : (
+            <div className="grid h-full place-items-center px-4 text-center text-sm text-muted">
+              Обложка пока не добавлена
+            </div>
+          )}
         </div>
         <div className="mt-5 flex items-start justify-between gap-5 border-t border-line pt-4">
           <div>

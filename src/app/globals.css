@@ -47,12 +47,12 @@ img {
 }
 
 .focus-ring {
-  outline: 2px solid transparent;
-  outline-offset: 3px;
+  outline: none;
 }
 
 .focus-ring:focus-visible {
-  outline-color: #234f9b;
+  outline: 2px solid rgba(35, 79, 155, 0.45);
+  outline-offset: 3px;
 }
 
 .admin-grid {

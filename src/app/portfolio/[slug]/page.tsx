@@ -66,14 +66,20 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             </div>
           </div>
           <div className="relative aspect-[4/3] overflow-hidden bg-line shadow-soft">
-            <Image
-              alt={project.title}
-              className="object-cover"
-              fill
-              priority
-              sizes="(min-width: 900px) 54vw, 100vw"
-              src={project.coverImageUrl}
-            />
+            {project.coverImageUrl ? (
+              <Image
+                alt={project.title}
+                className="object-cover"
+                fill
+                priority
+                sizes="(min-width: 900px) 54vw, 100vw"
+                src={project.coverImageUrl}
+              />
+            ) : (
+              <div className="grid h-full place-items-center px-6 text-center text-sm text-muted">
+                Обложка проекта пока не добавлена.
+              </div>
+            )}
           </div>
         </section>
         <section className="border-y border-line bg-white py-16">
@@ -95,7 +101,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               .map((imageUrl, index) => ({
                 src: imageUrl,
                 alt: `${project.title}, изображение ${index + 1}`,
-                caption: index === 0 ? project.title : project.gallery[index - 1]?.caption
+                caption:
+                  index === 0
+                    ? project.title
+                    : project.gallery[index - 1]?.caption || project.gallery[index - 1]?.title
               }))}
           />
         </section>

@@ -14,16 +14,38 @@ import {
   projectSchema,
   requestStatusSchema,
   serviceSchema,
-  tagSchema,
-  imageParentTypeSchema
+  tagSchema
 } from "@/lib/validation";
+
+export type UploadImageState = {
+  ok: boolean;
+  message: string;
+};
 
 function cleanId(value: string): string | null {
   return value.trim() || null;
 }
 
+function getMutationErrorMessage(error: unknown, fallback = "Mutation failed"): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const parts = [record.message, record.details, record.hint]
+      .filter((part): part is string => typeof part === "string" && part.trim().length > 0);
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+  }
+
+  return fallback;
+}
+
 function mutationError(error: unknown): never {
-  const message = error instanceof Error ? error.message : "Unknown mutation error";
+  const message = getMutationErrorMessage(error, "Unknown mutation error");
   throw new Error(message);
 }
 
@@ -145,12 +167,32 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
   const id = cleanId(formString(formData, "id"));
   const serviceIds = formStringArray(formData, "serviceIds");
   const tagIds = formStringArray(formData, "tagIds");
+  const galleryImageIds = formStringArray(formData, "galleryImageIds")
+    .map(cleanId)
+    .filter((imageId): imageId is string => Boolean(imageId));
+  const coverImageId = cleanId(formString(formData, "coverImageId"));
+  let coverImageUrl = formString(formData, "coverImageUrl");
+
+  if (!coverImageUrl && coverImageId) {
+    const { data, error } = await client
+      .from("images")
+      .select("public_url")
+      .eq("id", coverImageId)
+      .maybeSingle();
+
+    if (error) {
+      mutationError(error);
+    }
+
+    coverImageUrl = typeof data?.public_url === "string" ? data.public_url : "";
+  }
+
   const parsed = projectSchema.parse({
     title: formString(formData, "title"),
     slug: formString(formData, "slug") || createSlug(formString(formData, "title")),
     shortDescription: formString(formData, "shortDescription"),
     fullDescription: formString(formData, "fullDescription"),
-    coverImageUrl: formString(formData, "coverImageUrl"),
+    coverImageUrl,
     isPublished: formBoolean(formData, "isPublished")
   });
 
@@ -173,8 +215,18 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
 
   const projectId = result.data.id as string;
 
-  await client.from("project_services").delete().eq("project_id", projectId);
-  await client.from("project_tags").delete().eq("project_id", projectId);
+  const { error: deleteServicesError } = await client
+    .from("project_services")
+    .delete()
+    .eq("project_id", projectId);
+  const { error: deleteTagsError } = await client
+    .from("project_tags")
+    .delete()
+    .eq("project_id", projectId);
+
+  if (deleteServicesError || deleteTagsError) {
+    mutationError(deleteServicesError ?? deleteTagsError);
+  }
 
   if (serviceIds.length > 0) {
     const { error } = await client.from("project_services").insert(
@@ -202,25 +254,62 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     }
   }
 
+  const selectedImageIds = new Set(galleryImageIds);
+  const { error: detachImagesError } = await client
+    .from("images")
+    .update({ parent_type: "free", parent_id: null })
+    .eq("parent_type", "project")
+    .eq("parent_id", projectId);
+
+  if (detachImagesError) {
+    mutationError(detachImagesError);
+  }
+
+  const imageIds = Array.from(selectedImageIds);
+
+  if (imageIds.length > 0) {
+    const { error } = await client
+      .from("images")
+      .update({ parent_type: "project", parent_id: projectId })
+      .in("id", imageIds);
+
+    if (error) {
+      mutationError(error);
+    }
+  }
+
   revalidatePath("/admin/projects");
+  revalidatePath("/admin/images");
   revalidatePath("/portfolio");
 }
 
 export async function deleteProjectAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
     return;
   }
 
-  const { error } = await getSupabaseAdminOrThrow().from("projects").delete().eq("id", id);
+  const { error: detachImagesError } = await client
+    .from("images")
+    .update({ parent_type: "free", parent_id: null })
+    .eq("parent_type", "project")
+    .eq("parent_id", id);
+
+  if (detachImagesError) {
+    mutationError(detachImagesError);
+  }
+
+  const { error } = await client.from("projects").delete().eq("id", id);
 
   if (error) {
     mutationError(error);
   }
 
   revalidatePath("/admin/projects");
+  revalidatePath("/admin/images");
   revalidatePath("/portfolio");
 }
 
@@ -302,23 +391,31 @@ export async function deleteRequestAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/requests");
 }
 
-export async function uploadImageAction(formData: FormData): Promise<void> {
+export async function uploadImageAction(
+  _previousState: UploadImageState,
+  formData: FormData
+): Promise<UploadImageState> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Choose an image file.");
+    return {
+      ok: false,
+      message: "Выберите изображение."
+    };
   }
 
   const uploadValidationError = validatePortfolioImageUpload(file);
 
   if (uploadValidationError) {
-    throw new Error(uploadValidationError);
+    return {
+      ok: false,
+      message: uploadValidationError
+    };
   }
 
-  const parentType = imageParentTypeSchema.parse(formString(formData, "parentType") || "free");
-  const parentId = cleanId(formString(formData, "parentId"));
+  const title = formString(formData, "title") || file.name.replace(/\.[^.]+$/, "");
   const caption = formString(formData, "caption");
   const sortOrder = Number(formString(formData, "sortOrder") || "100");
   const extension = getPortfolioImageExtension(file);
@@ -334,7 +431,10 @@ export async function uploadImageAction(formData: FormData): Promise<void> {
     });
 
   if (uploadError) {
-    mutationError(uploadError);
+    return {
+      ok: false,
+      message: `Не удалось загрузить файл: ${getMutationErrorMessage(uploadError)}`
+    };
   }
 
   const publicUrl = client.storage.from("portfolio-images").getPublicUrl(storagePath)
@@ -343,18 +443,30 @@ export async function uploadImageAction(formData: FormData): Promise<void> {
   const { error } = await client.from("images").insert({
     storage_path: storagePath,
     public_url: publicUrl,
-    parent_type: parentType,
-    parent_id: parentId,
+    title,
+    parent_type: "free",
+    parent_id: null,
     caption,
     sort_order: Number.isFinite(sortOrder) ? sortOrder : 100
   });
 
   if (error) {
-    mutationError(error);
+    await client.storage.from("portfolio-images").remove([storagePath]);
+
+    return {
+      ok: false,
+      message: `Файл загружен, но запись в медиатеке не сохранилась: ${getMutationErrorMessage(error)}`
+    };
   }
 
   revalidatePath("/admin/images");
+  revalidatePath("/admin/projects");
   revalidatePath("/portfolio");
+
+  return {
+    ok: true,
+    message: "Изображение загружено."
+  };
 }
 
 export async function deleteImageAction(formData: FormData): Promise<void> {

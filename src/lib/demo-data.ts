@@ -162,6 +162,7 @@ export const demoProjects: Project[] = [
         id: "image-frame-identity",
         storagePath: "",
         publicUrl: "/assets/botanica-lab-cover.png",
+        title: "Пример визуальной системы",
         caption: "Пример визуальной системы в другой пропорции",
         parentType: "project",
         parentId: "project-frame",

@@ -1,5 +1,6 @@
 import { demoPages, demoProjects, demoRequests, demoServices, demoTags } from "@/lib/demo-data";
 import {
+  attachProjectImages,
   mapImage,
   mapPage,
   mapProject,
@@ -86,14 +87,27 @@ export async function listAdminProjects(): Promise<Project[]> {
 
   const { data, error } = await client
     .from("projects")
-    .select("*, project_services(services(*)), project_tags(tags(*)), images(*)")
+    .select("*, project_services(services(*)), project_tags(tags(*))")
     .order("created_at", { ascending: false });
 
   if (error || !data) {
     return demoProjects;
   }
 
-  return (data as ProjectRow[]).map(mapProject);
+  const projectRows = data as ProjectRow[];
+  const projectIds = projectRows.map((project) => project.id);
+
+  if (!projectIds.length) {
+    return [];
+  }
+
+  const { data: imageData } = await client
+    .from("images")
+    .select("*")
+    .eq("parent_type", "project")
+    .in("parent_id", projectIds);
+
+  return attachProjectImages(projectRows, (imageData as ImageRow[] | null) ?? []).map(mapProject);
 }
 
 export async function listAdminImages(): Promise<PortfolioImage[]> {

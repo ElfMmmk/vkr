@@ -63,9 +63,12 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
                 <p className="text-muted">{request.comment}</p>
               </div>
               <div className="space-y-3">
-                <form action={updateRequestStatusAction} className="grid gap-3">
+                <form action={updateRequestStatusAction} className="grid gap-3" key={`${request.id}-${request.status}`}>
                   <AdminFormFieldset canWrite={admin.canWrite} className="grid gap-3">
                     <input name="id" type="hidden" value={request.id} />
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                      Текущий статус: {requestStatusLabels[request.status]}
+                    </p>
                     <select className={selectClass} defaultValue={request.status} name="status">
                       {requestStatuses.map((status) => (
                         <option key={status} value={status}>

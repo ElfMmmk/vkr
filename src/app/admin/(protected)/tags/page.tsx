@@ -13,14 +13,22 @@ function TagForm({ tag, canWrite }: { tag?: Tag; canWrite: boolean }) {
         <input name="id" type="hidden" value={tag?.id ?? ""} />
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Название">
-            <input className={inputClass} defaultValue={tag?.title} name="title" />
+            <input className={inputClass} defaultValue={tag?.title} name="title" placeholder="Брендинг" />
           </Field>
-          <Field label="Slug">
-            <input className={inputClass} defaultValue={tag?.slug} name="slug" />
+          <Field
+            label="Адрес в ссылке"
+            hint="Можно оставить пустым: адрес создастся автоматически из названия."
+          >
+            <input className={inputClass} defaultValue={tag?.slug} name="slug" placeholder="branding" />
           </Field>
         </div>
         <Field label="Описание">
-          <textarea className={textareaClass} defaultValue={tag?.description} name="description" />
+          <textarea
+            className={textareaClass}
+            defaultValue={tag?.description}
+            name="description"
+            placeholder="Короткое пояснение для внутренней навигации"
+          />
         </Field>
         <button className={adminPrimaryButtonClass}>{tag ? "Сохранить тег" : "Создать тег"}</button>
       </AdminFormFieldset>

@@ -37,6 +37,7 @@ export type PortfolioImage = {
   id: string;
   storagePath: string;
   publicUrl: string;
+  title: string;
   caption: string;
   parentType: "project" | "page" | "service" | "free";
   parentId: string | null;

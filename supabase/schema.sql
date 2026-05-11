@@ -59,6 +59,7 @@ create table if not exists public.images (
   id uuid primary key default gen_random_uuid(),
   storage_path text not null,
   public_url text not null default '',
+  title text not null default '',
   caption text not null default '',
   parent_type text not null check (parent_type in ('project', 'page', 'service', 'free')),
   parent_id uuid,
@@ -66,6 +67,8 @@ create table if not exists public.images (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.images add column if not exists title text not null default '';
 
 create table if not exists public.requests (
   id uuid primary key default gen_random_uuid(),
@@ -170,6 +173,26 @@ for select using (true);
 drop policy if exists "Public can submit requests" on public.requests;
 create policy "Public can submit requests" on public.requests
 for insert with check (status = 'new');
+
+grant usage on schema public to anon, authenticated, service_role;
+
+grant select on public.pages to anon, authenticated;
+grant select on public.services to anon, authenticated;
+grant select on public.tags to anon, authenticated;
+grant select on public.projects to anon, authenticated;
+grant select on public.project_services to anon, authenticated;
+grant select on public.project_tags to anon, authenticated;
+grant select on public.images to anon, authenticated;
+grant insert on public.requests to anon, authenticated;
+
+grant all privileges on public.pages to service_role;
+grant all privileges on public.services to service_role;
+grant all privileges on public.tags to service_role;
+grant all privileges on public.projects to service_role;
+grant all privileges on public.project_services to service_role;
+grant all privileges on public.project_tags to service_role;
+grant all privileges on public.images to service_role;
+grant all privileges on public.requests to service_role;
 
 -- Admin writes are performed by the server-side Supabase secret/service-role client.
 -- Create a public storage bucket named `portfolio-images` in Supabase Storage.

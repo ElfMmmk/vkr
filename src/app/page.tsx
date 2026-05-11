@@ -47,7 +47,7 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="relative min-h-[520px] overflow-hidden bg-line shadow-soft">
-            {featured[0] ? (
+            {featured[0]?.coverImageUrl ? (
               <Image
                 alt={featured[0].title}
                 className="object-cover"
@@ -56,7 +56,11 @@ export default async function HomePage() {
                 sizes="(min-width: 900px) 52vw, 100vw"
                 src={featured[0].coverImageUrl}
               />
-            ) : null}
+            ) : (
+              <div className="grid h-full min-h-[520px] place-items-center px-6 text-center text-sm text-muted">
+                Обложка проекта пока не добавлена.
+              </div>
+            )}
             <div className="absolute bottom-0 left-0 right-0 bg-ink/82 p-6 text-white backdrop-blur">
               <p className="text-sm uppercase tracking-[0.16em] text-white/65">Featured case</p>
               <p className="mt-2 text-2xl font-semibold">{featured[0]?.title ?? "Portfolio"}</p>

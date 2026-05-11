@@ -57,7 +57,7 @@ export const projectSchema = z.object({
   slug: z.string().trim().min(2).max(200),
   shortDescription: z.string().trim().min(5).max(500),
   fullDescription: z.string().trim().min(20).max(6000),
-  coverImageUrl: z.string().trim().min(5).max(1200),
+  coverImageUrl: z.string().trim().max(1200).default(""),
   isPublished: z.boolean()
 });
 

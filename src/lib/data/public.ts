@@ -5,10 +5,12 @@ import {
   demoTags
 } from "@/lib/demo-data";
 import {
+  attachProjectImages,
   mapPage,
   mapProject,
   mapService,
   mapTag,
+  type ImageRow,
   type PageRow,
   type ProjectRow,
   type ServiceRow,
@@ -104,9 +106,7 @@ export async function getPublicProjects(filter: PortfolioFilter = {}): Promise<P
 
   const { data, error } = await client
     .from("projects")
-    .select(
-      "*, project_services(services(*)), project_tags(tags(*)), images(*)"
-    )
+    .select("*, project_services(services(*)), project_tags(tags(*))")
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 
@@ -114,7 +114,23 @@ export async function getPublicProjects(filter: PortfolioFilter = {}): Promise<P
     return filterProjects(demoProjects, filter);
   }
 
-  return filterProjects((data as ProjectRow[]).map(mapProject), filter);
+  const projectRows = data as ProjectRow[];
+  const projectIds = projectRows.map((project) => project.id);
+
+  if (!projectIds.length) {
+    return [];
+  }
+
+  const { data: imageData } = await client
+    .from("images")
+    .select("*")
+    .eq("parent_type", "project")
+    .in("parent_id", projectIds);
+
+  return filterProjects(
+    attachProjectImages(projectRows, (imageData as ImageRow[] | null) ?? []).map(mapProject),
+    filter
+  );
 }
 
 export async function getPublicProjectBySlug(slug: string): Promise<Project | null> {
@@ -126,9 +142,7 @@ export async function getPublicProjectBySlug(slug: string): Promise<Project | nu
 
   const { data, error } = await client
     .from("projects")
-    .select(
-      "*, project_services(services(*)), project_tags(tags(*)), images(*)"
-    )
+    .select("*, project_services(services(*)), project_tags(tags(*))")
     .eq("slug", slug)
     .eq("is_published", true)
     .maybeSingle();
@@ -137,5 +151,14 @@ export async function getPublicProjectBySlug(slug: string): Promise<Project | nu
     return demoProjects.find((project) => project.slug === slug && project.isPublished) ?? null;
   }
 
-  return mapProject(data as ProjectRow);
+  const { data: imageData } = await client
+    .from("images")
+    .select("*")
+    .eq("parent_type", "project")
+    .eq("parent_id", data.id);
+
+  return mapProject({
+    ...(data as ProjectRow),
+    images: (imageData as ImageRow[] | null) ?? []
+  });
 }
