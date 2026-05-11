@@ -53,7 +53,7 @@ The target demo setup uses Supabase Free plan: 500 MB database, 1 GB file storag
 2. Run `supabase/schema.sql`.
 3. Run `supabase/seed.sql`.
 4. Create a public Storage bucket named `portfolio-images`.
-5. Create one Auth user for `formaxmos@gmail.com`.
+5. Create one Auth user for `ADMIN_EMAIL`.
 6. Copy the project URL, publishable key, and secret key into `.env.local` and later into Vercel environment variables.
 
 For uploaded portfolio images, the app keeps a server-side 10 MB limit and accepts JPEG, PNG, WebP, GIF, and AVIF. Do not enable paid Storage Image Transformations for the Free plan demo.
