@@ -45,7 +45,6 @@ export default async function AdminImagesPage() {
             <form action={deleteImageAction} className="mt-4">
               <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
                 <input name="id" type="hidden" value={image.id} />
-                <input name="storagePath" type="hidden" value={image.storagePath} />
                 <button className={adminDangerButtonClass}>Удалить</button>
               </AdminFormFieldset>
             </form>

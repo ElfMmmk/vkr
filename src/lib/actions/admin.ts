@@ -659,10 +659,19 @@ export async function deleteImageAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
-  const storagePath = cleanId(formString(formData, "storagePath"));
 
   if (!id) {
     return;
+  }
+
+  const { data: image, error: imageError } = await client
+    .from("images")
+    .select("storage_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (imageError) {
+    mutationError(imageError);
   }
 
   const { error } = await client.from("images").delete().eq("id", id);
@@ -670,6 +679,8 @@ export async function deleteImageAction(formData: FormData): Promise<void> {
   if (error) {
     mutationError(error);
   }
+
+  const storagePath = typeof image?.storage_path === "string" ? image.storage_path : null;
 
   if (storagePath) {
     await client.storage.from("portfolio-images").remove([storagePath]);
