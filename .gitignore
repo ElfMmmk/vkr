@@ -31,3 +31,7 @@ EXECPLAN*.md
 .agent/
 .agents/
 .codex/
+
+# VKR draft materials and references
+/VKR_text/
+/vkr_text/
