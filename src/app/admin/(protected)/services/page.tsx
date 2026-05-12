@@ -4,7 +4,7 @@ import { AdminServiceOrderForm } from "@/components/admin-service-order-form";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteServiceAction, saveServiceAction } from "@/lib/actions/admin";
-import { requireAdmin } from "@/lib/auth";
+import { requireContentAdmin } from "@/lib/auth";
 import { listAdminServices } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import type { Service } from "@/lib/types";
@@ -80,7 +80,7 @@ function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boole
 }
 
 export default async function AdminServicesPage() {
-  const admin = await requireAdmin();
+  const admin = await requireContentAdmin();
   const services = await listAdminServices();
 
   return (

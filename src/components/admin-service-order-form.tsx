@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import { useState } from "react";
 
 import { reorderServicesAction } from "@/lib/actions/admin";
@@ -37,6 +37,22 @@ export function AdminServiceOrderForm({
     });
   }
 
+  function moveServiceByIndex(index: number, direction: -1 | 1) {
+    setOrderedServices((current) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const next = current.slice();
+      const [moved] = next.splice(index, 1);
+      next.splice(nextIndex, 0, moved);
+
+      return next;
+    });
+  }
+
   return (
     <form action={reorderServicesAction} className="grid gap-4">
       <fieldset className="grid gap-3" disabled={!canWrite}>
@@ -60,6 +76,26 @@ export function AdminServiceOrderForm({
             <div className="min-w-0">
               <p className="font-semibold text-ink">{service.title}</p>
               <p className="mt-1 text-sm leading-6 text-muted">{service.description}</p>
+            </div>
+            <div className="ml-auto grid shrink-0 grid-cols-2 gap-2">
+              <button
+                aria-label={`Поднять услугу ${service.title}`}
+                className="focus-ring inline-grid h-9 w-9 place-items-center border border-line bg-white text-muted transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!canWrite || index === 0}
+                onClick={() => moveServiceByIndex(index, -1)}
+                type="button"
+              >
+                <ArrowUp aria-hidden="true" size={16} />
+              </button>
+              <button
+                aria-label={`Опустить услугу ${service.title}`}
+                className="focus-ring inline-grid h-9 w-9 place-items-center border border-line bg-white text-muted transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!canWrite || index === orderedServices.length - 1}
+                onClick={() => moveServiceByIndex(index, 1)}
+                type="button"
+              >
+                <ArrowDown aria-hidden="true" size={16} />
+              </button>
             </div>
           </div>
         ))}

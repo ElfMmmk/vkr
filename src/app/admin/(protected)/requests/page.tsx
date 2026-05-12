@@ -7,7 +7,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Field, inputClass, selectClass } from "@/components/form-controls";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteRequestAction } from "@/lib/actions/admin";
-import { requireAdmin } from "@/lib/auth";
+import { requireRequestManager } from "@/lib/auth";
 import { listAdminRequests, listAdminServices } from "@/lib/data/admin";
 import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
 
@@ -21,9 +21,15 @@ type AdminRequestsPageProps = {
 };
 
 export default async function AdminRequestsPage({ searchParams }: AdminRequestsPageProps) {
-  const admin = await requireAdmin();
+  const admin = await requireRequestManager();
   const params = await searchParams;
   const sort = params.sort === "oldest" ? "oldest" : "newest";
+  const exportParams = new URLSearchParams();
+  if (params.query) exportParams.set("query", params.query);
+  if (params.serviceId) exportParams.set("serviceId", params.serviceId);
+  if (params.status) exportParams.set("status", params.status);
+  exportParams.set("sort", sort);
+  const exportHref = `/admin/requests/export?${exportParams.toString()}`;
   const [services, requests] = await Promise.all([
     listAdminServices(),
     listAdminRequests({
@@ -47,6 +53,12 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
       <div>
         <p className="text-sm uppercase tracking-[0.18em] text-muted">Продажи</p>
         <h1 className="mt-2 text-4xl font-semibold">Заявки</h1>
+        <Link
+          className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+          href={exportHref}
+        >
+          Экспорт XLSX
+        </Link>
       </div>
       <AdminCard title="Поиск и фильтр">
         <form className="grid gap-4 md:grid-cols-[1fr_220px_220px_220px_auto]" method="get">
@@ -122,9 +134,9 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
                 <p className="text-muted">{request.comment}</p>
               </div>
               <div className="space-y-3">
-                <AdminRequestStatusForm canWrite={admin.canWrite} id={request.id} status={request.status} />
+                <AdminRequestStatusForm canWrite={admin.canManageRequests} id={request.id} status={request.status} />
                 <form action={deleteRequestAction}>
-                  <AdminFormFieldset canWrite={admin.canWrite} className="grid">
+                  <AdminFormFieldset canWrite={admin.canManageContent} className="grid">
                     <input name="id" type="hidden" value={request.id} />
                     <ConfirmSubmitButton
                       className={`${adminDangerButtonClass} w-full`}

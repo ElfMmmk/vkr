@@ -99,13 +99,18 @@ export function FeaturedProjectRotator({ projects }: FeaturedProjectRotatorProps
             {projects.map((project, index) => (
               <button
                 aria-label={`Показать кейс ${project.title}`}
-                className={`focus-ring h-2.5 w-7 border border-white/50 transition active:translate-y-px ${
-                  index === activeIndex ? "bg-white" : "bg-white/25 hover:bg-white/70"
-                }`}
+                className="focus-ring grid h-6 w-8 place-items-center transition active:translate-y-px"
                 key={project.id}
                 onClick={() => setActiveIndex(index)}
                 type="button"
-              />
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-2.5 w-7 border border-white/50 transition ${
+                    index === activeIndex ? "bg-white" : "bg-white/25 hover:bg-white/70"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </>

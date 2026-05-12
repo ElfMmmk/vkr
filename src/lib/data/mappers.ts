@@ -73,6 +73,7 @@ export type ProjectRow = {
 
 export type RequestRow = {
   id: string;
+  client_user_id?: string | null;
   client_name: string;
   contact_method: string;
   contact_value: string;
@@ -242,6 +243,7 @@ export function attachLegacyProjectImages(rows: ProjectRow[], images: ImageRow[]
 export function mapRequest(row: RequestRow): OrderRequest {
   return {
     id: row.id,
+    clientUserId: row.client_user_id ?? null,
     clientName: row.client_name,
     contactMethod: row.contact_method,
     contactValue: row.contact_value,

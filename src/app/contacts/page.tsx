@@ -11,7 +11,7 @@ export default async function ContactsPage() {
   return (
     <>
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="container-shell py-16 md:py-24">
           <SectionHeading title={page.title} description={page.body} />
           <div className="mt-12 grid gap-8 md:grid-cols-3">

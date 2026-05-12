@@ -7,6 +7,8 @@ import { ProjectGallerySlider } from "@/components/project-gallery-slider";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getPublicProjectBySlug, getPublicProjects } from "@/lib/data/public";
+import { getDictionary } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 
 type ProjectPageProps = {
   params: Promise<{
@@ -21,7 +23,9 @@ export async function generateStaticParams() {
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
-  const project = await getPublicProjectBySlug(slug);
+  const locale = await getLocale();
+  const dictionary = getDictionary(locale);
+  const project = await getPublicProjectBySlug(slug, locale);
 
   if (!project) {
     notFound();
@@ -32,28 +36,31 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   return (
     <>
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="container-shell py-10 md:py-16">
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <nav className="flex flex-wrap items-center gap-2 text-sm text-muted" aria-label="Хлебные крошки">
+            <nav
+              className="flex flex-wrap items-center gap-2 text-sm text-muted"
+              aria-label={locale === "en" ? "Breadcrumbs" : "Хлебные крошки"}
+            >
               <Link className="hover:text-ink" href="/portfolio">
-                Портфолио
+                {dictionary.nav.portfolio}
               </Link>
               <span>/</span>
               <Link className="hover:text-ink" href="/services">
-                Услуги
+                {dictionary.nav.services}
               </Link>
               <span>/</span>
               <span className="text-ink">{project.title}</span>
             </nav>
             <ButtonLink href="/portfolio" variant="secondary">
-              Назад к работам
+              {locale === "en" ? "Back to work" : "Назад к работам"}
             </ButtonLink>
           </div>
           <div className="grid gap-10 md:grid-cols-[0.72fr_1fr]">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                Кейс
+                {locale === "en" ? "Case" : "Кейс"}
               </p>
               <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">{project.title}</h1>
               <p className="mt-6 text-lg leading-8 text-muted">{project.shortDescription}</p>
@@ -79,7 +86,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               </div>
               <div className="mt-8">
                 <ButtonLink href={primaryService ? `/order?service=${primaryService.slug}` : "/order"}>
-                  Заказать похожий проект
+                  {locale === "en" ? "Order a similar project" : "Заказать похожий проект"}
                 </ButtonLink>
               </div>
             </div>
@@ -95,7 +102,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 />
               ) : (
                 <div className="grid h-full place-items-center px-6 text-center text-sm text-muted">
-                  Обложка проекта пока не добавлена
+                  {locale === "en" ? "Project cover has not been added yet" : "Обложка проекта пока не добавлена"}
                 </div>
               )}
             </div>
@@ -103,18 +110,25 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </section>
         <section className="border-y border-line bg-white py-16">
           <div className="container-shell grid gap-10 md:grid-cols-[0.45fr_1fr]">
-            <h2 className="text-3xl font-semibold">Задача и результат</h2>
+            <h2 className="text-3xl font-semibold">
+              {locale === "en" ? "Task and result" : "Задача и результат"}
+            </h2>
             <p className="text-xl leading-9 text-muted">{project.fullDescription}</p>
           </div>
         </section>
         <section className="container-shell py-16">
-          <h2 className="mb-8 text-3xl font-semibold">Галерея</h2>
+          <h2 className="mb-8 text-3xl font-semibold">
+            {locale === "en" ? "Gallery" : "Галерея"}
+          </h2>
           <ProjectGallerySlider
             slides={[project.coverImageUrl, ...project.gallery.map((image) => image.publicUrl)]
               .filter(Boolean)
               .map((imageUrl, index) => ({
                 src: imageUrl,
-                alt: `${project.title}, изображение ${index + 1}`,
+                alt:
+                  locale === "en"
+                    ? `${project.title}, image ${index + 1}`
+                    : `${project.title}, изображение ${index + 1}`,
                 caption:
                   index === 0
                     ? project.title

@@ -1,6 +1,6 @@
 import { AdminCard } from "@/components/admin-card";
 import { AdminPageForm } from "@/components/admin-page-form";
-import { requireAdmin } from "@/lib/auth";
+import { requireContentAdmin } from "@/lib/auth";
 import { listAdminPages } from "@/lib/data/admin";
 import type { PageKey } from "@/lib/types";
 
@@ -19,7 +19,7 @@ const pageDescriptions: Record<PageKey, string> = {
 };
 
 export default async function AdminPagesPage() {
-  const admin = await requireAdmin();
+  const admin = await requireContentAdmin();
   const pages = await listAdminPages();
 
   return (

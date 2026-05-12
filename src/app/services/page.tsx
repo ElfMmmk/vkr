@@ -5,17 +5,21 @@ import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getPublicPage, getPublicServices } from "@/lib/data/public";
+import { getDictionary } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 
 export default async function ServicesPage() {
+  const locale = await getLocale();
+  const dictionary = getDictionary(locale);
   const [page, services] = await Promise.all([
-    getPublicPage("services"),
-    getPublicServices()
+    getPublicPage("services", locale),
+    getPublicServices(locale)
   ]);
 
   return (
     <>
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="container-shell py-16 md:py-24">
           <SectionHeading title={page.title} description={page.body} />
           <div className="mt-12 divide-y divide-line border-y border-line bg-white">
@@ -37,13 +41,13 @@ export default async function ServicesPage() {
                     className="focus-ring inline-flex min-h-12 min-w-36 items-center justify-center border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
                     href={`/portfolio?service=${service.slug}`}
                   >
-                    Пример работ
+                    {dictionary.common.serviceExamples}
                   </Link>
                   <Link
                     className="focus-ring inline-flex min-h-12 min-w-36 items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
                     href={`/order?service=${service.slug}`}
                   >
-                    Заказать
+                    {dictionary.common.order}
                   </Link>
                 </div>
               </article>

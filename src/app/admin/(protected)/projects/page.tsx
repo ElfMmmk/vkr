@@ -7,7 +7,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteProjectAction, saveProjectAction } from "@/lib/actions/admin";
-import { requireAdmin } from "@/lib/auth";
+import { requireContentAdmin } from "@/lib/auth";
 import { listAdminImages, listAdminProjects, listAdminServices, listAdminTags } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import type { PortfolioImage, Project, Service, Tag } from "@/lib/types";
@@ -201,7 +201,7 @@ function ProjectForm({
 }
 
 export default async function AdminProjectsPage() {
-  const admin = await requireAdmin();
+  const admin = await requireContentAdmin();
   const [projects, services, tags, images] = await Promise.all([
     listAdminProjects(),
     listAdminServices(),

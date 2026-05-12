@@ -4,7 +4,12 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { clearPreviewAdminSession, requireWritableAdmin } from "@/lib/auth";
+import {
+  clearPreviewAdminSession,
+  requireRequestManager,
+  requireRoleAdmin,
+  requireWritableAdmin
+} from "@/lib/auth";
 import { fieldLimits } from "@/lib/field-limits";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { createSlug } from "@/lib/slug";
@@ -23,6 +28,7 @@ import {
   serviceSchema,
   tagSchema
 } from "@/lib/validation";
+import type { UserRole } from "@/lib/types";
 
 export type UploadImageState = {
   ok: boolean;
@@ -59,6 +65,14 @@ function getMutationErrorMessage(error: unknown, fallback = "Mutation failed"): 
 function mutationError(error: unknown): never {
   const message = getMutationErrorMessage(error, "Unknown mutation error");
   throw new Error(message);
+}
+
+function parseUserRole(value: string): UserRole {
+  if (value === "admin" || value === "manager" || value === "client") {
+    return value;
+  }
+
+  throw new Error("Unknown user role.");
 }
 
 export async function signOutAction(): Promise<void> {
@@ -513,15 +527,22 @@ export async function savePageStateAction(
 }
 
 export async function updateRequestStatusAction(formData: FormData): Promise<void> {
-  await requireWritableAdmin();
+  const admin = await requireRequestManager();
   const id = cleanId(formString(formData, "id"));
   const status = requestStatusSchema.parse(formString(formData, "status"));
 
-  if (!id) {
+  if (!id || admin.mode === "preview") {
     return;
   }
 
-  const { error } = await getSupabaseAdminOrThrow()
+  const client = getSupabaseAdminOrThrow();
+  const { data: currentRequest } = await client
+    .from("requests")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { error } = await client
     .from("requests")
     .update({ status })
     .eq("id", id);
@@ -530,7 +551,26 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
     mutationError(error);
   }
 
+  await client.from("request_status_history").insert({
+    request_id: id,
+    from_status: typeof currentRequest?.status === "string" ? currentRequest.status : null,
+    to_status: status,
+    changed_by_user_id: admin.mode === "supabase" ? admin.id : null,
+    changed_by_role: admin.role
+  });
+
+  await client.from("notifications").insert({
+    type: "request_status_changed",
+    title: "Статус заявки изменён",
+    body: `Заявка переведена в статус ${status}.`,
+    entity_type: "request",
+    entity_id: id,
+    audience_role: "manager"
+  });
+
   revalidatePath("/admin/requests");
+  revalidatePath("/admin/notifications");
+  revalidatePath("/admin/analytics");
 }
 
 export async function deleteRequestAction(formData: FormData): Promise<void> {
@@ -688,4 +728,43 @@ export async function deleteImageAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/images");
   revalidatePath("/portfolio");
+}
+
+export async function markNotificationReadAction(formData: FormData): Promise<void> {
+  const admin = await requireRequestManager();
+  const id = cleanId(formString(formData, "id"));
+
+  if (!id || admin.mode !== "supabase") {
+    return;
+  }
+
+  const client = getSupabaseAdminOrThrow();
+
+  await client.from("notification_reads").upsert({
+    notification_id: id,
+    user_id: admin.id
+  });
+
+  revalidatePath("/admin/notifications");
+}
+
+export async function updateUserRoleAction(formData: FormData): Promise<void> {
+  const admin = await requireRoleAdmin();
+  const id = cleanId(formString(formData, "id"));
+  const role = parseUserRole(formString(formData, "role"));
+
+  if (!id || id === admin.id) {
+    return;
+  }
+
+  const { error } = await getSupabaseAdminOrThrow()
+    .from("profiles")
+    .update({ role })
+    .eq("id", id);
+
+  if (error) {
+    mutationError(error);
+  }
+
+  revalidatePath("/admin/users");
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdminCard } from "@/components/admin-card";
+import { requireAdmin } from "@/lib/auth";
 import {
   listAdminPages,
   listAdminProjects,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/data/admin";
 
 export default async function AdminDashboardPage() {
+  const admin = await requireAdmin();
   const [pages, projects, services, tags, requests] = await Promise.all([
     listAdminPages(),
     listAdminProjects(),
@@ -21,6 +23,8 @@ export default async function AdminDashboardPage() {
   const featuredProjects = projects.filter((project) => project.isFeatured).length;
   const activeServices = services.filter((service) => service.isActive).length;
   const newRequests = requests.filter((request) => request.status === "new").length;
+  const canBrowseContent = admin.canManageContent || admin.mode === "preview";
+  const canBrowseRequests = admin.canManageRequests || admin.mode === "preview";
 
   const cards = [
     { href: "/admin/projects", label: "Проекты", value: projects.length, meta: `${publishedProjects} опубликовано` },
@@ -30,6 +34,10 @@ export default async function AdminDashboardPage() {
     { href: "/admin/pages", label: "Страницы", value: pages.length, meta: "Тексты сайта" }
   ];
 
+  const visibleCards = cards.filter((card) =>
+    card.href === "/admin/requests" ? canBrowseRequests : canBrowseContent
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -37,7 +45,7 @@ export default async function AdminDashboardPage() {
         <h1 className="mt-2 text-4xl font-semibold">Обзор контента</h1>
       </div>
       <div className="grid gap-4 md:grid-cols-5">
-        {cards.map((card) => (
+        {visibleCards.map((card) => (
           <Link
             className="focus-ring min-w-0 border border-line bg-white p-5 transition hover:border-ink hover:bg-paper active:translate-y-px"
             href={card.href}
@@ -49,22 +57,24 @@ export default async function AdminDashboardPage() {
           </Link>
         ))}
       </div>
-      <AdminCard title="Состояние витрины">
-        <div className="grid gap-4 text-sm leading-6 text-muted md:grid-cols-3">
-          <div className="border border-line bg-paper p-4">
-            <p className="font-semibold text-ink">Закреплённые кейсы</p>
-            <p className="mt-2">{featuredProjects} из 6 мест занято</p>
+      {canBrowseContent ? (
+        <AdminCard title="Состояние витрины">
+          <div className="grid gap-4 text-sm leading-6 text-muted md:grid-cols-3">
+            <div className="border border-line bg-paper p-4">
+              <p className="font-semibold text-ink">Закреплённые кейсы</p>
+              <p className="mt-2">{featuredProjects} из 6 мест занято</p>
+            </div>
+            <div className="border border-line bg-paper p-4">
+              <p className="font-semibold text-ink">Активные услуги</p>
+              <p className="mt-2">Порядок на сайте совпадает со списком в админке</p>
+            </div>
+            <div className="border border-line bg-paper p-4">
+              <p className="font-semibold text-ink">Новые заявки</p>
+              <p className="mt-2">{newRequests ? "Требуют обработки" : "Новых заявок нет"}</p>
+            </div>
           </div>
-          <div className="border border-line bg-paper p-4">
-            <p className="font-semibold text-ink">Активные услуги</p>
-            <p className="mt-2">Порядок на сайте совпадает со списком в админке</p>
-          </div>
-          <div className="border border-line bg-paper p-4">
-            <p className="font-semibold text-ink">Новые заявки</p>
-            <p className="mt-2">{newRequests ? "Требуют обработки" : "Новых заявок нет"}</p>
-          </div>
-        </div>
-      </AdminCard>
+        </AdminCard>
+      ) : null}
     </div>
   );
 }

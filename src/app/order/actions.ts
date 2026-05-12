@@ -5,7 +5,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { formString } from "@/lib/form";
-import { getOptionalSupabaseAdmin, getOptionalSupabasePublic } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  getOptionalSupabaseAdmin,
+  getOptionalSupabasePublic
+} from "@/lib/supabase/server";
 import { orderRequestSchema } from "@/lib/validation";
 
 export type OrderFormState = {
@@ -124,7 +128,12 @@ export async function submitOrderAction(
     }
   }
 
-  const { error } = await client.from("requests").insert({
+  const sessionClient = await createSupabaseServerClient();
+  const { data: userData } = sessionClient
+    ? await sessionClient.auth.getUser()
+    : { data: { user: null } };
+  const clientUserId = userData.user?.id ?? null;
+  const requestPayload = {
     client_name: parsed.data.clientName,
     contact_method: parsed.data.contactMethod,
     contact_value: parsed.data.contactValue,
@@ -132,13 +141,30 @@ export async function submitOrderAction(
     service_title: serviceTitle,
     comment: parsed.data.comment,
     source_hash: sourceHash,
-    status: "new"
-  });
+    status: "new",
+    ...(clientUserId ? { client_user_id: clientUserId } : {})
+  };
+  const adminClient = getOptionalSupabaseAdmin();
+  const requestInsert = adminClient
+    ? await adminClient.from("requests").insert(requestPayload).select("id").single()
+    : await client.from("requests").insert(requestPayload);
+  const error = requestInsert.error;
 
   if (error) {
     return {
       message: "Не удалось сохранить заявку. Попробуйте позже."
     };
+  }
+
+  if (adminClient && "data" in requestInsert && requestInsert.data?.id) {
+    await adminClient.from("notifications").insert({
+      type: "request_created",
+      title: "Новая заявка",
+      body: `${parsed.data.clientName} отправил(а) заявку${serviceTitle ? `: ${serviceTitle}` : ""}.`,
+      entity_type: "request",
+      entity_id: requestInsert.data.id,
+      audience_role: "manager"
+    });
   }
 
   redirect("/order/success");

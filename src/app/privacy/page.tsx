@@ -39,7 +39,7 @@ export default function PrivacyPage() {
   return (
     <>
       <SiteHeader />
-      <main className="container-shell py-16 md:py-24">
+      <main id="main-content" className="container-shell py-16 md:py-24">
         <SectionHeading
           title="Политика обработки персональных данных"
           description="Документ для формы заявки и контактных данных сайта, ориентированного на работу с пользователями в Российской Федерации."

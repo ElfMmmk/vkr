@@ -4,11 +4,11 @@ import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass } from "@/components/admin-form-lock";
 import { AdminImageUploadForm } from "@/components/admin-image-upload-form";
 import { deleteImageAction } from "@/lib/actions/admin";
-import { requireAdmin } from "@/lib/auth";
+import { requireContentAdmin } from "@/lib/auth";
 import { listAdminImages } from "@/lib/data/admin";
 
 export default async function AdminImagesPage() {
-  const admin = await requireAdmin();
+  const admin = await requireContentAdmin();
   const images = await listAdminImages();
 
   return (

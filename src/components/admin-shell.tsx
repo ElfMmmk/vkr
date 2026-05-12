@@ -3,6 +3,8 @@
 import Link from "next/link";
 import {
   BriefcaseBusiness,
+  BarChart3,
+  Bell,
   FileText,
   Images,
   Inbox,
@@ -11,38 +13,60 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  Tags
+  Tags,
+  Users
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { signOutAction } from "@/lib/actions/admin";
 
 const adminNav = [
-  { href: "/admin", label: "Обзор", icon: LayoutDashboard },
-  { href: "/admin/projects", label: "Проекты", icon: BriefcaseBusiness },
-  { href: "/admin/services", label: "Услуги", icon: Menu },
-  { href: "/admin/tags", label: "Теги", icon: Tags },
-  { href: "/admin/images", label: "Изображения", icon: Images },
-  { href: "/admin/requests", label: "Заявки", icon: Inbox },
-  { href: "/admin/pages", label: "Страницы", icon: FileText }
+  { href: "/admin", label: "Обзор", icon: LayoutDashboard, scope: "requests" },
+  { href: "/admin/notifications", label: "Уведомления", icon: Bell, scope: "requests" },
+  { href: "/admin/analytics", label: "Аналитика", icon: BarChart3, scope: "requests" },
+  { href: "/admin/requests", label: "Заявки", icon: Inbox, scope: "requests" },
+  { href: "/admin/users", label: "Пользователи", icon: Users, scope: "roles" },
+  { href: "/admin/projects", label: "Проекты", icon: BriefcaseBusiness, scope: "content" },
+  { href: "/admin/services", label: "Услуги", icon: Menu, scope: "content" },
+  { href: "/admin/tags", label: "Теги", icon: Tags, scope: "content" },
+  { href: "/admin/images", label: "Изображения", icon: Images, scope: "content" },
+  { href: "/admin/pages", label: "Страницы", icon: FileText, scope: "content" }
 ];
 
 export function AdminShell({
   email,
   mode,
+  role,
   canWrite,
+  canManageContent,
+  canManageRequests,
+  canManageRoles,
   children
 }: {
   email: string;
   mode: "supabase" | "preview";
+  role: "admin" | "manager" | "client" | "preview";
   canWrite: boolean;
+  canManageContent: boolean;
+  canManageRequests: boolean;
+  canManageRoles: boolean;
   children: ReactNode;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const canPreviewBrowse = mode === "preview";
+  const visibleNav = adminNav.filter((item) => {
+    if (item.scope === "roles") {
+      return canManageRoles;
+    }
+
+    return item.scope === "content"
+      ? canManageContent || canPreviewBrowse
+      : canManageRequests || canManageContent || canPreviewBrowse;
+  });
 
   const renderNav = (collapsed = false) => (
     <nav className="grid gap-2">
-      {adminNav.map((item) => {
+      {visibleNav.map((item) => {
         const Icon = item.icon;
 
         return (
@@ -87,7 +111,11 @@ export function AdminShell({
             {isCollapsed ? <PanelLeftOpen aria-hidden="true" size={17} /> : <PanelLeftClose aria-hidden="true" size={17} />}
           </button>
         </div>
-        {!isCollapsed ? <p className="mt-2 truncate text-sm leading-6 text-white/60">{email}</p> : null}
+        {!isCollapsed ? (
+          <p className="mt-2 truncate text-sm leading-6 text-white/60">
+            {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Preview"}
+          </p>
+        ) : null}
         <div className="mt-10 flex-1">{renderNav(isCollapsed)}</div>
         <form action={signOutAction} className="mt-8">
           <button
@@ -101,14 +129,16 @@ export function AdminShell({
           </button>
         </form>
       </aside>
-      <main className="min-w-0 p-5 md:p-8">
+      <main id="main-content" className="min-w-0 p-5 md:p-8">
         <div className="mb-5 border border-line bg-ink p-4 text-white md:hidden">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <Link className="focus-ring block text-2xl font-semibold" href="/admin">
                 Панель администратора
               </Link>
-              <p className="mt-1 truncate text-sm leading-6 text-white/60">{email}</p>
+              <p className="mt-1 truncate text-sm leading-6 text-white/60">
+                {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Preview"}
+              </p>
             </div>
             <form action={signOutAction}>
               <button className="focus-ring inline-flex min-h-10 items-center gap-2 border border-white/20 px-3 py-2 text-sm text-white/80 transition hover:bg-white hover:text-ink active:translate-y-px">

@@ -11,7 +11,15 @@ export default async function ProtectedAdminLayout({
   const admin = await requireAdmin();
 
   return (
-    <AdminShell canWrite={admin.canWrite} email={admin.email} mode={admin.mode}>
+    <AdminShell
+      canManageContent={admin.canManageContent}
+      canManageRequests={admin.canManageRequests}
+      canManageRoles={admin.canManageRoles}
+      canWrite={admin.canWrite}
+      email={admin.email}
+      mode={admin.mode}
+      role={admin.role}
+    >
       {children}
     </AdminShell>
   );

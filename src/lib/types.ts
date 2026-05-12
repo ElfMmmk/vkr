@@ -5,6 +5,8 @@ export type RequestStatus =
   | "completed"
   | "rejected";
 
+export type UserRole = "admin" | "manager" | "client";
+
 export type PageKey = "home" | "about" | "services" | "contacts";
 
 export type PageContent = {
@@ -64,6 +66,7 @@ export type Project = {
 
 export type OrderRequest = {
   id: string;
+  clientUserId?: string | null;
   clientName: string;
   contactMethod: string;
   contactValue: string;
@@ -81,4 +84,25 @@ export type PortfolioFilter = {
   services?: string[];
   tags?: string[];
   sort?: "default" | "newest" | "oldest";
+};
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminNotification = {
+  id: string;
+  type: "request_created" | "request_status_changed" | "system";
+  title: string;
+  body: string;
+  entityType: string;
+  entityId: string | null;
+  audienceRole: "admin" | "manager";
+  createdAt: string;
+  readAt?: string | null;
 };

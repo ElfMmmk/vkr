@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { createPreviewAdminSession, getAdminEmail, isAdminPreviewEnabled } from "@/lib/auth";
+import {
+  createPreviewAdminSession,
+  isAdminPreviewEnabled,
+  isPrivilegedRole,
+  resolveUserProfile
+} from "@/lib/auth";
 import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
 import { createSupabaseServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
@@ -30,7 +35,7 @@ export async function loginAction(
   _previousState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  if (!hasSupabasePublicEnv() || !getAdminEmail()) {
+  if (!hasSupabasePublicEnv()) {
     return {
       message:
         "Вход временно недоступен: настройка администратора ещё не завершена."
@@ -48,14 +53,7 @@ export async function loginAction(
     };
   }
 
-  const allowedEmail = getAdminEmail();
   const email = parsed.data.email.toLowerCase();
-
-  if (allowedEmail && email !== allowedEmail) {
-    return {
-      message: "У этой учётной записи нет доступа к административной панели."
-    };
-  }
 
   const client = await createSupabaseServerClient();
 
@@ -73,6 +71,17 @@ export async function loginAction(
   if (error) {
     return {
       message: "Не удалось войти. Проверьте email и пароль."
+    };
+  }
+
+  const { data: userData } = await client.auth.getUser();
+  const profile = userData.user ? await resolveUserProfile(userData.user) : null;
+
+  if (!profile || !isPrivilegedRole(profile.role)) {
+    await client.auth.signOut();
+
+    return {
+      message: "У этой учётной записи нет доступа к административной панели."
     };
   }
 

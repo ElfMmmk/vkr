@@ -3,7 +3,7 @@ import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } fr
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteTagAction, saveTagAction } from "@/lib/actions/admin";
-import { requireAdmin } from "@/lib/auth";
+import { requireContentAdmin } from "@/lib/auth";
 import { listAdminTags } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import type { Tag } from "@/lib/types";
@@ -55,7 +55,7 @@ function TagForm({ tag, canWrite }: { tag?: Tag; canWrite: boolean }) {
 }
 
 export default async function AdminTagsPage() {
-  const admin = await requireAdmin();
+  const admin = await requireContentAdmin();
   const tags = await listAdminTags();
 
   return (

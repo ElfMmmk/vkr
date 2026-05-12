@@ -223,7 +223,7 @@ test("preview admin can browse read-only admin sections", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Загрузить" })).toBeDisabled();
 
   await page.goto("/admin/requests");
-  await expect(page.locator('select[name="status"]').first()).toBeDisabled();
+  await expect(page.locator('input[name="id"] + p + select[name="status"]').first()).toBeDisabled();
 });
 
 test("mobile preview admin uses compact section navigation", async ({ page }) => {

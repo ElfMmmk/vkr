@@ -6,6 +6,8 @@ import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getPublicProjects, getPublicServices, getPublicTags } from "@/lib/data/public";
+import { getDictionary } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 
 type PortfolioPageProps = {
   searchParams: Promise<{
@@ -56,6 +58,8 @@ function portfolioHref(params: {
 }
 
 export default async function PortfolioPage({ searchParams }: PortfolioPageProps) {
+  const locale = await getLocale();
+  const dictionary = getDictionary(locale);
   const params = await searchParams;
   const selectedServices = toList(params.service);
   const selectedTags = toList(params.tag);
@@ -64,9 +68,9 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
   const hasActiveFilter = Boolean(selectedServices.length || selectedTags.length);
   const hasCustomState = hasActiveFilter || sort !== "default";
   const [services, tags, projects] = await Promise.all([
-    getPublicServices(),
-    getPublicTags(),
-    getPublicProjects({ services: selectedServices, tags: selectedTags, sort })
+    getPublicServices(locale),
+    getPublicTags(locale),
+    getPublicProjects({ services: selectedServices, tags: selectedTags, sort }, locale)
   ]);
   const selectedServiceItems = services.filter((service) => selectedServices.includes(service.slug));
   const selectedTagItems = tags.filter((tag) => selectedTags.includes(tag.slug));
@@ -74,16 +78,20 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
   return (
     <>
       <SiteHeader />
-      <main className="container-shell py-16 md:py-24">
+      <main id="main-content" className="container-shell py-16 md:py-24">
         <SectionHeading
-          title="Портфолио"
-          description="Кейсы можно отфильтровать по нескольким услугам и тегам. Внутри одной группы выбранные пункты работают как «или», между услугами и тегами — как «и»."
+          title={dictionary.common.portfolio}
+          description={
+            locale === "en"
+              ? "Filter cases by several services and tags. Items inside one group work as OR, while services and tags are combined as AND."
+              : "Кейсы можно отфильтровать по нескольким услугам и тегам. Внутри одной группы выбранные пункты работают как «или», между услугами и тегами — как «и»."
+          }
         />
         <div className="mt-10 border-y border-line py-6">
           <div className="grid gap-5">
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                По услугам
+                {locale === "en" ? "By services" : "По услугам"}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -92,7 +100,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
                   }`}
                   href={portfolioHref({ tags: selectedTags, sort })}
                 >
-                  Все услуги
+                  {dictionary.common.allServices}
                 </Link>
                 {services.map((service) => {
                   const isSelected = selectedServices.includes(service.slug);
@@ -117,7 +125,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
             </div>
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                По тегам
+                {locale === "en" ? "By tags" : "По тегам"}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -126,7 +134,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
                   }`}
                   href={portfolioHref({ services: selectedServices, sort })}
                 >
-                  Все теги
+                  {dictionary.common.allTags}
                 </Link>
                 {tags.map((tag) => {
                   const isSelected = selectedTags.includes(tag.slug);
@@ -154,7 +162,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
             {hasActiveFilter ? (
               <div className="flex flex-wrap items-center gap-2 border-t border-line pt-5">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                  Выбрано
+                  {dictionary.common.selected}
                 </span>
                 {selectedServiceItems.map((service) => (
                   <Link
@@ -188,7 +196,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
                   className="focus-ring inline-flex min-h-9 items-center border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
                   href={portfolioHref({ sort })}
                 >
-                  Сбросить фильтры
+                  {dictionary.common.resetFilters}
                 </Link>
               </div>
             ) : null}
@@ -197,11 +205,11 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
         <div className="mt-8 flex flex-col justify-between gap-4 border-b border-line pb-5 md:flex-row md:items-end">
           <div>
             <p className="text-sm font-semibold text-ink">
-              Найдено проектов: {projects.length}
+              {dictionary.common.projectCount}: {projects.length}
             </p>
             {hasCustomState ? (
               <Link className="focus-ring mt-2 inline-flex text-sm font-semibold text-accent hover:text-ink" href="/portfolio">
-                Сбросить всё
+                {dictionary.common.resetAll}
               </Link>
             ) : null}
           </div>
@@ -219,8 +227,8 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
           </div>
         ) : (
           <div className="mt-12 border border-line bg-white p-10 text-center">
-            <h2 className="text-2xl font-semibold">Проекты не найдены</h2>
-            <p className="mt-3 text-muted">Сбросьте фильтр или выберите другое направление</p>
+            <h2 className="text-2xl font-semibold">{dictionary.common.emptyProjectsTitle}</h2>
+            <p className="mt-3 text-muted">{dictionary.common.emptyProjectsText}</p>
           </div>
         )}
       </main>

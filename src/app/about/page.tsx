@@ -30,7 +30,7 @@ export default async function AboutPage() {
   return (
     <>
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="container-shell py-16 md:py-24">
           <SectionHeading title={page.title} description={page.body} />
           <div className="mt-14 grid gap-8 md:grid-cols-3">

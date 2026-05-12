@@ -6,7 +6,7 @@ export default function NotFound() {
   return (
     <>
       <SiteHeader />
-      <main className="container-shell grid min-h-[60vh] place-items-center py-16 text-center">
+      <main id="main-content" className="container-shell grid min-h-[60vh] place-items-center py-16 text-center">
         <div>
           <h1 className="text-5xl font-semibold">Страница не найдена</h1>
           <p className="mt-4 text-muted">Запрошенный раздел отсутствует или был скрыт.</p>

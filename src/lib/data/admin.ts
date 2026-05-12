@@ -22,7 +22,9 @@ import type {
   PortfolioImage,
   Project,
   Service,
-  Tag
+  Tag,
+  UserProfile,
+  UserRole
 } from "@/lib/types";
 
 function requireAdminData<T>(data: T | null, error: { message: string } | null, label: string): T {
@@ -250,4 +252,39 @@ export async function listAdminRequests(options: {
       .toLowerCase()
       .includes(query)
   );
+}
+
+type ProfileRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export async function listUserProfiles(): Promise<UserProfile[]> {
+  const client = getOptionalSupabaseAdmin();
+
+  if (!client) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return [];
+  }
+
+  return ((data as ProfileRow[] | null) ?? []).map((profile) => ({
+    id: profile.id,
+    email: profile.email,
+    fullName: profile.full_name ?? "",
+    role: profile.role,
+    createdAt: profile.created_at ?? undefined,
+    updatedAt: profile.updated_at ?? undefined
+  }));
 }
