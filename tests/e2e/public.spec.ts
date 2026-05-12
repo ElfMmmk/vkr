@@ -19,6 +19,7 @@ test("public visitor can browse portfolio and open an order form", async ({ page
 test("admin login renders setup notice or Supabase form", async ({ page }) => {
   await page.goto("/admin/login");
   await expect(page.getByRole("heading", { name: "Вход в админку" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 
   const setupNotice = page.getByText("Для входа настройте Supabase");
 
@@ -28,6 +29,14 @@ test("admin login renders setup notice or Supabase form", async ({ page }) => {
     await expect(page.getByLabel("Email администратора")).toBeVisible();
     await expect(page.getByLabel("Пароль")).toBeVisible();
   }
+});
+
+test("protected admin routes require Supabase authentication", async ({ page }) => {
+  await page.goto("/admin");
+
+  await expect(page).toHaveURL(/\/admin\/login$/);
+  await expect(page.getByRole("heading", { name: "Вход в админку" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 });
 
 test("services page keeps service ctas compact", async ({ page }) => {
@@ -184,67 +193,14 @@ test("footer links to privacy policy and hides admin entry", async ({ page }) =>
   await expect(page.getByText("Служебный вход")).toHaveCount(0);
 });
 
-test("preview admin can browse read-only admin sections", async ({ page }) => {
-  await page.goto("/admin/login");
-  const demoLoginButton = page.getByRole("button", { name: "Войти в demo admin" });
-
-  test.skip(
-    !(await demoLoginButton.isVisible()),
-    "Preview demo login is hidden on the currently reused Supabase dev server."
-  );
-
-  await demoLoginButton.click();
-
-  await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByText("Режим просмотра админки")).toBeVisible();
-  await expect(page.getByRole("complementary").getByText("admin-preview@local.test")).toBeVisible();
-
-  const sections = [
-    { label: "Проекты", path: /\/admin\/projects$/, heading: "Проекты" },
-    { label: "Услуги", path: /\/admin\/services$/, heading: "Услуги" },
-    { label: "Теги", path: /\/admin\/tags$/, heading: "Теги" },
-    { label: "Изображения", path: /\/admin\/images$/, heading: "Изображения" },
-    { label: "Заявки", path: /\/admin\/requests$/, heading: "Заявки" },
-    { label: "Страницы", path: /\/admin\/pages$/, heading: "Страницы" }
-  ];
-
-  for (const section of sections) {
-    await page.getByRole("link", { name: section.label }).first().click();
-    await expect(page).toHaveURL(section.path);
-    await expect(page.getByRole("heading", { name: section.heading })).toBeVisible();
-    await expect(page.getByText("Режим просмотра админки")).toBeVisible();
-  }
-
-  await page.goto("/admin/projects");
-  await expect(page.getByRole("button", { name: "Создать проект" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Удалить" }).first()).toBeDisabled();
-
-  await page.goto("/admin/images");
-  await expect(page.getByRole("button", { name: "Загрузить" })).toBeDisabled();
-
-  await page.goto("/admin/requests");
-  await expect(page.locator('input[name="id"] + p + select[name="status"]').first()).toBeDisabled();
-});
-
-test("mobile preview admin uses compact section navigation", async ({ page }) => {
+test("mobile admin login keeps Supabase form inside viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/login");
-  const demoLoginButton = page.getByRole("button", { name: "Войти в demo admin" });
 
-  test.skip(
-    !(await demoLoginButton.isVisible()),
-    "Preview demo login is hidden on the currently reused Supabase dev server."
-  );
-
-  await demoLoginButton.click();
-
-  await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByText("Разделы")).toBeVisible();
-  await page.getByText("Разделы").click();
-  await page.getByRole("link", { name: "Проекты", exact: true }).click();
-
-  await expect(page).toHaveURL(/\/admin\/projects$/);
-  await expect(page.getByRole("heading", { name: "Проекты" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в админку" })).toBeVisible();
+  await expect(page.getByLabel("Email администратора")).toBeVisible();
+  await expect(page.getByLabel("Пароль")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1

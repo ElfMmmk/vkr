@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { loginAction, previewLoginAction, type LoginState } from "@/app/admin/login/actions";
+import { loginAction, type LoginState } from "@/app/admin/login/actions";
 import { Field, inputClass } from "@/components/form-controls";
 import { LimitedInput } from "@/components/limited-text-control";
 import { fieldLimits } from "@/lib/field-limits";
@@ -22,7 +22,7 @@ function LoginButton() {
   );
 }
 
-export function LoginForm({ previewEnabled }: { previewEnabled: boolean }) {
+export function LoginForm() {
   const [state, formAction] = useActionState<LoginState, FormData>(loginAction, {});
 
   return (
@@ -56,16 +56,6 @@ export function LoginForm({ previewEnabled }: { previewEnabled: boolean }) {
         ) : null}
         <LoginButton />
       </form>
-      {previewEnabled ? (
-        <form action={previewLoginAction}>
-          <button className="focus-ring min-h-12 w-full border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px">
-            Войти в demo admin
-          </button>
-          <p className="mt-3 text-xs leading-5 text-muted">
-            Локальный режим просмотра: данные не сохраняются, формы в админке отключены.
-          </p>
-        </form>
-      ) : null}
     </div>
   );
 }

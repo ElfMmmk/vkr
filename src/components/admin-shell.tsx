@@ -35,33 +35,28 @@ const adminNav = [
 
 export function AdminShell({
   email,
-  mode,
   role,
-  canWrite,
   canManageContent,
   canManageRequests,
   canManageRoles,
   children
 }: {
   email: string;
-  mode: "supabase" | "preview";
-  role: "admin" | "manager" | "client" | "preview";
-  canWrite: boolean;
+  role: "admin" | "manager" | "client";
   canManageContent: boolean;
   canManageRequests: boolean;
   canManageRoles: boolean;
   children: ReactNode;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const canPreviewBrowse = mode === "preview";
   const visibleNav = adminNav.filter((item) => {
     if (item.scope === "roles") {
       return canManageRoles;
     }
 
     return item.scope === "content"
-      ? canManageContent || canPreviewBrowse
-      : canManageRequests || canManageContent || canPreviewBrowse;
+      ? canManageContent
+      : canManageRequests || canManageContent;
   });
 
   const renderNav = (collapsed = false) => (
@@ -113,7 +108,7 @@ export function AdminShell({
         </div>
         {!isCollapsed ? (
           <p className="mt-2 truncate text-sm leading-6 text-white/60">
-            {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Preview"}
+            {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Client"}
           </p>
         ) : null}
         <div className="mt-10 flex-1">{renderNav(isCollapsed)}</div>
@@ -137,7 +132,7 @@ export function AdminShell({
                 Панель администратора
               </Link>
               <p className="mt-1 truncate text-sm leading-6 text-white/60">
-                {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Preview"}
+                {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Client"}
               </p>
             </div>
             <form action={signOutAction}>
@@ -155,11 +150,6 @@ export function AdminShell({
             <div className="mt-2">{renderNav()}</div>
           </details>
         </div>
-        {!canWrite && mode === "preview" ? (
-          <div className="mb-6 border border-accent/30 bg-accent/10 px-4 py-3 text-sm leading-6 text-accent">
-            Режим просмотра админки: Supabase не подключён, формы сохранения, удаления, загрузки и смены статуса отключены.
-          </div>
-        ) : null}
         {children}
       </main>
     </div>

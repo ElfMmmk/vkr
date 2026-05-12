@@ -23,8 +23,8 @@ export default async function AdminDashboardPage() {
   const featuredProjects = projects.filter((project) => project.isFeatured).length;
   const activeServices = services.filter((service) => service.isActive).length;
   const newRequests = requests.filter((request) => request.status === "new").length;
-  const canBrowseContent = admin.canManageContent || admin.mode === "preview";
-  const canBrowseRequests = admin.canManageRequests || admin.mode === "preview";
+  const canBrowseContent = admin.canManageContent;
+  const canBrowseRequests = admin.canManageRequests;
 
   const cards = [
     { href: "/admin/projects", label: "Проекты", value: projects.length, meta: `${publishedProjects} опубликовано` },

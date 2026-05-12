@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
-  clearPreviewAdminSession,
   requireRequestManager,
   requireRoleAdmin,
   requireWritableAdmin
@@ -76,8 +75,6 @@ function parseUserRole(value: string): UserRole {
 }
 
 export async function signOutAction(): Promise<void> {
-  await clearPreviewAdminSession();
-
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const client = await createSupabaseServerClient();
 
@@ -531,7 +528,7 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
   const id = cleanId(formString(formData, "id"));
   const status = requestStatusSchema.parse(formString(formData, "status"));
 
-  if (!id || admin.mode === "preview") {
+  if (!id) {
     return;
   }
 
@@ -555,7 +552,7 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
     request_id: id,
     from_status: typeof currentRequest?.status === "string" ? currentRequest.status : null,
     to_status: status,
-    changed_by_user_id: admin.mode === "supabase" ? admin.id : null,
+    changed_by_user_id: admin.id,
     changed_by_role: admin.role
   });
 
@@ -734,7 +731,7 @@ export async function markNotificationReadAction(formData: FormData): Promise<vo
   const admin = await requireRequestManager();
   const id = cleanId(formString(formData, "id"));
 
-  if (!id || admin.mode !== "supabase") {
+  if (!id) {
     return;
   }
 

@@ -3,12 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import {
-  createPreviewAdminSession,
-  isAdminPreviewEnabled,
-  isPrivilegedRole,
-  resolveUserProfile
-} from "@/lib/auth";
+import { isPrivilegedRole, resolveUserProfile } from "@/lib/auth";
 import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
 import { createSupabaseServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
@@ -21,15 +16,6 @@ const loginSchema = z.object({
 export type LoginState = {
   message?: string;
 };
-
-export async function previewLoginAction(): Promise<void> {
-  if (!isAdminPreviewEnabled()) {
-    redirect("/admin/login");
-  }
-
-  await createPreviewAdminSession();
-  redirect("/admin");
-}
 
 export async function loginAction(
   _previousState: LoginState,

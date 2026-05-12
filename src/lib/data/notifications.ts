@@ -20,11 +20,11 @@ type NotificationReadRow = {
 
 export async function listAdminNotifications(
   userId: string,
-  role: UserRole | "preview"
+  role: UserRole
 ): Promise<AdminNotification[]> {
   const client = getOptionalSupabaseAdmin();
 
-  if (!client || role === "preview" || role === "client") {
+  if (!client || role === "client") {
     return [];
   }
 

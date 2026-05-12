@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 
 import {
@@ -7,9 +6,6 @@ import {
   getOptionalSupabaseAdmin,
   hasSupabasePublicEnv
 } from "@/lib/supabase/server";
-
-const ADMIN_PREVIEW_COOKIE = "admin_preview_session";
-const ADMIN_PREVIEW_COOKIE_VALUE = "enabled";
 
 export type UserRole = "admin" | "manager" | "client";
 
@@ -23,8 +19,7 @@ export type AppSession = {
 export type AdminSession = {
   id: string;
   email: string;
-  mode: "supabase" | "preview";
-  role: UserRole | "preview";
+  role: UserRole;
   canWrite: boolean;
   canManageContent: boolean;
   canManageRequests: boolean;
@@ -35,27 +30,19 @@ export function getAdminEmail(): string | null {
   return process.env.ADMIN_EMAIL?.trim().toLowerCase() || null;
 }
 
-export function isAdminPreviewEnabled(): boolean {
-  return process.env.ADMIN_PREVIEW_MODE === "true" && process.env.NODE_ENV !== "production";
-}
-
-export function getPreviewAdminEmail(): string {
-  return process.env.ADMIN_PREVIEW_EMAIL?.trim().toLowerCase() || "admin-preview@local.test";
-}
-
 export function isPrivilegedRole(role: UserRole): boolean {
   return role === "admin" || role === "manager";
 }
 
-export function canManageContent(role: UserRole | "preview"): boolean {
+export function canManageContent(role: UserRole): boolean {
   return role === "admin";
 }
 
-export function canManageRequests(role: UserRole | "preview"): boolean {
+export function canManageRequests(role: UserRole): boolean {
   return role === "admin" || role === "manager";
 }
 
-export function canManageRoles(role: UserRole | "preview"): boolean {
+export function canManageRoles(role: UserRole): boolean {
   return role === "admin";
 }
 
@@ -137,47 +124,7 @@ export async function resolveUserProfile(user: User): Promise<AppSession> {
   };
 }
 
-export async function createPreviewAdminSession(): Promise<void> {
-  if (!isAdminPreviewEnabled()) {
-    return;
-  }
-
-  const cookieStore = await cookies();
-
-  cookieStore.set(ADMIN_PREVIEW_COOKIE, ADMIN_PREVIEW_COOKIE_VALUE, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
-    maxAge: 60 * 60 * 8
-  });
-}
-
-export async function clearPreviewAdminSession(): Promise<void> {
-  const cookieStore = await cookies();
-
-  cookieStore.delete(ADMIN_PREVIEW_COOKIE);
-}
-
 export async function getCurrentAdmin(): Promise<AdminSession | null> {
-  if (isAdminPreviewEnabled()) {
-    const cookieStore = await cookies();
-    const previewCookie = cookieStore.get(ADMIN_PREVIEW_COOKIE);
-
-    if (previewCookie?.value === ADMIN_PREVIEW_COOKIE_VALUE) {
-      return {
-        id: "preview-admin",
-        email: getPreviewAdminEmail(),
-        mode: "preview",
-        role: "preview",
-        canWrite: false,
-        canManageContent: false,
-        canManageRequests: false,
-        canManageRoles: false
-      };
-    }
-  }
-
   if (!hasSupabasePublicEnv()) {
     return null;
   }
@@ -203,7 +150,6 @@ export async function getCurrentAdmin(): Promise<AdminSession | null> {
   return {
     id: profile.id,
     email: profile.email,
-    mode: "supabase",
     role: profile.role,
     canWrite: canManageContent(profile.role),
     canManageContent: canManageContent(profile.role),
@@ -255,7 +201,7 @@ export async function requireWritableAdmin(): Promise<AdminSession> {
 export async function requireContentAdmin(): Promise<AdminSession> {
   const admin = await requireAdmin();
 
-  if (!admin.canManageContent && admin.mode !== "preview") {
+  if (!admin.canManageContent) {
     redirect("/admin");
   }
 
@@ -265,7 +211,7 @@ export async function requireContentAdmin(): Promise<AdminSession> {
 export async function requireRequestManager(): Promise<AdminSession> {
   const admin = await requireAdmin();
 
-  if (!admin.canManageRequests && admin.mode !== "preview") {
+  if (!admin.canManageRequests) {
     throw new Error("This action requires request manager permissions.");
   }
 

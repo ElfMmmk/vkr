@@ -13,8 +13,6 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- -p ${e2ePort}`,
     env: {
-      ADMIN_PREVIEW_EMAIL: "admin-preview@local.test",
-      ADMIN_PREVIEW_MODE: "true",
       ADMIN_EMAIL: "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",

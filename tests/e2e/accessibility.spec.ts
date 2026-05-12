@@ -9,6 +9,7 @@ const publicRoutes = [
   "/order",
   "/account/login",
   "/account/register",
+  "/admin/login",
   "/privacy"
 ];
 
@@ -36,20 +37,11 @@ test.describe("WCAG smoke audit", () => {
     expect(await page.locator("#main-content").evaluate((element) => element.id)).toBe("main-content");
   });
 
-  test("admin reorder controls have keyboard alternatives", async ({ page }) => {
+  test("admin login exposes only Supabase authentication controls", async ({ page }) => {
     await page.goto("/admin/login");
-    const demoLoginButton = page.getByRole("button", { name: "Войти в demo admin" });
 
-    test.skip(
-      !(await demoLoginButton.isVisible()),
-      "Preview demo login is hidden on the currently reused Supabase dev server."
-    );
-
-    await demoLoginButton.click();
-    await expect(page).toHaveURL(/\/admin$/);
-    await page.goto("/admin/projects");
-
-    await expect(page.getByRole("button", { name: /Поднять проект/ }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Опустить проект/ }).first()).toBeVisible();
+    await expect(page.getByLabel("Email администратора")).toBeVisible();
+    await expect(page.getByLabel("Пароль")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
   });
 });

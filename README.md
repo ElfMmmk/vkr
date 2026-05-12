@@ -34,17 +34,6 @@ npm run dev
 
 The public site works with built-in demo content even before Supabase is configured. Admin login and real content mutations require Supabase environment variables and a Supabase Auth user whose email equals `ADMIN_EMAIL`.
 
-## Admin preview
-
-To inspect the admin UI locally before Supabase is configured, add these variables to `.env.local`:
-
-```bash
-ADMIN_PREVIEW_MODE=true
-ADMIN_PREVIEW_EMAIL=admin-preview@local.test
-```
-
-Then run `npm run dev`, open `/admin/login`, and choose `Войти в demo admin`. This mode is read-only, disables admin mutations, and is unavailable in production builds.
-
 ## Supabase
 
 The target demo setup uses Supabase Free plan: 500 MB database, 1 GB file storage, 5 GB egress, and up to 2 active free projects. Free projects can pause after 1 week of inactivity, so open the Supabase dashboard before a demo if the project has been idle.

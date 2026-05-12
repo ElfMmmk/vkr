@@ -15,9 +15,7 @@ export default async function ProtectedAdminLayout({
       canManageContent={admin.canManageContent}
       canManageRequests={admin.canManageRequests}
       canManageRoles={admin.canManageRoles}
-      canWrite={admin.canWrite}
       email={admin.email}
-      mode={admin.mode}
       role={admin.role}
     >
       {children}
