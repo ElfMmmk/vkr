@@ -6,8 +6,10 @@ import { useActionState, useMemo, useState } from "react";
 import { savePageStateAction, type AdminFormState } from "@/lib/actions/admin";
 import type { PageContent } from "@/lib/types";
 import { AdminFormFieldset, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { CharacterCount, LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import { ToastMessage } from "@/components/route-flash-toast";
 import { fieldLimits } from "@/lib/field-limits";
 
 type BlockRow = {
@@ -153,11 +155,18 @@ export function AdminPageForm({
           </button>
         </div>
         {state.message ? (
-          <div className={`border px-4 py-3 text-sm leading-6 ${state.ok ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-accent/30 bg-accent/10 text-accent"}`}>
-            {state.message}
-          </div>
+          <ToastMessage
+            key={`${state.ok}-${state.message}`}
+            message={state.message}
+            tone={state.ok ? "success" : "error"}
+          />
         ) : null}
-        <button className={adminPrimaryButtonClass} disabled={isBlocksTooLong}>Сохранить страницу</button>
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          disabled={isBlocksTooLong}
+          idleLabel="Сохранить страницу"
+          pendingLabel="Сохранение..."
+        />
       </AdminFormFieldset>
     </form>
   );

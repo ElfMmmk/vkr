@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { requireRequestManager } from "@/lib/auth";
 import { listAdminRequests } from "@/lib/data/admin";
+import { formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
 import { requestStatusLabels } from "@/lib/request-status";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     query: searchParams.get("query") ?? undefined,
     serviceId: searchParams.get("serviceId") ?? undefined,
     status: searchParams.get("status") ?? undefined,
-    sort: searchParams.get("sort") === "oldest" ? "oldest" : "newest"
+    sort: searchParams.get("sort") === "oldest" ? "oldest" : "newest",
+    limit: null
   });
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Graphic Designer Portfolio";
@@ -28,8 +30,11 @@ export async function GET(request: NextRequest): Promise<Response> {
     { header: "Способ связи", key: "contactMethod", width: 18 },
     { header: "Контакт", key: "contactValue", width: 30 },
     { header: "Услуга", key: "serviceTitle", width: 30 },
+    { header: "Пакет", key: "packageTitle", width: 24 },
+    { header: "Предварительная стоимость", key: "estimatePrice", width: 26 },
+    { header: "Предварительный срок", key: "estimateDuration", width: 24 },
     { header: "Статус", key: "status", width: 18 },
-    { header: "Комментарий", key: "comment", width: 60 }
+    { header: "Ожидаемый результат", key: "resultDescription", width: 60 }
   ];
   sheet.getRow(1).font = { bold: true };
   sheet.getRow(1).alignment = { vertical: "middle" };
@@ -41,8 +46,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       contactMethod: item.contactMethod,
       contactValue: item.contactValue,
       serviceTitle: item.serviceTitle || "Не выбрана",
+      packageTitle: item.packageTitle || "Не выбран",
+      estimatePrice: formatPriceRange(item.estimatedPriceFrom, item.estimatedPriceTo),
+      estimateDuration: formatDurationRange(
+        item.estimatedDurationFromDays,
+        item.estimatedDurationToDays
+      ),
       status: requestStatusLabels[item.status],
-      comment: item.comment
+      resultDescription: item.resultDescription || item.comment
     });
   }
 

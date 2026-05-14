@@ -46,13 +46,9 @@ export function canManageRoles(role: UserRole): boolean {
   return role === "admin";
 }
 
-function getBootstrapRole(email: string): UserRole {
-  return email === getAdminEmail() ? "admin" : "client";
-}
-
 export async function resolveUserProfile(user: User): Promise<AppSession> {
   const email = user.email?.trim().toLowerCase() || "";
-  const fallbackRole = getBootstrapRole(email);
+  const fallbackRole: UserRole = "client";
   const fallbackName = user.user_metadata?.full_name;
   const fallbackFullName = typeof fallbackName === "string" ? fallbackName : "";
   const adminClient = getOptionalSupabaseAdmin();
@@ -100,17 +96,6 @@ export async function resolveUserProfile(user: User): Promise<AppSession> {
       role: inserted?.role === "admin" || inserted?.role === "manager" || inserted?.role === "client"
         ? inserted.role
         : fallbackRole
-    };
-  }
-
-  if (fallbackRole === "admin" && data.role !== "admin") {
-    await adminClient.from("profiles").update({ role: "admin", email }).eq("id", user.id);
-
-    return {
-      id: user.id,
-      email,
-      fullName: typeof data.full_name === "string" ? data.full_name : fallbackFullName,
-      role: "admin"
     };
   }
 

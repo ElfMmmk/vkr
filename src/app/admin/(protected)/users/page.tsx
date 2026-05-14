@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { updateUserRoleAction } from "@/lib/actions/admin";
 import { requireAdmin } from "@/lib/auth";
 import { listUserProfiles } from "@/lib/data/admin";
@@ -59,7 +60,11 @@ export default async function AdminUsersPage() {
                 </select>
               </label>
               <AdminFormFieldset canWrite={profile.id !== admin.id && admin.canManageRoles}>
-                <button className={adminPrimaryButtonClass}>Сохранить роль</button>
+                <FormSubmitButton
+                  className={adminPrimaryButtonClass}
+                  idleLabel="Сохранить роль"
+                  pendingLabel="Сохранение..."
+                />
               </AdminFormFieldset>
             </form>
           </AdminCard>

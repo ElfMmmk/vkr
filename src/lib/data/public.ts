@@ -34,6 +34,12 @@ function isMissingDisplayOrderColumn(error: { message?: string } | null): boolea
   return Boolean(error?.message?.includes("display_order"));
 }
 
+function logPublicDataError(context: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+
+  console.error("[public-data]", context, message);
+}
+
 type TranslationRow = {
   entity_id: string;
   fields: Record<string, unknown> | null;
@@ -165,12 +171,14 @@ export async function getPublicServices(locale: Locale = defaultLocale): Promise
 
   const { data, error } = await client
     .from("services")
-    .select("*")
+    .select("*, service_packages(*), service_addons(*)")
     .eq("is_active", true)
     .order("display_order", { ascending: true });
 
   if (error || !data) {
-    throw new Error(`Failed to load public services: ${error?.message ?? "empty response"}`);
+    logPublicDataError("services", error ?? new Error("empty response"));
+
+    return demoServices.filter((service) => service.isActive);
   }
 
   const services = (data as ServiceRow[]).map(mapService);
@@ -192,7 +200,9 @@ export async function getPublicTags(locale: Locale = defaultLocale): Promise<Tag
     .order("title", { ascending: true });
 
   if (error || !data) {
-    throw new Error(`Failed to load public tags: ${error?.message ?? "empty response"}`);
+    logPublicDataError("tags", error ?? new Error("empty response"));
+
+    return demoTags;
   }
 
   const tags = (data as TagRow[]).map(mapTag);
@@ -219,7 +229,9 @@ export async function getPublicPage(
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to load public page ${pageKey}: ${error.message}`);
+    logPublicDataError(`page:${pageKey}`, error);
+
+    return fallback;
   }
 
   if (!data) {
@@ -262,7 +274,9 @@ export async function getPublicProjects(
   }
 
   if (error || !data) {
-    throw new Error(`Failed to load public projects: ${error?.message ?? "empty response"}`);
+    logPublicDataError("projects", error ?? new Error("empty response"));
+
+    return filterProjects(demoProjects, filter);
   }
 
   const projectRows = data as ProjectRow[];
@@ -294,7 +308,20 @@ export async function getPublicProjects(
       .in("parent_id", projectIds);
 
     if (legacyImageError) {
-      throw new Error(`Failed to load legacy public project media: ${legacyImageError.message}`);
+      logPublicDataError("legacy project media", legacyImageError);
+
+      const projects = projectRows.map(mapProject);
+      const translations = await loadTranslations(
+        client,
+        "project",
+        projects.map((project) => project.id),
+        locale
+      );
+
+      return filterProjects(
+        projects.map((project) => localizeProject(project, translations.get(project.id))),
+        filter
+      );
     }
 
     const projects = attachLegacyProjectImages(projectRows, (legacyImageData as ImageRow[] | null) ?? []).map(
@@ -306,8 +333,19 @@ export async function getPublicProjects(
   }
 
   if (relationError || coverError) {
-    throw new Error(
-      `Failed to load public project media: ${relationError?.message ?? coverError?.message}`
+    logPublicDataError("project media", relationError ?? coverError);
+
+    const projects = projectRows.map(mapProject);
+    const translations = await loadTranslations(
+      client,
+      "project",
+      projects.map((project) => project.id),
+      locale
+    );
+
+    return filterProjects(
+      projects.map((project) => localizeProject(project, translations.get(project.id))),
+      filter
     );
   }
 
@@ -329,10 +367,11 @@ export async function getPublicProjectBySlug(
   slug: string,
   locale: Locale = defaultLocale
 ): Promise<Project | null> {
+  const fallback = demoProjects.find((project) => project.slug === slug && project.isPublished) ?? null;
   const client = getOptionalSupabasePublic();
 
   if (!client) {
-    return demoProjects.find((project) => project.slug === slug && project.isPublished) ?? null;
+    return fallback;
   }
 
   const { data, error } = await client
@@ -343,7 +382,9 @@ export async function getPublicProjectBySlug(
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to load public project ${slug}: ${error.message}`);
+    logPublicDataError(`project:${slug}`, error);
+
+    return fallback;
   }
 
   if (!data) {
@@ -370,7 +411,12 @@ export async function getPublicProjectBySlug(
       .eq("parent_id", data.id);
 
     if (legacyImageError) {
-      throw new Error(`Failed to load legacy public project media: ${legacyImageError.message}`);
+      logPublicDataError(`legacy project media:${slug}`, legacyImageError);
+
+      const project = mapProject(data as ProjectRow);
+      const translations = await loadTranslations(client, "project", [project.id], locale);
+
+      return localizeProject(project, translations.get(project.id));
     }
 
     const project = mapProject({
@@ -383,9 +429,12 @@ export async function getPublicProjectBySlug(
   }
 
   if (relationError || coverError) {
-    throw new Error(
-      `Failed to load public project media: ${relationError?.message ?? coverError?.message}`
-    );
+    logPublicDataError(`project media:${slug}`, relationError ?? coverError);
+
+    const project = mapProject(data as ProjectRow);
+    const translations = await loadTranslations(client, "project", [project.id], locale);
+
+    return localizeProject(project, translations.get(project.id));
   }
 
   const project = mapProject(

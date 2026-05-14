@@ -13,15 +13,19 @@ test("public visitor can browse portfolio and open an order form", async ({ page
 
   await page.getByRole("link", { name: "Заказать похожий проект" }).click();
   await expect(page).toHaveURL(/\/order/);
-  await expect(page.getByRole("button", { name: "Отправить заявку" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Отправить заказ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Пакет работ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Сводка заказа" })).toBeVisible();
+  await expect(page.getByRole("img").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Открыть проект" }).first()).toBeVisible();
 });
 
-test("admin login renders setup notice or Supabase form", async ({ page }) => {
+test("admin login renders setup notice or authentication form", async ({ page }) => {
   await page.goto("/admin/login");
-  await expect(page.getByRole("heading", { name: "Вход в админку" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в административную панель" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 
-  const setupNotice = page.getByText("Для входа настройте Supabase");
+  const setupNotice = page.getByText("Вход временно недоступен");
 
   if (await setupNotice.isVisible()) {
     await expect(setupNotice).toBeVisible();
@@ -35,7 +39,7 @@ test("protected admin routes require Supabase authentication", async ({ page }) 
   await page.goto("/admin");
 
   await expect(page).toHaveURL(/\/admin\/login$/);
-  await expect(page.getByRole("heading", { name: "Вход в админку" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в административную панель" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 });
 
@@ -154,13 +158,12 @@ test("project page has breadcrumbs and gallery slider", async ({ page }) => {
 test("order form blocks empty submissions with browser field validation", async ({ page }) => {
   await page.goto("/order");
 
-  await page.getByRole("button", { name: "Отправить заявку" }).click();
+  await page.getByRole("button", { name: "Отправить заказ" }).click();
   const clientNameState = await page.locator('input[name="clientName"]').evaluate((element) => {
     const input = element as HTMLInputElement;
 
     return {
       maxLength: input.maxLength,
-      minLength: input.minLength,
       required: input.required,
       valueMissing: input.validity.valueMissing
     };
@@ -168,12 +171,46 @@ test("order form blocks empty submissions with browser field validation", async 
 
   expect(clientNameState).toEqual({
     maxLength: 120,
-    minLength: 2,
     required: true,
     valueMissing: true
   });
-  await expect(page.getByText("0 / 120, минимум 2")).toBeVisible();
+  await expect(page.locator('input[name="clientName"] ~ span').first()).toHaveText("0 / 120");
+  await expect(page.getByText(/минимум/i)).toHaveCount(0);
   await expect(page.getByText("Заполните обязательные поля")).toHaveCount(0);
+});
+
+test("order form recalculates package and add-ons", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+
+  await expect(page.getByRole("heading", { name: "Сводка заказа" })).toBeVisible();
+  await expect(page.getByText(/Предварительная стоимость/)).toBeVisible();
+
+  const addon = page.locator('input[name="addonIds"]').first();
+
+  if (await addon.count()) {
+    const before = await page.getByText(/Предварительная стоимость/).locator("..").innerText();
+
+    await addon.check();
+    await expect(page.getByText(/Доплаты/)).toBeVisible();
+    const after = await page.getByText(/Предварительная стоимость/).locator("..").innerText();
+
+    expect(after).not.toBe(before);
+  }
+});
+
+test("mobile order form keeps visual examples inside viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/order?service=brand-identity");
+
+  await expect(page.getByRole("heading", { name: "Оформить заказ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Пример работы для ориентира" })).toBeVisible();
+  await expect(page.getByRole("img").first()).toBeVisible();
+
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+  );
+
+  expect(hasHorizontalOverflow).toBe(false);
 });
 
 test("public routes send baseline security headers", async ({ page }) => {
@@ -182,6 +219,9 @@ test("public routes send baseline security headers", async ({ page }) => {
   expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
   expect(response?.headers()["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(response?.headers()["content-security-policy"]).toContain("object-src 'none'");
+  expect(response?.headers()["strict-transport-security"]).toBeUndefined();
 });
 
 test("footer links to privacy policy and hides admin entry", async ({ page }) => {
@@ -193,11 +233,11 @@ test("footer links to privacy policy and hides admin entry", async ({ page }) =>
   await expect(page.getByText("Служебный вход")).toHaveCount(0);
 });
 
-test("mobile admin login keeps Supabase form inside viewport", async ({ page }) => {
+test("mobile admin login keeps authentication form inside viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/login");
 
-  await expect(page.getByRole("heading", { name: "Вход в админку" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в административную панель" })).toBeVisible();
   await expect(page.getByLabel("Email администратора")).toBeVisible();
   await expect(page.getByLabel("Пароль")).toBeVisible();
   await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
@@ -207,4 +247,17 @@ test("mobile admin login keeps Supabase form inside viewport", async ({ page }) 
   );
 
   expect(hasHorizontalOverflow).toBe(false);
+});
+
+test("publicly visible UI avoids technical and informal copy", async ({ page }) => {
+  for (const route of ["/admin/login", "/order"]) {
+    await page.goto(route);
+    const visibleText = await page.locator("body").innerText();
+
+    expect(visibleText).not.toContain("Supabase");
+    expect(visibleText).not.toContain("bucket");
+    expect(visibleText).not.toContain("Админка");
+    expect(visibleText).not.toContain("админка");
+    expect(visibleText).not.toContain("ПА");
+  }
 });

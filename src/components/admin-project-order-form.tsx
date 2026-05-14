@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import { useState } from "react";
 
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { reorderProjectsAction } from "@/lib/actions/admin";
 import type { Project } from "@/lib/types";
 
@@ -107,12 +108,12 @@ export function AdminProjectOrderForm({
           </div>
         ))}
       </fieldset>
-      <button
+      <FormSubmitButton
         className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
         disabled={!canWrite}
-      >
-        Сохранить порядок проектов
-      </button>
+        idleLabel="Сохранить порядок проектов"
+        pendingLabel="Сохранение..."
+      />
     </form>
   );
 }

@@ -24,7 +24,7 @@ export async function loginAction(
   if (!hasSupabasePublicEnv()) {
     return {
       message:
-        "Вход временно недоступен: настройка администратора ещё не завершена."
+        "Вход временно недоступен. Попробуйте позже."
     };
   }
 
@@ -45,7 +45,7 @@ export async function loginAction(
 
   if (!client) {
     return {
-      message: "Supabase не подключён."
+      message: "Вход временно недоступен. Попробуйте позже."
     };
   }
 
@@ -71,5 +71,5 @@ export async function loginAction(
     };
   }
 
-  redirect("/admin");
+  redirect("/admin?notice=admin-signed-in");
 }

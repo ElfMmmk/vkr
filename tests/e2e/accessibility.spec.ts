@@ -37,7 +37,7 @@ test.describe("WCAG smoke audit", () => {
     expect(await page.locator("#main-content").evaluate((element) => element.id)).toBe("main-content");
   });
 
-  test("admin login exposes only Supabase authentication controls", async ({ page }) => {
+  test("admin login exposes only configured authentication controls", async ({ page }) => {
     await page.goto("/admin/login");
 
     await expect(page.getByLabel("Email администратора")).toBeVisible();

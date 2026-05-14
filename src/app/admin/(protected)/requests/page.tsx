@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { deleteRequestAction } from "@/lib/actions/admin";
 import { requireRequestManager } from "@/lib/auth";
 import { listAdminRequests, listAdminServices } from "@/lib/data/admin";
+import { formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
 import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
 
 type AdminRequestsPageProps = {
@@ -30,6 +31,14 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
   if (params.status) exportParams.set("status", params.status);
   exportParams.set("sort", sort);
   const exportHref = `/admin/requests/export?${exportParams.toString()}`;
+  const redirectParams = new URLSearchParams();
+  if (params.query) redirectParams.set("query", params.query);
+  if (params.serviceId) redirectParams.set("serviceId", params.serviceId);
+  if (params.status) redirectParams.set("status", params.status);
+  if (params.sort) redirectParams.set("sort", sort);
+  const redirectTo = redirectParams.toString()
+    ? `/admin/requests?${redirectParams.toString()}`
+    : "/admin/requests";
   const [services, requests] = await Promise.all([
     listAdminServices(),
     listAdminRequests({
@@ -52,7 +61,7 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.18em] text-muted">Продажи</p>
-        <h1 className="mt-2 text-4xl font-semibold">Заявки</h1>
+        <h1 className="mt-2 text-4xl font-semibold">Заказы</h1>
         <Link
           className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
           href={exportHref}
@@ -131,13 +140,35 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
                 <p>
                   <span className="font-semibold">Услуга:</span> {request.serviceTitle || "Не выбрана"}
                 </p>
-                <p className="text-muted">{request.comment}</p>
+                {request.packageTitle ? (
+                  <p>
+                    <span className="font-semibold">Пакет:</span> {request.packageTitle},{" "}
+                    {formatPriceRange(request.estimatedPriceFrom, request.estimatedPriceTo)} ·{" "}
+                    {formatDurationRange(
+                      request.estimatedDurationFromDays,
+                      request.estimatedDurationToDays
+                    )}
+                  </p>
+                ) : null}
+                <p className="text-muted">{request.resultDescription || request.comment}</p>
+                <Link
+                  className="focus-ring inline-flex min-h-10 items-center justify-center border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
+                  href={`/admin/requests/${request.id}`}
+                >
+                  Открыть заказ
+                </Link>
               </div>
               <div className="space-y-3">
-                <AdminRequestStatusForm canWrite={admin.canManageRequests} id={request.id} status={request.status} />
+                <AdminRequestStatusForm
+                  canWrite={admin.canManageRequests}
+                  id={request.id}
+                  redirectTo={redirectTo}
+                  status={request.status}
+                />
                 <form action={deleteRequestAction}>
                   <AdminFormFieldset canWrite={admin.canManageContent} className="grid">
                     <input name="id" type="hidden" value={request.id} />
+                    <input name="redirectTo" type="hidden" value={redirectTo} />
                     <ConfirmSubmitButton
                       className={`${adminDangerButtonClass} w-full`}
                       message="Подтвердите удаление заявки. Это действие нельзя отменить."

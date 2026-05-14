@@ -11,7 +11,7 @@ export async function listClientRequests(clientUserId: string): Promise<OrderReq
 
   const { data, error } = await client
     .from("requests")
-    .select("*")
+    .select("*, order_contracts(*)")
     .eq("client_user_id", clientUserId)
     .order("created_at", { ascending: false });
 

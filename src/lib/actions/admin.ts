@@ -23,7 +23,10 @@ import {
   pageSchema,
   pageKeySchema,
   projectSchema,
+  orderContractSchema,
   requestStatusSchema,
+  serviceAddonSchema,
+  servicePackageSchema,
   serviceSchema,
   tagSchema
 } from "@/lib/validation";
@@ -66,12 +69,40 @@ function mutationError(error: unknown): never {
   throw new Error(message);
 }
 
+function logAdminActionError(
+  context: string,
+  error: unknown,
+  meta?: Record<string, unknown>
+) {
+  console.error("[admin-action]", context, {
+    error: getMutationErrorMessage(error, "Unknown error"),
+    meta
+  });
+}
+
 function parseUserRole(value: string): UserRole {
   if (value === "admin" || value === "manager" || value === "client") {
     return value;
   }
 
   throw new Error("Unknown user role.");
+}
+
+function getAdminRedirectTo(formData: FormData, fallback: string): string {
+  const redirectTo = formString(formData, "redirectTo");
+
+  return redirectTo === "/admin" || redirectTo.startsWith("/admin/") ? redirectTo : fallback;
+}
+
+function redirectWithNotice(path: string, notice: string): never {
+  const url = new URL(path, "http://localhost");
+
+  if (url.pathname !== "/admin" && !url.pathname.startsWith("/admin/")) {
+    redirect(`/admin?notice=${notice}`);
+  }
+
+  url.searchParams.set("notice", notice);
+  redirect(`${url.pathname}${url.search}${url.hash}`);
 }
 
 export async function signOutAction(): Promise<void> {
@@ -148,6 +179,7 @@ export async function saveServiceAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/services");
   revalidatePath("/services");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/services", "service-saved");
 }
 
 export async function deleteServiceAction(formData: FormData): Promise<void> {
@@ -167,6 +199,123 @@ export async function deleteServiceAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/services");
   revalidatePath("/services");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/services", "service-deleted");
+}
+
+export async function saveServicePackageAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const id = cleanId(formString(formData, "id"));
+  const parsed = servicePackageSchema.parse({
+    serviceId: cleanId(formString(formData, "serviceId")) ?? "",
+    title: formString(formData, "title"),
+    description: formString(formData, "description"),
+    priceFrom: formString(formData, "priceFrom"),
+    priceTo: formString(formData, "priceTo"),
+    durationFromDays: formString(formData, "durationFromDays"),
+    durationToDays: formString(formData, "durationToDays"),
+    displayOrder: formString(formData, "displayOrder") || "100",
+    isActive: formBoolean(formData, "isActive")
+  });
+  const payload = {
+    service_id: parsed.serviceId,
+    title: parsed.title,
+    description: parsed.description,
+    price_from: parsed.priceFrom,
+    price_to: parsed.priceTo,
+    duration_from_days: parsed.durationFromDays,
+    duration_to_days: parsed.durationToDays,
+    display_order: parsed.displayOrder,
+    is_active: parsed.isActive
+  };
+  const result = id
+    ? await client.from("service_packages").update(payload).eq("id", id)
+    : await client.from("service_packages").insert(payload);
+
+  if (result.error) {
+    mutationError(result.error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/services");
+  revalidatePath("/order");
+  redirectWithNotice("/admin/services", "service-package-saved");
+}
+
+export async function deleteServicePackageAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const id = cleanId(formString(formData, "id"));
+
+  if (!id) {
+    return;
+  }
+
+  const { error } = await getSupabaseAdminOrThrow().from("service_packages").delete().eq("id", id);
+
+  if (error) {
+    mutationError(error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/services");
+  revalidatePath("/order");
+  redirectWithNotice("/admin/services", "service-package-deleted");
+}
+
+export async function saveServiceAddonAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const id = cleanId(formString(formData, "id"));
+  const parsed = serviceAddonSchema.parse({
+    serviceId: cleanId(formString(formData, "serviceId")) ?? "",
+    title: formString(formData, "title"),
+    description: formString(formData, "description"),
+    price: formString(formData, "price"),
+    durationDays: formString(formData, "durationDays"),
+    displayOrder: formString(formData, "displayOrder") || "100",
+    isActive: formBoolean(formData, "isActive")
+  });
+  const payload = {
+    service_id: parsed.serviceId,
+    title: parsed.title,
+    description: parsed.description,
+    price: parsed.price,
+    duration_days: parsed.durationDays,
+    display_order: parsed.displayOrder,
+    is_active: parsed.isActive
+  };
+  const result = id
+    ? await client.from("service_addons").update(payload).eq("id", id)
+    : await client.from("service_addons").insert(payload);
+
+  if (result.error) {
+    mutationError(result.error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/services");
+  revalidatePath("/order");
+  redirectWithNotice("/admin/services", "service-addon-saved");
+}
+
+export async function deleteServiceAddonAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const id = cleanId(formString(formData, "id"));
+
+  if (!id) {
+    return;
+  }
+
+  const { error } = await getSupabaseAdminOrThrow().from("service_addons").delete().eq("id", id);
+
+  if (error) {
+    mutationError(error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/services");
+  revalidatePath("/order");
+  redirectWithNotice("/admin/services", "service-addon-deleted");
 }
 
 export async function reorderServicesAction(formData: FormData): Promise<void> {
@@ -196,6 +345,7 @@ export async function reorderServicesAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/services");
   revalidatePath("/services");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/services", "services-reordered");
 }
 
 export async function reorderProjectsAction(formData: FormData): Promise<void> {
@@ -225,6 +375,7 @@ export async function reorderProjectsAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/projects");
   revalidatePath("/");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/projects", "projects-reordered");
 }
 
 export async function saveTagAction(formData: FormData): Promise<void> {
@@ -253,6 +404,7 @@ export async function saveTagAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/tags");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/tags", "tag-saved");
 }
 
 export async function deleteTagAction(formData: FormData): Promise<void> {
@@ -271,6 +423,7 @@ export async function deleteTagAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/tags");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/tags", "tag-deleted");
 }
 
 export async function saveProjectAction(formData: FormData): Promise<void> {
@@ -438,6 +591,8 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
   if (previousSlug && previousSlug !== result.data.slug) {
     revalidatePath(`/portfolio/${previousSlug}`);
   }
+
+  redirectWithNotice("/admin/projects", "project-saved");
 }
 
 export async function deleteProjectAction(formData: FormData): Promise<void> {
@@ -458,6 +613,7 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/projects");
   revalidatePath("/admin/images");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/projects", "project-deleted");
 }
 
 async function savePageMutation(formData: FormData): Promise<void> {
@@ -515,10 +671,10 @@ export async function savePageStateAction(
       ok: true,
       message: "Страница сохранена"
     };
-  } catch (error) {
+  } catch {
     return {
       ok: false,
-      message: getMutationErrorMessage(error, "Не удалось сохранить страницу")
+      message: "Не удалось сохранить страницу. Проверьте поля и попробуйте ещё раз."
     };
   }
 }
@@ -527,6 +683,7 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
   const admin = await requireRequestManager();
   const id = cleanId(formString(formData, "id"));
   const status = requestStatusSchema.parse(formString(formData, "status"));
+  const redirectTo = getAdminRedirectTo(formData, "/admin/requests");
 
   if (!id) {
     return;
@@ -568,11 +725,70 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
   revalidatePath("/admin/requests");
   revalidatePath("/admin/notifications");
   revalidatePath("/admin/analytics");
+  redirectWithNotice(redirectTo, "request-status-updated");
+}
+
+export async function saveOrderContractAction(formData: FormData): Promise<void> {
+  await requireRequestManager();
+  const client = getSupabaseAdminOrThrow();
+  const id = cleanId(formString(formData, "id"));
+  const parsed = orderContractSchema.parse({
+    requestId: cleanId(formString(formData, "requestId")) ?? "",
+    finalPrice: formString(formData, "finalPrice"),
+    finalDurationDays: formString(formData, "finalDurationDays"),
+    workScope: formString(formData, "workScope"),
+    materials: formString(formData, "materials"),
+    managerComment: formString(formData, "managerComment"),
+    status: formString(formData, "status")
+  });
+
+  if (id) {
+    const { data: existingContract, error: existingContractError } = await client
+      .from("order_contracts")
+      .select("request_id, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingContractError) {
+      mutationError(existingContractError);
+    }
+
+    if (existingContract?.status === "accepted") {
+      redirectWithNotice(
+        `/admin/requests/${existingContract.request_id ?? parsed.requestId}`,
+        "order-contract-locked"
+      );
+    }
+  }
+
+  const payload = {
+    request_id: parsed.requestId,
+    final_price: parsed.finalPrice,
+    final_duration_days: parsed.finalDurationDays,
+    work_scope: parsed.workScope,
+    materials: parsed.materials,
+    manager_comment: parsed.managerComment,
+    status: parsed.status === "accepted" ? "sent" : parsed.status,
+    accepted_at: null
+  };
+  const result = id
+    ? await client.from("order_contracts").update(payload).eq("id", id)
+    : await client.from("order_contracts").upsert(payload, { onConflict: "request_id" });
+
+  if (result.error) {
+    mutationError(result.error);
+  }
+
+  revalidatePath("/admin/requests");
+  revalidatePath(`/admin/requests/${parsed.requestId}`);
+  revalidatePath("/account");
+  redirectWithNotice(`/admin/requests/${parsed.requestId}`, "order-contract-saved");
 }
 
 export async function deleteRequestAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const id = cleanId(formString(formData, "id"));
+  const redirectTo = getAdminRedirectTo(formData, "/admin/requests");
 
   if (!id) {
     return;
@@ -585,6 +801,7 @@ export async function deleteRequestAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/admin/requests");
+  redirectWithNotice(redirectTo, "request-deleted");
 }
 
 export async function uploadImageAction(
@@ -592,102 +809,121 @@ export async function uploadImageAction(
   formData: FormData
 ): Promise<UploadImageState> {
   try {
-  await requireWritableAdmin();
-  const client = getSupabaseAdminOrThrow();
-  const file = formData.get("file");
+    await requireWritableAdmin();
+    const client = getSupabaseAdminOrThrow();
+    const file = formData.get("file");
 
-  if (!(file instanceof File) || file.size === 0) {
-    return {
-      ok: false,
-      message: "Выберите изображение"
-    };
-  }
+    if (!(file instanceof File) || file.size === 0) {
+      return {
+        ok: false,
+        message: "Выберите изображение"
+      };
+    }
 
-  const uploadValidationError = validatePortfolioImageUpload(file);
+    const uploadValidationError = validatePortfolioImageUpload(file);
 
-  if (uploadValidationError) {
-    return {
-      ok: false,
-      message: uploadValidationError
-    };
-  }
+    if (uploadValidationError) {
+      return {
+        ok: false,
+        message: uploadValidationError
+      };
+    }
 
-  const parsed = imageUploadSchema.safeParse({
-    title: formString(formData, "title"),
-    caption: formString(formData, "caption"),
-    sortOrder: formString(formData, "sortOrder") || "100"
-  });
-
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message: parsed.error.issues[0]?.message ?? "Проверьте поля изображения"
-    };
-  }
-
-  const title = parsed.data.title || file.name.replace(/\.[^.]+$/, "").slice(0, fieldLimits.image.title.max);
-  const extension = getPortfolioImageExtension(file);
-  const safeName = `${randomUUID()}.${extension}`;
-  const storagePath = `uploads/${safeName}`;
-  const bytes = await file.arrayBuffer();
-  const bytesValidationError = validatePortfolioImageBytes(file, bytes);
-
-  if (bytesValidationError) {
-    return {
-      ok: false,
-      message: bytesValidationError
-    };
-  }
-
-  const { error: uploadError } = await client.storage
-    .from("portfolio-images")
-    .upload(storagePath, bytes, {
-      cacheControl: "31536000",
-      contentType: file.type || "image/jpeg",
-      upsert: false
+    const parsed = imageUploadSchema.safeParse({
+      title: formString(formData, "title"),
+      caption: formString(formData, "caption"),
+      sortOrder: formString(formData, "sortOrder") || "100"
     });
 
-  if (uploadError) {
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: parsed.error.issues[0]?.message ?? "Проверьте поля изображения"
+      };
+    }
+
+    const title =
+      parsed.data.title || file.name.replace(/\.[^.]+$/, "").slice(0, fieldLimits.image.title.max);
+    const extension = getPortfolioImageExtension(file);
+    const safeName = `${randomUUID()}.${extension}`;
+    const storagePath = `uploads/${safeName}`;
+    const bytes = await file.arrayBuffer();
+    const bytesValidationError = validatePortfolioImageBytes(file, bytes);
+
+    if (bytesValidationError) {
+      return {
+        ok: false,
+        message: bytesValidationError
+      };
+    }
+
+    const { error: uploadError } = await client.storage
+      .from("portfolio-images")
+      .upload(storagePath, bytes, {
+        cacheControl: "31536000",
+        contentType: file.type || "image/jpeg",
+        upsert: false
+      });
+
+    if (uploadError) {
+      logAdminActionError("image storage upload failed", uploadError, {
+        contentType: file.type,
+        size: file.size
+      });
+
+      return {
+        ok: false,
+        message:
+          "Не удалось загрузить файл в медиатеку. Проверьте настройки хранилища и попробуйте позже."
+      };
+    }
+
+    const publicUrl = client.storage.from("portfolio-images").getPublicUrl(storagePath)
+      .data.publicUrl;
+
+    const { error } = await client.from("images").insert({
+      storage_path: storagePath,
+      public_url: publicUrl,
+      title,
+      parent_type: "free",
+      parent_id: null,
+      caption: parsed.data.caption,
+      sort_order: parsed.data.sortOrder
+    });
+
+    if (error) {
+      logAdminActionError("image metadata insert failed", error, {
+        storagePath,
+        contentType: file.type,
+        size: file.size
+      });
+
+      const { error: cleanupError } = await client.storage.from("portfolio-images").remove([storagePath]);
+
+      if (cleanupError) {
+        logAdminActionError("image storage cleanup failed", cleanupError, { storagePath });
+      }
+
+      return {
+        ok: false,
+        message: "Не удалось сохранить изображение в медиатеке. Попробуйте ещё раз."
+      };
+    }
+
+    revalidatePath("/admin/images");
+    revalidatePath("/admin/projects");
+    revalidatePath("/portfolio");
+
     return {
-      ok: false,
-      message: `Не удалось загрузить файл в bucket portfolio-images: ${getMutationErrorMessage(uploadError)}`
+      ok: true,
+      message: "Изображение загружено"
     };
-  }
-
-  const publicUrl = client.storage.from("portfolio-images").getPublicUrl(storagePath)
-    .data.publicUrl;
-
-  const { error } = await client.from("images").insert({
-    storage_path: storagePath,
-    public_url: publicUrl,
-    title,
-    parent_type: "free",
-    parent_id: null,
-    caption: parsed.data.caption,
-    sort_order: parsed.data.sortOrder
-  });
-
-  if (error) {
-    await client.storage.from("portfolio-images").remove([storagePath]);
-
-    return {
-      ok: false,
-      message: `Файл загружен, но запись в медиатеке не сохранилась: ${getMutationErrorMessage(error)}`
-    };
-  }
-
-  revalidatePath("/admin/images");
-  revalidatePath("/admin/projects");
-  revalidatePath("/portfolio");
-
-  return {
-    ok: true,
-    message: "Изображение загружено"
-  };
   } catch (error) {
+    logAdminActionError("image upload action failed", error);
+
     return {
       ok: false,
-      message: `Не удалось загрузить изображение: ${getMutationErrorMessage(error)}`
+      message: "Не удалось загрузить изображение. Попробуйте позже."
     };
   }
 }
@@ -725,6 +961,7 @@ export async function deleteImageAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/images");
   revalidatePath("/portfolio");
+  redirectWithNotice("/admin/images", "image-deleted");
 }
 
 export async function markNotificationReadAction(formData: FormData): Promise<void> {
@@ -743,6 +980,7 @@ export async function markNotificationReadAction(formData: FormData): Promise<vo
   });
 
   revalidatePath("/admin/notifications");
+  redirectWithNotice("/admin/notifications", "notification-read");
 }
 
 export async function updateUserRoleAction(formData: FormData): Promise<void> {
@@ -764,4 +1002,5 @@ export async function updateUserRoleAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/admin/users");
+  redirectWithNotice("/admin/users", "user-role-updated");
 }

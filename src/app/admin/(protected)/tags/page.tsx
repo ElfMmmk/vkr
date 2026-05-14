@@ -1,5 +1,6 @@
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteTagAction, saveTagAction } from "@/lib/actions/admin";
@@ -48,7 +49,11 @@ function TagForm({ tag, canWrite }: { tag?: Tag; canWrite: boolean }) {
             placeholder="Короткое пояснение для внутренней навигации"
           />
         </Field>
-        <button className={adminPrimaryButtonClass}>{tag ? "Сохранить тег" : "Создать тег"}</button>
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          idleLabel={tag ? "Сохранить тег" : "Создать тег"}
+          pendingLabel="Сохранение..."
+        />
       </AdminFormFieldset>
     </form>
   );

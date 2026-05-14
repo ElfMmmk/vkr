@@ -16,6 +16,7 @@ import {
   type TagRow
 } from "@/lib/data/mappers";
 import { getOptionalSupabaseAdmin } from "@/lib/supabase/server";
+import type { RequestStatus } from "@/lib/supabase/database.types";
 import type {
   OrderRequest,
   PageContent,
@@ -51,6 +52,16 @@ function isMissingDisplayOrderColumn(error: { message?: string } | null): boolea
   return Boolean(error?.message?.includes("display_order"));
 }
 
+function isRequestStatus(value: string): value is RequestStatus {
+  return (
+    value === "new" ||
+    value === "in_progress" ||
+    value === "approved" ||
+    value === "completed" ||
+    value === "rejected"
+  );
+}
+
 export async function listAdminPages(): Promise<PageContent[]> {
   const client = getOptionalSupabaseAdmin();
 
@@ -75,7 +86,7 @@ export async function listAdminServices(): Promise<Service[]> {
 
   const { data, error } = await client
     .from("services")
-    .select("*")
+    .select("*, service_packages(*), service_addons(*)")
     .order("display_order", { ascending: true });
 
   return requireAdminData(data as ServiceRow[] | null, error, "admin services").map(mapService);
@@ -203,11 +214,12 @@ export async function listAdminRequests(options: {
   serviceId?: string;
   status?: string;
   sort?: "newest" | "oldest";
+  limit?: number | null;
 } = {}): Promise<OrderRequest[]> {
   const client = getOptionalSupabaseAdmin();
 
   if (!client) {
-    return demoRequests.filter((request) => {
+    const requests = demoRequests.filter((request) => {
       const query = normalizeRequestSearch(options.query);
       const statusMatches = !options.status || request.status === options.status;
       const serviceMatches = !options.serviceId || request.serviceId === options.serviceId;
@@ -223,25 +235,55 @@ export async function listAdminRequests(options: {
 
       return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction;
     });
+
+    return typeof options.limit === "number" ? requests.slice(0, options.limit) : requests;
   }
 
   const query = normalizeRequestSearch(options.query);
-  let requestQuery = client
-    .from("requests")
-    .select("*")
-    .order("created_at", { ascending: options.sort === "oldest" })
-    .limit(query ? 500 : 200);
+  const requestLimit = options.limit === undefined ? (query ? 500 : 200) : options.limit;
+  const buildRequestQuery = () => {
+    let requestQuery = client
+      .from("requests")
+      .select("*, order_contracts(*)")
+      .order("created_at", { ascending: options.sort === "oldest" });
 
-  if (options.status) {
-    requestQuery = requestQuery.eq("status", options.status);
+    if (options.status && isRequestStatus(options.status)) {
+      requestQuery = requestQuery.eq("status", options.status);
+    }
+
+    if (options.serviceId) {
+      requestQuery = requestQuery.eq("service_id", options.serviceId);
+    }
+
+    return requestQuery;
+  };
+
+  let requestRows: RequestRow[] = [];
+
+  if (requestLimit === null) {
+    const pageSize = 1000;
+
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await buildRequestQuery().range(from, from + pageSize - 1);
+      const pageRows = requireAdminData(
+        data as RequestRow[] | null,
+        error,
+        "admin requests export"
+      );
+
+      requestRows = requestRows.concat(pageRows);
+
+      if (pageRows.length < pageSize) {
+        break;
+      }
+    }
+  } else {
+    const { data, error } = await buildRequestQuery().limit(requestLimit);
+
+    requestRows = requireAdminData(data as RequestRow[] | null, error, "admin requests");
   }
 
-  if (options.serviceId) {
-    requestQuery = requestQuery.eq("service_id", options.serviceId);
-  }
-
-  const { data, error } = await requestQuery;
-  const rows = requireAdminData(data as RequestRow[] | null, error, "admin requests").map(mapRequest);
+  const rows = requestRows.map(mapRequest);
 
   if (!query) {
     return rows;
@@ -252,6 +294,26 @@ export async function listAdminRequests(options: {
       .toLowerCase()
       .includes(query)
   );
+}
+
+export async function getAdminRequestById(id: string): Promise<OrderRequest | null> {
+  const client = getOptionalSupabaseAdmin();
+
+  if (!client) {
+    return demoRequests.find((request) => request.id === id) ?? null;
+  }
+
+  const { data, error } = await client
+    .from("requests")
+    .select("*, order_contracts(*)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load admin request: ${error.message}`);
+  }
+
+  return data ? mapRequest(data as RequestRow) : null;
 }
 
 type ProfileRow = {

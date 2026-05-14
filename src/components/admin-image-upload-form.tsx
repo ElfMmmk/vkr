@@ -1,14 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { useFormStatus } from "react-dom";
 
 import {
   AdminFormFieldset,
   adminPrimaryButtonClass
 } from "@/components/admin-form-lock";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass } from "@/components/form-controls";
 import { LimitedInput } from "@/components/limited-text-control";
+import { ToastMessage } from "@/components/route-flash-toast";
 import {
   uploadImageAction,
   type UploadImageState
@@ -25,16 +26,6 @@ const initialState: UploadImageState = {
   ok: false,
   message: ""
 };
-
-function SubmitButton({ canWrite }: { canWrite: boolean }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button className={adminPrimaryButtonClass} disabled={!canWrite || pending}>
-      {pending ? "Загрузка..." : "Загрузить"}
-    </button>
-  );
-}
 
 function validateFileInput(input: HTMLInputElement | null): boolean {
   if (!input) {
@@ -124,18 +115,18 @@ export function AdminImageUploadForm({ canWrite }: { canWrite: boolean }) {
         </Field>
         <input name="sortOrder" type="hidden" value="100" />
         {state.message ? (
-          <p
-            className={`border px-4 py-3 text-sm ${
-              state.ok
-                ? "border-green-300 bg-green-50 text-green-800"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}
-            role="status"
-          >
-            {state.message}
-          </p>
+          <ToastMessage
+            key={`${state.ok}-${state.message}`}
+            message={state.message}
+            tone={state.ok ? "success" : "error"}
+          />
         ) : null}
-        <SubmitButton canWrite={canWrite} />
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          disabled={!canWrite}
+          idleLabel="Загрузить"
+          pendingLabel="Загрузка..."
+        />
       </AdminFormFieldset>
     </form>
   );

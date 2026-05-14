@@ -1,11 +1,13 @@
 import Link from "next/link";
 
-import { clientSignOutAction } from "@/app/account/actions";
+import { acceptOrderContractAction, clientSignOutAction } from "@/app/account/actions";
+import { RouteFlashToast } from "@/components/route-flash-toast";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StatusBadge } from "@/components/status-badge";
 import { requireClientSession } from "@/lib/auth";
 import { listClientRequests } from "@/lib/data/client";
+import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,7 @@ export default async function AccountPage() {
   return (
     <>
       <SiteHeader />
+      <RouteFlashToast />
       <main id="main-content" className="container-shell py-16 md:py-24">
         <div className="flex flex-col justify-between gap-5 border-b border-line pb-8 md:flex-row md:items-end">
           <div>
@@ -26,6 +29,9 @@ export default async function AccountPage() {
               {session.fullName || session.email}
             </h1>
             <p className="mt-3 text-muted">{session.email}</p>
+            <p className="mt-3 inline-flex border border-cobalt/25 bg-cobalt/10 px-3 py-1.5 text-sm font-semibold text-cobalt">
+              Вы вошли как {session.fullName || session.email}
+            </p>
           </div>
           <form action={clientSignOutAction}>
             <button className="focus-ring inline-flex min-h-11 items-center justify-center border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px">
@@ -37,16 +43,16 @@ export default async function AccountPage() {
         <section className="mt-10">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h2 className="text-2xl font-semibold">Мои заявки</h2>
+              <h2 className="text-2xl font-semibold">Мои заказы</h2>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Отображаются только заявки, отправленные из текущего кабинета.
+                Здесь отображаются заказы, предварительные расчёты и договоры-заказы.
               </p>
             </div>
             <Link
               className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
               href="/order"
             >
-              Новая заявка
+              Новый заказ
             </Link>
           </div>
 
@@ -65,14 +71,61 @@ export default async function AccountPage() {
                     </div>
                     <StatusBadge status={request.status} />
                   </div>
-                  <p className="mt-4 text-sm leading-6 text-muted">{request.comment}</p>
+                  <div className="mt-4 grid gap-3 text-sm leading-6 md:grid-cols-2">
+                    <p>
+                      <span className="font-semibold">Пакет:</span>{" "}
+                      {request.packageTitle || "Не выбран"}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Предварительно:</span>{" "}
+                      {formatPriceRange(request.estimatedPriceFrom, request.estimatedPriceTo)},{" "}
+                      {formatDurationRange(
+                        request.estimatedDurationFromDays,
+                        request.estimatedDurationToDays
+                      )}
+                    </p>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-muted">
+                    {request.resultDescription || request.comment}
+                  </p>
+                  {request.contract && ["sent", "accepted"].includes(request.contract.status) ? (
+                    <div className="mt-5 border border-cobalt/25 bg-cobalt/10 p-4">
+                      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                        <div>
+                          <h4 className="text-lg font-semibold">Договор-заказ</h4>
+                          <p className="mt-2 text-sm leading-6 text-muted">
+                            Итоговая стоимость: {formatRubles(request.contract.finalPrice)} · срок:{" "}
+                            {request.contract.finalDurationDays} раб. дн.
+                          </p>
+                        </div>
+                        <span className="border border-cobalt/25 bg-white px-3 py-1.5 text-sm font-semibold text-cobalt">
+                          {request.contract.status === "accepted" ? "Принят" : "На согласовании"}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6">{request.contract.workScope}</p>
+                      {request.contract.managerComment ? (
+                        <p className="mt-2 text-sm leading-6 text-muted">
+                          {request.contract.managerComment}
+                        </p>
+                      ) : null}
+                      {request.contract.status === "sent" ? (
+                        <form action={acceptOrderContractAction} className="mt-4">
+                          <input name="requestId" type="hidden" value={request.id} />
+                          <input name="contractId" type="hidden" value={request.contract.id} />
+                          <button className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px">
+                            Принять договор-заказ
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
           ) : (
             <div className="mt-6 border border-line bg-white p-8 text-center">
-              <h3 className="text-xl font-semibold">Заявок пока нет</h3>
-              <p className="mt-2 text-muted">Создайте первую заявку, чтобы отслеживать её статус здесь.</p>
+              <h3 className="text-xl font-semibold">Заказов пока нет</h3>
+              <p className="mt-2 text-muted">Оформите первый заказ, чтобы отслеживать его статус здесь.</p>
             </div>
           )}
         </section>

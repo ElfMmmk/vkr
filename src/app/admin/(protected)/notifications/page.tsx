@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { markNotificationReadAction } from "@/lib/actions/admin";
 import { requireRequestManager } from "@/lib/auth";
 import { listAdminNotifications } from "@/lib/data/notifications";
@@ -49,7 +50,11 @@ export default async function AdminNotificationsPage() {
                   <form action={markNotificationReadAction}>
                     <AdminFormFieldset canWrite={admin.canManageRequests}>
                       <input name="id" type="hidden" value={notification.id} />
-                      <button className={adminPrimaryButtonClass}>Отметить прочитанным</button>
+                      <FormSubmitButton
+                        className={adminPrimaryButtonClass}
+                        idleLabel="Отметить прочитанным"
+                        pendingLabel="Сохранение..."
+                      />
                     </AdminFormFieldset>
                   </form>
                 ) : null}

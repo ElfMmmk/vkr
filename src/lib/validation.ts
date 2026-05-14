@@ -8,6 +8,7 @@ export const pageKeySchema = z.enum(["home", "about", "services", "contacts"]);
 export const imageParentTypeSchema = z.enum(["project", "page", "service", "free"]);
 
 export const contactMethodSchema = z.enum(["Telegram", "Email", "Телефон", "Другой способ"]);
+export const contractStatusSchema = z.enum(["draft", "sent", "accepted", "cancelled"]);
 
 export const orderRequestSchema = z.object({
   clientName: z
@@ -22,12 +23,104 @@ export const orderRequestSchema = z.object({
     .min(fieldLimits.order.contactValue.min, "Укажите контакт")
     .max(fieldLimits.order.contactValue.max, "Контакт слишком длинный"),
   serviceId: z.string().trim().min(1, "Выберите услугу"),
+  packageId: z.string().trim().min(1, "Выберите пакет работ"),
+  addonIds: z.array(z.string().trim().min(1)).default([]),
+  referenceProjectId: z.string().trim().optional(),
   serviceTitle: z.string().trim().max(fieldLimits.order.serviceTitle.max).optional(),
+  resultDescription: z
+    .string()
+    .trim()
+    .min(fieldLimits.order.resultDescription.min, "Опишите ожидаемый результат")
+    .max(fieldLimits.order.resultDescription.max, "Описание слишком длинное"),
+  stylePreferences: z
+    .string()
+    .trim()
+    .min(fieldLimits.order.stylePreferences.min, "Опишите стиль или выберите пример")
+    .max(fieldLimits.order.stylePreferences.max, "Описание стиля слишком длинное"),
+  materials: z
+    .string()
+    .trim()
+    .max(fieldLimits.order.materials.max, "Материалы описаны слишком подробно")
+    .default(""),
+  desiredDeadline: z
+    .string()
+    .trim()
+    .max(fieldLimits.order.desiredDeadline.max, "Срок слишком длинный")
+    .default(""),
   comment: z
     .string()
     .trim()
-    .min(fieldLimits.order.comment.min, "Опишите задачу хотя бы в одном предложении")
     .max(fieldLimits.order.comment.max, "Комментарий слишком длинный")
+    .default("")
+});
+
+export const servicePackageSchema = z
+  .object({
+    serviceId: z.string().trim().min(1),
+    title: z.string().trim().min(fieldLimits.servicePackage.title.min).max(fieldLimits.servicePackage.title.max),
+    description: z.string().trim().max(fieldLimits.servicePackage.description.max).default(""),
+    priceFrom: z.coerce.number().int().min(fieldLimits.servicePackage.price.min).max(fieldLimits.servicePackage.price.max),
+    priceTo: z.coerce.number().int().min(fieldLimits.servicePackage.price.min).max(fieldLimits.servicePackage.price.max),
+    durationFromDays: z.coerce
+      .number()
+      .int()
+      .min(fieldLimits.servicePackage.durationDays.min)
+      .max(fieldLimits.servicePackage.durationDays.max),
+    durationToDays: z.coerce
+      .number()
+      .int()
+      .min(fieldLimits.servicePackage.durationDays.min)
+      .max(fieldLimits.servicePackage.durationDays.max),
+    displayOrder: z.coerce
+      .number()
+      .int()
+      .min(fieldLimits.servicePackage.displayOrder.min)
+      .max(fieldLimits.servicePackage.displayOrder.max),
+    isActive: z.boolean()
+  })
+  .refine((value) => value.priceTo >= value.priceFrom, {
+    message: "Максимальная цена не может быть меньше минимальной",
+    path: ["priceTo"]
+  })
+  .refine((value) => value.durationToDays >= value.durationFromDays, {
+    message: "Максимальный срок не может быть меньше минимального",
+    path: ["durationToDays"]
+  });
+
+export const serviceAddonSchema = z.object({
+  serviceId: z.string().trim().min(1),
+  title: z.string().trim().min(fieldLimits.serviceAddon.title.min).max(fieldLimits.serviceAddon.title.max),
+  description: z.string().trim().max(fieldLimits.serviceAddon.description.max).default(""),
+  price: z.coerce.number().int().min(fieldLimits.serviceAddon.price.min).max(fieldLimits.serviceAddon.price.max),
+  durationDays: z.coerce
+    .number()
+    .int()
+    .min(fieldLimits.serviceAddon.durationDays.min)
+    .max(fieldLimits.serviceAddon.durationDays.max),
+  displayOrder: z.coerce
+    .number()
+    .int()
+    .min(fieldLimits.serviceAddon.displayOrder.min)
+    .max(fieldLimits.serviceAddon.displayOrder.max),
+  isActive: z.boolean()
+});
+
+export const orderContractSchema = z.object({
+  requestId: z.string().trim().min(1),
+  finalPrice: z.coerce.number().int().min(fieldLimits.orderContract.finalPrice.min).max(fieldLimits.orderContract.finalPrice.max),
+  finalDurationDays: z.coerce
+    .number()
+    .int()
+    .min(fieldLimits.orderContract.finalDurationDays.min)
+    .max(fieldLimits.orderContract.finalDurationDays.max),
+  workScope: z
+    .string()
+    .trim()
+    .min(fieldLimits.orderContract.workScope.min)
+    .max(fieldLimits.orderContract.workScope.max),
+  materials: z.string().trim().max(fieldLimits.orderContract.materials.max).default(""),
+  managerComment: z.string().trim().max(fieldLimits.orderContract.managerComment.max).default(""),
+  status: contractStatusSchema
 });
 
 export const serviceSchema = z.object({

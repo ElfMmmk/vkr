@@ -1,13 +1,22 @@
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminServiceOrderForm } from "@/components/admin-service-order-form";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
-import { deleteServiceAction, saveServiceAction } from "@/lib/actions/admin";
+import {
+  deleteServiceAction,
+  deleteServiceAddonAction,
+  deleteServicePackageAction,
+  saveServiceAction,
+  saveServiceAddonAction,
+  saveServicePackageAction
+} from "@/lib/actions/admin";
 import { requireContentAdmin } from "@/lib/auth";
 import { listAdminServices } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
-import type { Service } from "@/lib/types";
+import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
+import type { Service, ServiceAddon, ServicePackage } from "@/lib/types";
 
 function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boolean }) {
   return (
@@ -71,9 +80,200 @@ function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boole
             Показывать на сайте
           </label>
         </div>
-        <button className={adminPrimaryButtonClass}>
-          {service ? "Сохранить услугу" : "Создать услугу"}
-        </button>
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          idleLabel={service ? "Сохранить услугу" : "Создать услугу"}
+          pendingLabel="Сохранение..."
+        />
+      </AdminFormFieldset>
+    </form>
+  );
+}
+
+function PackageForm({
+  canWrite,
+  packageItem,
+  serviceId
+}: {
+  canWrite: boolean;
+  packageItem?: ServicePackage;
+  serviceId: string;
+}) {
+  return (
+    <form action={saveServicePackageAction} className="grid gap-4">
+      <AdminFormFieldset canWrite={canWrite}>
+        <input name="id" type="hidden" value={packageItem?.id ?? ""} />
+        <input name="serviceId" type="hidden" value={serviceId} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Название пакета" required>
+            <LimitedInput
+              className={inputClass}
+              defaultValue={packageItem?.title}
+              maxLength={fieldLimits.servicePackage.title.max}
+              minLength={fieldLimits.servicePackage.title.min}
+              name="title"
+              placeholder="Базовый пакет"
+              required
+            />
+          </Field>
+          <Field label="Порядок">
+            <input
+              className={inputClass}
+              defaultValue={packageItem?.displayOrder ?? 100}
+              max={fieldLimits.servicePackage.displayOrder.max}
+              min={fieldLimits.servicePackage.displayOrder.min}
+              name="displayOrder"
+              type="number"
+            />
+          </Field>
+        </div>
+        <Field label="Описание пакета">
+          <LimitedTextarea
+            className={textareaClass}
+            defaultValue={packageItem?.description}
+            maxLength={fieldLimits.servicePackage.description.max}
+            name="description"
+            placeholder="Что входит в пакет и какой результат получает клиент"
+          />
+        </Field>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Field label="Цена от" required>
+            <input
+              className={inputClass}
+              defaultValue={packageItem?.priceFrom ?? 0}
+              max={fieldLimits.servicePackage.price.max}
+              min={fieldLimits.servicePackage.price.min}
+              name="priceFrom"
+              required
+              type="number"
+            />
+          </Field>
+          <Field label="Цена до" required>
+            <input
+              className={inputClass}
+              defaultValue={packageItem?.priceTo ?? 0}
+              max={fieldLimits.servicePackage.price.max}
+              min={fieldLimits.servicePackage.price.min}
+              name="priceTo"
+              required
+              type="number"
+            />
+          </Field>
+          <Field label="Срок от" required>
+            <input
+              className={inputClass}
+              defaultValue={packageItem?.durationFromDays ?? 7}
+              max={fieldLimits.servicePackage.durationDays.max}
+              min={fieldLimits.servicePackage.durationDays.min}
+              name="durationFromDays"
+              required
+              type="number"
+            />
+          </Field>
+          <Field label="Срок до" required>
+            <input
+              className={inputClass}
+              defaultValue={packageItem?.durationToDays ?? 14}
+              max={fieldLimits.servicePackage.durationDays.max}
+              min={fieldLimits.servicePackage.durationDays.min}
+              name="durationToDays"
+              required
+              type="number"
+            />
+          </Field>
+        </div>
+        <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
+          <input defaultChecked={packageItem?.isActive ?? true} name="isActive" type="checkbox" />
+          Показывать пакет клиентам
+        </label>
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          idleLabel={packageItem ? "Сохранить пакет" : "Добавить пакет"}
+          pendingLabel="Сохранение..."
+        />
+      </AdminFormFieldset>
+    </form>
+  );
+}
+
+function AddonForm({
+  addon,
+  canWrite,
+  serviceId
+}: {
+  addon?: ServiceAddon;
+  canWrite: boolean;
+  serviceId: string;
+}) {
+  return (
+    <form action={saveServiceAddonAction} className="grid gap-4">
+      <AdminFormFieldset canWrite={canWrite}>
+        <input name="id" type="hidden" value={addon?.id ?? ""} />
+        <input name="serviceId" type="hidden" value={serviceId} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Название доплаты" required>
+            <LimitedInput
+              className={inputClass}
+              defaultValue={addon?.title}
+              maxLength={fieldLimits.serviceAddon.title.max}
+              minLength={fieldLimits.serviceAddon.title.min}
+              name="title"
+              placeholder="Срочное выполнение"
+              required
+            />
+          </Field>
+          <Field label="Порядок">
+            <input
+              className={inputClass}
+              defaultValue={addon?.displayOrder ?? 100}
+              max={fieldLimits.serviceAddon.displayOrder.max}
+              min={fieldLimits.serviceAddon.displayOrder.min}
+              name="displayOrder"
+              type="number"
+            />
+          </Field>
+        </div>
+        <Field label="Описание доплаты">
+          <LimitedTextarea
+            className={textareaClass}
+            defaultValue={addon?.description}
+            maxLength={fieldLimits.serviceAddon.description.max}
+            name="description"
+            placeholder="Что добавляется к заказу"
+          />
+        </Field>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Доплата" required>
+            <input
+              className={inputClass}
+              defaultValue={addon?.price ?? 0}
+              max={fieldLimits.serviceAddon.price.max}
+              min={fieldLimits.serviceAddon.price.min}
+              name="price"
+              required
+              type="number"
+            />
+          </Field>
+          <Field label="Доп. срок, раб. дни">
+            <input
+              className={inputClass}
+              defaultValue={addon?.durationDays ?? 0}
+              max={fieldLimits.serviceAddon.durationDays.max}
+              min={fieldLimits.serviceAddon.durationDays.min}
+              name="durationDays"
+              type="number"
+            />
+          </Field>
+        </div>
+        <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
+          <input defaultChecked={addon?.isActive ?? true} name="isActive" type="checkbox" />
+          Показывать доплату клиентам
+        </label>
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          idleLabel={addon ? "Сохранить доплату" : "Добавить доплату"}
+          pendingLabel="Сохранение..."
+        />
       </AdminFormFieldset>
     </form>
   );
@@ -99,6 +299,98 @@ export default async function AdminServicesPage() {
         {services.map((service) => (
           <AdminCard key={service.id} title={service.title} description={service.slug}>
             <p className="text-sm leading-6 text-muted">{service.description}</p>
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <section className="border border-line bg-paper p-4">
+                <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">Пакеты</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted">
+                      Видны клиенту при оформлении заказа.
+                    </p>
+                  </div>
+                  <details>
+                    <summary className="focus-ring cursor-pointer border border-ink bg-ink px-3 py-2 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+                      Добавить
+                    </summary>
+                    <div className="mt-4">
+                      <PackageForm canWrite={admin.canWrite} serviceId={service.id} />
+                    </div>
+                  </details>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {service.packages.map((packageItem) => (
+                    <details className="border border-line bg-white p-4" key={packageItem.id}>
+                      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                        <span className="block font-semibold">{packageItem.title}</span>
+                        <span className="mt-1 block text-sm text-muted">
+                          {formatPriceRange(packageItem.priceFrom, packageItem.priceTo)} ·{" "}
+                          {formatDurationRange(packageItem.durationFromDays, packageItem.durationToDays)}
+                        </span>
+                      </summary>
+                      <div className="mt-4 border-t border-line pt-4">
+                        <PackageForm
+                          canWrite={admin.canWrite}
+                          packageItem={packageItem}
+                          serviceId={service.id}
+                        />
+                        <form action={deleteServicePackageAction} className="mt-3">
+                          <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
+                            <input name="id" type="hidden" value={packageItem.id} />
+                            <button className={adminDangerButtonClass}>Удалить пакет</button>
+                          </AdminFormFieldset>
+                        </form>
+                      </div>
+                    </details>
+                  ))}
+                  {!service.packages.length ? (
+                    <p className="text-sm leading-6 text-muted">Пакеты пока не настроены.</p>
+                  ) : null}
+                </div>
+              </section>
+              <section className="border border-line bg-paper p-4">
+                <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">Доплаты</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted">
+                      Клиент может добавить их к выбранному пакету.
+                    </p>
+                  </div>
+                  <details>
+                    <summary className="focus-ring cursor-pointer border border-ink bg-ink px-3 py-2 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+                      Добавить
+                    </summary>
+                    <div className="mt-4">
+                      <AddonForm canWrite={admin.canWrite} serviceId={service.id} />
+                    </div>
+                  </details>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {service.addons.map((addon) => (
+                    <details className="border border-line bg-white p-4" key={addon.id}>
+                      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                        <span className="block font-semibold">{addon.title}</span>
+                        <span className="mt-1 block text-sm text-muted">
+                          +{formatRubles(addon.price)}
+                          {addon.durationDays ? ` · +${addon.durationDays} раб. дн.` : ""}
+                        </span>
+                      </summary>
+                      <div className="mt-4 border-t border-line pt-4">
+                        <AddonForm addon={addon} canWrite={admin.canWrite} serviceId={service.id} />
+                        <form action={deleteServiceAddonAction} className="mt-3">
+                          <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
+                            <input name="id" type="hidden" value={addon.id} />
+                            <button className={adminDangerButtonClass}>Удалить доплату</button>
+                          </AdminFormFieldset>
+                        </form>
+                      </div>
+                    </details>
+                  ))}
+                  {!service.addons.length ? (
+                    <p className="text-sm leading-6 text-muted">Доплаты пока не настроены.</p>
+                  ) : null}
+                </div>
+              </section>
+            </div>
             <details className="mt-4">
               <summary className="cursor-pointer text-sm font-semibold text-accent">Редактировать</summary>
               <div className="mt-5">

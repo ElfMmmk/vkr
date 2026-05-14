@@ -5,6 +5,8 @@ export type RequestStatus =
   | "completed"
   | "rejected";
 
+export type ContractStatus = "draft" | "sent" | "accepted" | "cancelled";
+
 export type UserRole = "admin" | "manager" | "client";
 
 export type PageKey = "home" | "about" | "services" | "contacts";
@@ -24,6 +26,32 @@ export type Service = {
   slug: string;
   description: string;
   details: string;
+  displayOrder: number;
+  isActive: boolean;
+  packages: ServicePackage[];
+  addons: ServiceAddon[];
+};
+
+export type ServicePackage = {
+  id: string;
+  serviceId: string;
+  title: string;
+  description: string;
+  priceFrom: number;
+  priceTo: number;
+  durationFromDays: number;
+  durationToDays: number;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+export type ServiceAddon = {
+  id: string;
+  serviceId: string;
+  title: string;
+  description: string;
+  price: number;
+  durationDays: number;
   displayOrder: number;
   isActive: boolean;
 };
@@ -72,8 +100,50 @@ export type OrderRequest = {
   contactValue: string;
   serviceId: string | null;
   serviceTitle: string;
+  packageId: string | null;
+  packageTitle: string;
+  packageDescription: string;
+  packagePriceFrom: number | null;
+  packagePriceTo: number | null;
+  packageDurationFromDays: number | null;
+  packageDurationToDays: number | null;
+  selectedAddons: OrderAddonSnapshot[];
+  referenceProjectId: string | null;
+  referenceProjectTitle: string;
+  referenceProjectSlug: string;
+  resultDescription: string;
+  stylePreferences: string;
+  materials: string;
+  desiredDeadline: string;
+  estimatedPriceFrom: number | null;
+  estimatedPriceTo: number | null;
+  estimatedDurationFromDays: number | null;
+  estimatedDurationToDays: number | null;
   comment: string;
   status: RequestStatus;
+  createdAt: string;
+  updatedAt?: string;
+  contract?: OrderContract | null;
+};
+
+export type OrderAddonSnapshot = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  durationDays: number;
+};
+
+export type OrderContract = {
+  id: string;
+  requestId: string;
+  finalPrice: number;
+  finalDurationDays: number;
+  workScope: string;
+  materials: string;
+  managerComment: string;
+  status: ContractStatus;
+  acceptedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 };

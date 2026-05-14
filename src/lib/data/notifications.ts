@@ -1,22 +1,10 @@
 import { getOptionalSupabaseAdmin } from "@/lib/supabase/server";
 import type { AdminNotification } from "@/lib/types";
 import type { UserRole } from "@/lib/auth";
+import type { Tables } from "@/lib/supabase/database.types";
 
-type NotificationRow = {
-  id: string;
-  type: AdminNotification["type"];
-  title: string;
-  body: string | null;
-  entity_type: string | null;
-  entity_id: string | null;
-  audience_role: "admin" | "manager";
-  created_at: string;
-};
-
-type NotificationReadRow = {
-  notification_id: string;
-  read_at: string;
-};
+type NotificationRow = Tables<"notifications">;
+type NotificationReadRow = Pick<Tables<"notification_reads">, "notification_id" | "read_at">;
 
 export async function listAdminNotifications(
   userId: string,

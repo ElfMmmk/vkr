@@ -1,9 +1,34 @@
 export const fieldLimits = {
   order: {
-    clientName: { min: 2, max: 120 },
-    contactValue: { min: 3, max: 180 },
+    clientName: { min: 1, max: 120 },
+    contactValue: { min: 1, max: 180 },
     serviceTitle: { max: 160 },
-    comment: { min: 10, max: 2000 }
+    resultDescription: { min: 10, max: 2000 },
+    stylePreferences: { min: 3, max: 1000 },
+    materials: { max: 1200 },
+    desiredDeadline: { max: 160 },
+    comment: { min: 1, max: 2000 }
+  },
+  servicePackage: {
+    title: { min: 2, max: 120 },
+    description: { max: 800 },
+    price: { min: 0, max: 10000000 },
+    durationDays: { min: 1, max: 365 },
+    displayOrder: { min: 0, max: 10000 }
+  },
+  serviceAddon: {
+    title: { min: 2, max: 120 },
+    description: { max: 800 },
+    price: { min: 0, max: 10000000 },
+    durationDays: { min: 0, max: 365 },
+    displayOrder: { min: 0, max: 10000 }
+  },
+  orderContract: {
+    finalPrice: { min: 0, max: 10000000 },
+    finalDurationDays: { min: 1, max: 365 },
+    workScope: { min: 10, max: 3000 },
+    materials: { max: 2000 },
+    managerComment: { max: 2000 }
   },
   service: {
     title: { min: 2, max: 160 },

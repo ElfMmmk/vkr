@@ -11,11 +11,13 @@ import type { RequestStatus } from "@/lib/types";
 export function AdminRequestStatusForm({
   id,
   status,
-  canWrite
+  canWrite,
+  redirectTo
 }: {
   id: string;
   status: RequestStatus;
   canWrite: boolean;
+  redirectTo?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -24,6 +26,7 @@ export function AdminRequestStatusForm({
     <form action={updateRequestStatusAction} className="grid gap-3" key={`${id}-${status}`} ref={formRef}>
       <AdminFormFieldset canWrite={canWrite} className="grid gap-3">
         <input name="id" type="hidden" value={id} />
+        {redirectTo ? <input name="redirectTo" type="hidden" value={redirectTo} /> : null}
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
           Текущий статус: {requestStatusLabels[status]}
         </p>
@@ -46,7 +49,7 @@ export function AdminRequestStatusForm({
           ))}
         </select>
         <p className="text-xs leading-5 text-muted">
-          Статус сохраняется сразу после выбора
+          {isPending ? "Сохранение статуса..." : "Выбор сразу сохраняет новый статус"}
         </p>
       </AdminFormFieldset>
     </form>

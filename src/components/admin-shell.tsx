@@ -18,13 +18,14 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { RouteFlashToast } from "@/components/route-flash-toast";
 import { signOutAction } from "@/lib/actions/admin";
 
 const adminNav = [
   { href: "/admin", label: "Обзор", icon: LayoutDashboard, scope: "requests" },
   { href: "/admin/notifications", label: "Уведомления", icon: Bell, scope: "requests" },
   { href: "/admin/analytics", label: "Аналитика", icon: BarChart3, scope: "requests" },
-  { href: "/admin/requests", label: "Заявки", icon: Inbox, scope: "requests" },
+  { href: "/admin/requests", label: "Заказы", icon: Inbox, scope: "requests" },
   { href: "/admin/users", label: "Пользователи", icon: Users, scope: "roles" },
   { href: "/admin/projects", label: "Проекты", icon: BriefcaseBusiness, scope: "content" },
   { href: "/admin/services", label: "Услуги", icon: Menu, scope: "content" },
@@ -32,6 +33,12 @@ const adminNav = [
   { href: "/admin/images", label: "Изображения", icon: Images, scope: "content" },
   { href: "/admin/pages", label: "Страницы", icon: FileText, scope: "content" }
 ];
+
+const roleLabels = {
+  admin: "Администратор",
+  manager: "Менеджер",
+  client: "Клиент"
+} as const;
 
 export function AdminShell({
   email,
@@ -71,6 +78,7 @@ export function AdminShell({
             }`}
             href={item.href}
             key={item.href}
+            aria-label={collapsed ? item.label : undefined}
             title={collapsed ? item.label : undefined}
           >
             <Icon aria-hidden="true" size={18} />
@@ -91,11 +99,11 @@ export function AdminShell({
         <div className="flex items-start justify-between gap-3">
           <Link
             className={`focus-ring block min-w-0 font-semibold ${
-              isCollapsed ? "text-center text-sm" : "text-2xl"
+              isCollapsed ? "sr-only" : "text-2xl"
             }`}
             href="/admin"
           >
-            {isCollapsed ? "ПА" : "Панель администратора"}
+            Панель администратора
           </Link>
           <button
             aria-label={isCollapsed ? "Развернуть меню" : "Свернуть меню"}
@@ -108,7 +116,7 @@ export function AdminShell({
         </div>
         {!isCollapsed ? (
           <p className="mt-2 truncate text-sm leading-6 text-white/60">
-            {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Client"}
+            {email} · {roleLabels[role]}
           </p>
         ) : null}
         <div className="mt-10 flex-1">{renderNav(isCollapsed)}</div>
@@ -117,6 +125,7 @@ export function AdminShell({
             className={`focus-ring flex min-h-11 w-full items-center gap-3 border border-white/15 px-3 py-2 text-sm text-white/80 transition hover:bg-white hover:text-ink active:translate-y-px ${
               isCollapsed ? "justify-center" : ""
             }`}
+            aria-label={isCollapsed ? "Выйти" : undefined}
             title={isCollapsed ? "Выйти" : undefined}
           >
             <LogOut aria-hidden="true" size={18} />
@@ -132,7 +141,7 @@ export function AdminShell({
                 Панель администратора
               </Link>
               <p className="mt-1 truncate text-sm leading-6 text-white/60">
-                {email} · {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Client"}
+                {email} · {roleLabels[role]}
               </p>
             </div>
             <form action={signOutAction}>
@@ -150,6 +159,7 @@ export function AdminShell({
             <div className="mt-2">{renderNav()}</div>
           </details>
         </div>
+        <RouteFlashToast />
         {children}
       </main>
     </div>

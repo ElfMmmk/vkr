@@ -22,6 +22,100 @@ on conflict (slug) do update set
   display_order = excluded.display_order,
   is_active = excluded.is_active;
 
+with package_seed (service_slug, title, description, price_from, price_to, duration_from_days, duration_to_days, display_order, is_active) as (
+  values
+    ('brand-identity', 'Старт', 'Логотип, палитра, базовая типографика и краткая памятка по применению.', 25000, 45000, 10, 18, 10, true),
+    ('brand-identity', 'Система', 'Айдентика с носителями, правилами применения и подготовкой макетов для запуска.', 60000, 120000, 18, 30, 20, true),
+    ('social-media', 'Контент-месяц', 'Набор шаблонов и визуальная сетка для регулярных публикаций.', 18000, 36000, 7, 14, 10, true),
+    ('packaging-print', 'Один носитель', 'Дизайн этикетки, упаковки или печатного макета с подготовкой к производству.', 22000, 50000, 10, 20, 10, true),
+    ('presentation-design', 'До 20 слайдов', 'Структура, визуальный стиль и оформление презентации для выступления или продажи.', 20000, 42000, 7, 14, 10, true)
+)
+insert into public.service_packages (
+  service_id,
+  title,
+  description,
+  price_from,
+  price_to,
+  duration_from_days,
+  duration_to_days,
+  display_order,
+  is_active
+)
+select
+  service.id,
+  package_seed.title,
+  package_seed.description,
+  package_seed.price_from,
+  package_seed.price_to,
+  package_seed.duration_from_days,
+  package_seed.duration_to_days,
+  package_seed.display_order,
+  package_seed.is_active
+from package_seed
+join public.services service on service.slug = package_seed.service_slug
+where not exists (
+  select 1
+  from public.service_packages service_package
+  where service_package.service_id = service.id
+    and service_package.title = package_seed.title
+);
+
+with addon_seed (service_slug, title, description, price, duration_days, display_order, is_active) as (
+  values
+    ('brand-identity', 'Расширенный бренд-гайд', 'Дополнительные правила для команды, подрядчиков и печатных носителей.', 18000, 5, 10, true),
+    ('brand-identity', 'Приоритетный старт', 'Ускоренный запуск проекта при свободном окне в графике.', 12000, 0, 20, true),
+    ('social-media', 'Рекламные макеты', 'Дополнительные форматы для таргетированной рекламы.', 9000, 3, 10, true),
+    ('packaging-print', 'Допечатная проверка', 'Проверка технических требований типографии и подготовка финальных файлов.', 8000, 2, 10, true),
+    ('presentation-design', 'Шаблон для команды', 'Набор редактируемых мастер-слайдов для дальнейшего использования.', 10000, 3, 10, true)
+)
+insert into public.service_addons (
+  service_id,
+  title,
+  description,
+  price,
+  duration_days,
+  display_order,
+  is_active
+)
+select
+  service.id,
+  addon_seed.title,
+  addon_seed.description,
+  addon_seed.price,
+  addon_seed.duration_days,
+  addon_seed.display_order,
+  addon_seed.is_active
+from addon_seed
+join public.services service on service.slug = addon_seed.service_slug
+where not exists (
+  select 1
+  from public.service_addons addon
+  where addon.service_id = service.id
+    and addon.title = addon_seed.title
+);
+
+update public.service_packages service_package
+set is_active = false
+where service_package.title = 'Базовый пакет'
+  and service_package.description = 'Предварительный состав работ и итоговая стоимость уточняются после брифа.'
+  and exists (
+    select 1
+    from public.service_packages specific_package
+    where specific_package.service_id = service_package.service_id
+      and specific_package.id <> service_package.id
+  );
+
+update public.service_addons addon
+set is_active = false
+where addon.title = 'Срочная подготовка'
+  and addon.description = 'Приоритетная работа над заказом при наличии свободного окна в графике.'
+  and exists (
+    select 1
+    from public.service_addons specific_addon
+    where specific_addon.service_id = addon.service_id
+      and specific_addon.id <> addon.id
+  );
+
 insert into public.tags (title, slug, description)
 values
   ('Брендинг', 'branding', 'Проекты с визуальной системой бренда'),

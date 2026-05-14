@@ -1,12 +1,17 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { resolveUserProfile } from "@/lib/auth";
+import { getAdminEmail, requireClientSession, resolveUserProfile } from "@/lib/auth";
 import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
-import { createSupabaseServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  getSupabaseAdminOrThrow,
+  hasSupabasePublicEnv
+} from "@/lib/supabase/server";
 
 export type AccountFormState = {
   message?: string;
@@ -29,7 +34,7 @@ export async function clientLoginAction(
   formData: FormData
 ): Promise<AccountFormState> {
   if (!hasSupabasePublicEnv()) {
-    return { message: "Вход клиентов временно недоступен: Supabase не настроен." };
+    return { message: "Вход временно недоступен. Попробуйте позже." };
   }
 
   const parsed = accountAuthSchema.safeParse({
@@ -44,7 +49,7 @@ export async function clientLoginAction(
   const client = await createSupabaseServerClient();
 
   if (!client) {
-    return { message: "Supabase не подключён." };
+    return { message: "Вход временно недоступен. Попробуйте позже." };
   }
 
   const { error } = await client.auth.signInWithPassword(parsed.data);
@@ -53,7 +58,7 @@ export async function clientLoginAction(
     return { message: "Не удалось войти. Проверьте email и пароль." };
   }
 
-  redirect("/account");
+  redirect("/account?notice=signed-in");
 }
 
 export async function clientRegisterAction(
@@ -61,7 +66,7 @@ export async function clientRegisterAction(
   formData: FormData
 ): Promise<AccountFormState> {
   if (!hasSupabasePublicEnv()) {
-    return { message: "Регистрация клиентов временно недоступна: Supabase не настроен." };
+    return { message: "Регистрация временно недоступна. Попробуйте позже." };
   }
 
   const parsed = registerSchema.safeParse({
@@ -74,14 +79,24 @@ export async function clientRegisterAction(
     return { message: parsed.error.issues[0]?.message ?? "Проверьте данные регистрации." };
   }
 
+  const email = parsed.data.email.toLowerCase();
+  const adminEmail = getAdminEmail();
+
+  if (adminEmail && email === adminEmail) {
+    return {
+      message:
+        "Этот email используется для административного доступа. Войдите через административную панель."
+    };
+  }
+
   const client = await createSupabaseServerClient();
 
   if (!client) {
-    return { message: "Supabase не подключён." };
+    return { message: "Регистрация временно недоступна. Попробуйте позже." };
   }
 
   const { data, error } = await client.auth.signUp({
-    email: parsed.data.email.toLowerCase(),
+    email,
     password: parsed.data.password,
     options: {
       data: {
@@ -102,7 +117,7 @@ export async function clientRegisterAction(
     return { message: "Регистрация создана. Проверьте почту, если включено подтверждение email." };
   }
 
-  redirect("/account");
+  redirect("/account?notice=registered");
 }
 
 export async function clientSignOutAction(): Promise<void> {
@@ -113,4 +128,46 @@ export async function clientSignOutAction(): Promise<void> {
   }
 
   redirect("/");
+}
+
+export async function acceptOrderContractAction(formData: FormData): Promise<void> {
+  const session = await requireClientSession();
+  const requestId = formString(formData, "requestId").trim();
+  const contractId = formString(formData, "contractId").trim();
+
+  if (!requestId || !contractId) {
+    redirect("/account");
+  }
+
+  const client = getSupabaseAdminOrThrow();
+  const { data: request } = await client
+    .from("requests")
+    .select("id, client_user_id, order_contracts(id, status)")
+    .eq("id", requestId)
+    .maybeSingle();
+  const contractRows = Array.isArray(request?.order_contracts)
+    ? request.order_contracts
+    : request?.order_contracts
+      ? [request.order_contracts]
+      : [];
+  const contract = contractRows.find((item) => item.id === contractId);
+
+  if (request?.client_user_id !== session.id || !contract || contract.status !== "sent") {
+    redirect("/account");
+  }
+
+  const { data: acceptedContract, error: acceptError } = await client
+    .from("order_contracts")
+    .update({ status: "accepted", accepted_at: new Date().toISOString() })
+    .eq("id", contractId)
+    .eq("status", "sent")
+    .select("id")
+    .maybeSingle();
+
+  if (acceptError || !acceptedContract) {
+    redirect("/account?notice=order-contract-accept-failed");
+  }
+
+  revalidatePath("/account");
+  redirect("/account?notice=order-contract-accepted");
 }

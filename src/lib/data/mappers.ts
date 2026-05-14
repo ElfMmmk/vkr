@@ -1,40 +1,27 @@
 import type {
   OrderRequest,
+  OrderAddonSnapshot,
+  OrderContract,
   PageContent,
   PageKey,
   PortfolioImage,
   Project,
   Service,
+  ServiceAddon,
+  ServicePackage,
   Tag
 } from "@/lib/types";
+import type { Json, Tables } from "@/lib/supabase/database.types";
 
-export type ServiceRow = {
-  id: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  details: string | null;
-  display_order: number | null;
-  is_active: boolean | null;
+export type ServicePackageRow = Tables<"service_packages">;
+export type ServiceAddonRow = Tables<"service_addons">;
+export type ServiceRow = Tables<"services"> & {
+  service_packages?: ServicePackageRow[] | null;
+  service_addons?: ServiceAddonRow[] | null;
 };
-
-export type TagRow = {
-  id: string;
-  title: string;
-  slug: string;
-  description: string | null;
-};
-
-export type ImageRow = {
-  id: string;
-  storage_path: string;
-  public_url: string | null;
-  title?: string | null;
-  caption: string | null;
-  parent_type: "project" | "page" | "service" | "free";
-  parent_id: string | null;
-  sort_order: number | null;
-};
+export type TagRow = Tables<"tags">;
+export type ImageRow = Tables<"images">;
+export type OrderContractRow = Tables<"order_contracts">;
 
 export type ProjectImageRow = {
   image_id: string;
@@ -42,28 +29,12 @@ export type ProjectImageRow = {
   images: ImageRow | ImageRow[] | null;
 };
 
-export type PageRow = {
-  id: string;
+export type PageRow = Omit<Tables<"pages">, "blocks" | "page_key"> & {
+  blocks: Json | null;
   page_key: PageKey;
-  title: string;
-  body: string | null;
-  blocks: Record<string, string> | null;
-  updated_at?: string | null;
 };
 
-export type ProjectRow = {
-  id: string;
-  title: string;
-  slug: string;
-  short_description: string | null;
-  full_description: string | null;
-  cover_image_id?: string | null;
-  cover_image_url: string | null;
-  display_order?: number | null;
-  is_featured?: boolean | null;
-  is_published: boolean | null;
-  created_at: string;
-  updated_at?: string | null;
+export type ProjectRow = Tables<"projects"> & {
   project_services?: { services: ServiceRow | null }[] | null;
   project_tags?: { tags: TagRow | null }[] | null;
   project_images?: ProjectImageRow[] | null;
@@ -71,19 +42,19 @@ export type ProjectRow = {
   images?: ImageRow[] | null;
 };
 
-export type RequestRow = {
-  id: string;
-  client_user_id?: string | null;
-  client_name: string;
-  contact_method: string;
-  contact_value: string;
-  service_id: string | null;
-  service_title: string | null;
-  comment: string | null;
-  status: OrderRequest["status"];
-  created_at: string;
-  updated_at?: string | null;
+export type RequestRow = Tables<"requests"> & {
+  order_contracts?: OrderContractRow | OrderContractRow[] | null;
 };
+
+function mapJsonRecord(value: Json | null): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+  );
+}
 
 export function mapService(row: ServiceRow): Service {
   return {
@@ -92,6 +63,44 @@ export function mapService(row: ServiceRow): Service {
     slug: row.slug,
     description: row.description ?? "",
     details: row.details ?? "",
+    displayOrder: row.display_order ?? 100,
+    isActive: row.is_active ?? true,
+    packages:
+      row.service_packages
+        ?.slice()
+        .sort((a, b) => (a.display_order ?? 100) - (b.display_order ?? 100))
+        .map(mapServicePackage) ?? [],
+    addons:
+      row.service_addons
+        ?.slice()
+        .sort((a, b) => (a.display_order ?? 100) - (b.display_order ?? 100))
+        .map(mapServiceAddon) ?? []
+  };
+}
+
+export function mapServicePackage(row: ServicePackageRow): ServicePackage {
+  return {
+    id: row.id,
+    serviceId: row.service_id,
+    title: row.title,
+    description: row.description ?? "",
+    priceFrom: row.price_from ?? 0,
+    priceTo: row.price_to ?? 0,
+    durationFromDays: row.duration_from_days ?? 1,
+    durationToDays: row.duration_to_days ?? 1,
+    displayOrder: row.display_order ?? 100,
+    isActive: row.is_active ?? true
+  };
+}
+
+export function mapServiceAddon(row: ServiceAddonRow): ServiceAddon {
+  return {
+    id: row.id,
+    serviceId: row.service_id,
+    title: row.title,
+    description: row.description ?? "",
+    price: row.price ?? 0,
+    durationDays: row.duration_days ?? 0,
     displayOrder: row.display_order ?? 100,
     isActive: row.is_active ?? true
   };
@@ -153,7 +162,7 @@ export function mapPage(row: PageRow): PageContent {
     pageKey: row.page_key,
     title: row.title,
     body: row.body ?? "",
-    blocks: row.blocks ?? {},
+    blocks: mapJsonRecord(row.blocks),
     updatedAt: row.updated_at ?? undefined
   };
 }
@@ -241,6 +250,9 @@ export function attachLegacyProjectImages(rows: ProjectRow[], images: ImageRow[]
 }
 
 export function mapRequest(row: RequestRow): OrderRequest {
+  const contractRows = row.order_contracts;
+  const contract = Array.isArray(contractRows) ? contractRows[0] : contractRows;
+
   return {
     id: row.id,
     clientUserId: row.client_user_id ?? null,
@@ -249,8 +261,74 @@ export function mapRequest(row: RequestRow): OrderRequest {
     contactValue: row.contact_value,
     serviceId: row.service_id,
     serviceTitle: row.service_title ?? "",
+    packageId: row.package_id ?? null,
+    packageTitle: row.package_title ?? "",
+    packageDescription: row.package_description ?? "",
+    packagePriceFrom: row.package_price_from ?? null,
+    packagePriceTo: row.package_price_to ?? null,
+    packageDurationFromDays: row.package_duration_from_days ?? null,
+    packageDurationToDays: row.package_duration_to_days ?? null,
+    selectedAddons: mapOrderAddonSnapshots(row.selected_addons),
+    referenceProjectId: row.reference_project_id ?? null,
+    referenceProjectTitle: row.reference_project_title ?? "",
+    referenceProjectSlug: row.reference_project_slug ?? "",
+    resultDescription: row.result_description ?? "",
+    stylePreferences: row.style_preferences ?? "",
+    materials: row.materials ?? "",
+    desiredDeadline: row.desired_deadline ?? "",
+    estimatedPriceFrom: row.estimated_price_from ?? null,
+    estimatedPriceTo: row.estimated_price_to ?? null,
+    estimatedDurationFromDays: row.estimated_duration_from_days ?? null,
+    estimatedDurationToDays: row.estimated_duration_to_days ?? null,
     comment: row.comment ?? "",
     status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at ?? undefined,
+    contract: contract ? mapOrderContract(contract) : null
+  };
+}
+
+function mapOrderAddonSnapshots(value: Json): OrderAddonSnapshot[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const record = item as Record<string, Json | undefined>;
+      const id = typeof record.id === "string" ? record.id : "";
+      const title = typeof record.title === "string" ? record.title : "";
+
+      if (!id || !title) {
+        return null;
+      }
+
+      return {
+        id,
+        title,
+        description: typeof record.description === "string" ? record.description : "",
+        price: typeof record.price === "number" ? record.price : 0,
+        durationDays: typeof record.durationDays === "number" ? record.durationDays : 0
+      };
+    })
+    .filter((item): item is OrderAddonSnapshot => Boolean(item));
+}
+
+export function mapOrderContract(row: OrderContractRow): OrderContract {
+  return {
+    id: row.id,
+    requestId: row.request_id,
+    finalPrice: row.final_price ?? 0,
+    finalDurationDays: row.final_duration_days ?? 1,
+    workScope: row.work_scope ?? "",
+    materials: row.materials ?? "",
+    managerComment: row.manager_comment ?? "",
+    status: row.status,
+    acceptedAt: row.accepted_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? undefined
   };

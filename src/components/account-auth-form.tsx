@@ -1,28 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 
 import {
   clientLoginAction,
   clientRegisterAction,
   type AccountFormState
 } from "@/app/account/actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass } from "@/components/form-controls";
-
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      className="focus-ring inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
-      disabled={pending}
-      type="submit"
-    >
-      {pending ? "Отправка..." : label}
-    </button>
-  );
-}
 
 export function AccountAuthForm({ mode }: { mode: "login" | "register" }) {
   const action = mode === "login" ? clientLoginAction : clientRegisterAction;
@@ -70,7 +56,11 @@ export function AccountAuthForm({ mode }: { mode: "login" | "register" }) {
           {state.message}
         </p>
       ) : null}
-      <SubmitButton label={isRegister ? "Создать кабинет" : "Войти"} />
+      <FormSubmitButton
+        className="focus-ring inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+        idleLabel={isRegister ? "Создать кабинет" : "Войти"}
+        pendingLabel={isRegister ? "Создание..." : "Вход..."}
+      />
     </form>
   );
 }

@@ -1,26 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 
 import { loginAction, type LoginState } from "@/app/admin/login/actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass } from "@/components/form-controls";
 import { LimitedInput } from "@/components/limited-text-control";
 import { fieldLimits } from "@/lib/field-limits";
-
-function LoginButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      className="focus-ring min-h-12 w-full border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px active:border-ink active:bg-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-y-0"
-      disabled={pending}
-      type="submit"
-    >
-      {pending ? "Вход..." : "Войти"}
-    </button>
-  );
-}
 
 export function LoginForm() {
   const [state, formAction] = useActionState<LoginState, FormData>(loginAction, {});
@@ -54,7 +40,11 @@ export function LoginForm() {
             {state.message}
           </div>
         ) : null}
-        <LoginButton />
+        <FormSubmitButton
+          className="focus-ring inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px active:border-ink active:bg-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-y-0"
+          idleLabel="Войти"
+          pendingLabel="Вход..."
+        />
       </form>
     </div>
   );

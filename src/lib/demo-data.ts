@@ -14,7 +14,55 @@ export const demoServices: Service[] = [
     description: "Логотип, визуальная система, палитра, типографика и правила применения.",
     details: "Подходит для нового бизнеса или обновления существующего образа.",
     displayOrder: 10,
-    isActive: true
+    isActive: true,
+    packages: [
+      {
+        id: "pkg-brand-start",
+        serviceId: "svc-brand",
+        title: "Старт",
+        description: "Логотип, палитра, базовая типографика и краткая памятка по применению.",
+        priceFrom: 25000,
+        priceTo: 45000,
+        durationFromDays: 10,
+        durationToDays: 18,
+        displayOrder: 10,
+        isActive: true
+      },
+      {
+        id: "pkg-brand-system",
+        serviceId: "svc-brand",
+        title: "Система",
+        description: "Айдентика с носителями, правилами применения и подготовкой макетов для запуска.",
+        priceFrom: 60000,
+        priceTo: 120000,
+        durationFromDays: 18,
+        durationToDays: 30,
+        displayOrder: 20,
+        isActive: true
+      }
+    ],
+    addons: [
+      {
+        id: "addon-brand-guide",
+        serviceId: "svc-brand",
+        title: "Расширенный бренд-гайд",
+        description: "Дополнительные правила для команды, подрядчиков и печатных носителей.",
+        price: 18000,
+        durationDays: 5,
+        displayOrder: 10,
+        isActive: true
+      },
+      {
+        id: "addon-brand-fast",
+        serviceId: "svc-brand",
+        title: "Приоритетный старт",
+        description: "Ускоренный запуск проекта при свободном окне в графике.",
+        price: 12000,
+        durationDays: 0,
+        displayOrder: 20,
+        isActive: true
+      }
+    ]
   },
   {
     id: "svc-social",
@@ -23,7 +71,33 @@ export const demoServices: Service[] = [
     description: "Шаблоны постов, обложки, рекламные макеты и визуальная сетка.",
     details: "Помогает сделать коммуникацию в соцсетях узнаваемой и регулярной.",
     displayOrder: 20,
-    isActive: true
+    isActive: true,
+    packages: [
+      {
+        id: "pkg-social-month",
+        serviceId: "svc-social",
+        title: "Контент-месяц",
+        description: "Набор шаблонов и визуальная сетка для регулярных публикаций.",
+        priceFrom: 18000,
+        priceTo: 36000,
+        durationFromDays: 7,
+        durationToDays: 14,
+        displayOrder: 10,
+        isActive: true
+      }
+    ],
+    addons: [
+      {
+        id: "addon-social-ads",
+        serviceId: "svc-social",
+        title: "Рекламные макеты",
+        description: "Дополнительные форматы для таргетированной рекламы.",
+        price: 9000,
+        durationDays: 3,
+        displayOrder: 10,
+        isActive: true
+      }
+    ]
   },
   {
     id: "svc-packaging",
@@ -32,7 +106,33 @@ export const demoServices: Service[] = [
     description: "Этикетки, упаковка, визитки, буклеты и печатные материалы.",
     details: "Готовится с учётом технических ограничений печати.",
     displayOrder: 30,
-    isActive: true
+    isActive: true,
+    packages: [
+      {
+        id: "pkg-packaging-basic",
+        serviceId: "svc-packaging",
+        title: "Один носитель",
+        description: "Дизайн этикетки, упаковки или печатного макета с подготовкой к производству.",
+        priceFrom: 22000,
+        priceTo: 50000,
+        durationFromDays: 10,
+        durationToDays: 20,
+        displayOrder: 10,
+        isActive: true
+      }
+    ],
+    addons: [
+      {
+        id: "addon-packaging-prepress",
+        serviceId: "svc-packaging",
+        title: "Допечатная проверка",
+        description: "Проверка технических требований типографии и подготовка финальных файлов.",
+        price: 8000,
+        durationDays: 2,
+        displayOrder: 10,
+        isActive: true
+      }
+    ]
   },
   {
     id: "svc-presentation",
@@ -41,7 +141,33 @@ export const demoServices: Service[] = [
     description: "Структура и визуальное оформление коммерческих и экспертных презентаций.",
     details: "Фокус на ясности, ритме слайдов и убедительной подаче.",
     displayOrder: 40,
-    isActive: true
+    isActive: true,
+    packages: [
+      {
+        id: "pkg-presentation-core",
+        serviceId: "svc-presentation",
+        title: "До 20 слайдов",
+        description: "Структура, визуальный стиль и оформление презентации для выступления или продажи.",
+        priceFrom: 20000,
+        priceTo: 42000,
+        durationFromDays: 7,
+        durationToDays: 14,
+        displayOrder: 10,
+        isActive: true
+      }
+    ],
+    addons: [
+      {
+        id: "addon-presentation-template",
+        serviceId: "svc-presentation",
+        title: "Шаблон для команды",
+        description: "Набор редактируемых мастер-слайдов для дальнейшего использования.",
+        price: 10000,
+        durationDays: 3,
+        displayOrder: 10,
+        isActive: true
+      }
+    ]
   }
 ];
 
@@ -213,8 +339,47 @@ export const demoRequests: OrderRequest[] = [
     contactValue: "@client",
     serviceId: "svc-brand",
     serviceTitle: "Айдентика бренда",
+    packageId: "pkg-brand-start",
+    packageTitle: "Старт",
+    packageDescription: "Логотип, палитра, базовая типографика и краткая памятка по применению.",
+    packagePriceFrom: 25000,
+    packagePriceTo: 45000,
+    packageDurationFromDays: 10,
+    packageDurationToDays: 18,
+    selectedAddons: [
+      {
+        id: "addon-brand-guide",
+        title: "Расширенный бренд-гайд",
+        description: "Дополнительные правила для команды, подрядчиков и печатных носителей.",
+        price: 18000,
+        durationDays: 5
+      }
+    ],
+    referenceProjectId: "project-botanica",
+    referenceProjectTitle: "Botanica Lab",
+    referenceProjectSlug: "botanica-lab",
+    resultDescription: "Нужна визуальная система для запуска новой студии.",
+    stylePreferences: "Спокойная минималистичная подача, натуральная палитра.",
+    materials: "Логотип, палитра, шаблон визитки и правила применения.",
+    desiredDeadline: "Запуск через месяц",
+    estimatedPriceFrom: 43000,
+    estimatedPriceTo: 63000,
+    estimatedDurationFromDays: 15,
+    estimatedDurationToDays: 23,
     comment: "Нужна визуальная система для запуска новой студии.",
     status: "new",
-    createdAt: projectDate
+    createdAt: projectDate,
+    contract: {
+      id: "contract-demo",
+      requestId: "request-demo",
+      finalPrice: 58000,
+      finalDurationDays: 20,
+      workScope: "Айдентика, базовый бренд-гайд и подготовка стартовых носителей.",
+      materials: "Логотип, палитра, типографика, визитка, обложка для соцсетей.",
+      managerComment: "Финальные условия можно согласовать после передачи текстов и референсов.",
+      status: "sent",
+      acceptedAt: null,
+      createdAt: projectDate
+    }
   }
 ];

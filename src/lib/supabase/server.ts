@@ -2,8 +2,13 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let adminClient: SupabaseClient | null = null;
-let publicClient: SupabaseClient | null = null;
+import type { Database } from "@/lib/supabase/database.types";
+import { noopRealtimeTransport } from "@/lib/supabase/realtime-transport";
+
+type AppSupabaseClient = SupabaseClient<Database>;
+
+let adminClient: AppSupabaseClient | null = null;
+let publicClient: AppSupabaseClient | null = null;
 
 function getSupabaseUrl(): string | null {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || null;
@@ -33,7 +38,7 @@ export function hasSupabaseAdminEnv(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseSecretKey());
 }
 
-export function getOptionalSupabasePublic(): SupabaseClient | null {
+export function getOptionalSupabasePublic(): AppSupabaseClient | null {
   const supabaseUrl = getSupabaseUrl();
   const publicKey = getSupabasePublicKey();
 
@@ -42,10 +47,13 @@ export function getOptionalSupabasePublic(): SupabaseClient | null {
   }
 
   if (!publicClient) {
-    publicClient = createClient(supabaseUrl, publicKey, {
+    publicClient = createClient<Database>(supabaseUrl, publicKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false
+      },
+      realtime: {
+        transport: noopRealtimeTransport
       }
     });
   }
@@ -53,7 +61,7 @@ export function getOptionalSupabasePublic(): SupabaseClient | null {
   return publicClient;
 }
 
-export async function createSupabaseServerClient(): Promise<SupabaseClient | null> {
+export async function createSupabaseServerClient(): Promise<AppSupabaseClient | null> {
   const supabaseUrl = getSupabaseUrl();
   const publicKey = getSupabasePublicKey();
 
@@ -63,29 +71,28 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient | nul
 
   const cookieStore = await cookies();
 
-  return createServerClient(
-    supabaseUrl,
-    publicKey,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Server Components cannot set cookies. Server Actions can.
-          }
+  return createServerClient<Database>(supabaseUrl, publicKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Server Components cannot set cookies. Server Actions can.
         }
       }
+    },
+    realtime: {
+      transport: noopRealtimeTransport
     }
-  );
+  });
 }
 
-export function getOptionalSupabaseAdmin(): SupabaseClient | null {
+export function getOptionalSupabaseAdmin(): AppSupabaseClient | null {
   const supabaseUrl = getSupabaseUrl();
   const secretKey = getSupabaseSecretKey();
 
@@ -94,13 +101,16 @@ export function getOptionalSupabaseAdmin(): SupabaseClient | null {
   }
 
   if (!adminClient) {
-    adminClient = createClient(
+    adminClient = createClient<Database>(
       supabaseUrl,
       secretKey,
       {
         auth: {
           persistSession: false,
           autoRefreshToken: false
+        },
+        realtime: {
+          transport: noopRealtimeTransport
         }
       }
     );
@@ -109,7 +119,7 @@ export function getOptionalSupabaseAdmin(): SupabaseClient | null {
   return adminClient;
 }
 
-export function getSupabaseAdminOrThrow(): SupabaseClient {
+export function getSupabaseAdminOrThrow(): AppSupabaseClient {
   const client = getOptionalSupabaseAdmin();
 
   if (!client) {

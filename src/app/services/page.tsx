@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getPublicPage, getPublicServices } from "@/lib/data/public";
 import { getDictionary } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n-server";
+import { formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
 
 export default async function ServicesPage() {
   const locale = await getLocale();
@@ -35,6 +36,19 @@ export default async function ServicesPage() {
                 <div className="min-w-0 md:pr-6">
                   <p className="text-lg leading-8 text-ink">{service.description}</p>
                   <p className="mt-3 text-sm leading-6 text-muted">{service.details}</p>
+                  {service.packages.length ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {service.packages.slice(0, 2).map((item) => (
+                        <span
+                          className="border border-cobalt/25 bg-cobalt/10 px-3 py-1.5 text-sm font-semibold text-cobalt"
+                          key={item.id}
+                        >
+                          {item.title}: {formatPriceRange(item.priceFrom, item.priceTo)},{" "}
+                          {formatDurationRange(item.durationFromDays, item.durationToDays)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2 md:flex-col">
                   <Link

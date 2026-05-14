@@ -9,11 +9,11 @@ export default function OrderSuccessPage() {
       <main id="main-content" className="container-shell grid min-h-[60vh] place-items-center py-16 text-center">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Заявка отправлена
+            Заказ отправлен
           </p>
-          <h1 className="mt-4 text-5xl font-semibold leading-tight">Спасибо за обращение</h1>
+          <h1 className="mt-4 text-5xl font-semibold leading-tight">Спасибо за заказ</h1>
           <p className="mt-5 text-lg leading-8 text-muted">
-            Дизайнер получит заявку и свяжется с нами в течение одного рабочего дня.
+            Дизайнер получит бриф, проверит предварительный расчет и подготовит договор-заказ для согласования.
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <ButtonLink href="/">На главную</ButtonLink>

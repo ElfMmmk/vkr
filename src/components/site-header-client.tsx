@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { dictionaries, type Locale } from "@/lib/i18n";
+import type { AppSession } from "@/lib/auth";
 
 const navItems = [
   { href: "/about", key: "about" },
@@ -19,9 +20,24 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SiteHeaderClient({ locale }: { locale: Locale }) {
+export function SiteHeaderClient({
+  locale,
+  session
+}: {
+  locale: Locale;
+  session: Pick<AppSession, "email" | "fullName"> | null;
+}) {
   const pathname = usePathname();
   const dictionary = dictionaries[locale];
+  const signedInLabel = locale === "en" ? "Signed in" : "Вы вошли";
+  const accountLabel = session
+    ? dictionary.nav.account
+    : locale === "en"
+      ? "Sign in"
+      : "Войти";
+  const accountTitle = session
+    ? `${signedInLabel}: ${session.fullName || session.email}`
+    : accountLabel;
 
   return (
     <header className="sticky top-0 z-30 border-b border-line/80 bg-paper/88 backdrop-blur">
@@ -46,6 +62,7 @@ export function SiteHeaderClient({ locale }: { locale: Locale }) {
         <nav className="hidden items-center gap-2 text-sm font-medium text-muted md:flex">
           {navItems.map((item) => {
             const active = isActivePath(pathname, item.href);
+            const href = item.key === "account" && !session ? "/account/login" : item.href;
 
             return (
               <Link
@@ -53,10 +70,16 @@ export function SiteHeaderClient({ locale }: { locale: Locale }) {
                 className={`focus-ring px-3 py-2 transition hover:text-ink ${
                   active ? "bg-white text-ink shadow-soft" : ""
                 }`}
-                href={item.href}
+                href={href}
                 key={item.href}
+                title={item.key === "account" ? accountTitle : undefined}
               >
-                {dictionary.nav[item.key]}
+                <span className="block">{item.key === "account" ? accountLabel : dictionary.nav[item.key]}</span>
+                {item.key === "account" && session ? (
+                  <span className="block text-[11px] font-semibold leading-4 text-cobalt">
+                    {signedInLabel}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -83,6 +106,8 @@ export function SiteHeaderClient({ locale }: { locale: Locale }) {
           <nav className="mt-2 grid border border-line bg-white text-sm font-medium text-muted">
             {navItems.map((item) => {
               const active = isActivePath(pathname, item.href);
+              const href = item.key === "account" && !session ? "/account/login" : item.href;
+              const label = item.key === "account" ? accountLabel : dictionary.nav[item.key];
 
               return (
                 <Link
@@ -90,10 +115,11 @@ export function SiteHeaderClient({ locale }: { locale: Locale }) {
                   className={`focus-ring border-b border-line px-4 py-3 transition hover:bg-paper hover:text-ink active:bg-line/40 ${
                     active ? "bg-paper text-ink" : ""
                   }`}
-                  href={item.href}
+                  href={href}
                   key={item.href}
+                  title={item.key === "account" ? accountTitle : undefined}
                 >
-                  {dictionary.nav[item.key]}
+                  {item.key === "account" && session ? `${label} — ${signedInLabel.toLowerCase()}` : label}
                 </Link>
               );
             })}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { filterProjects } from "@/lib/data/public";
 import { demoProjects } from "@/lib/demo-data";
+import { calculateOrderEstimate } from "@/lib/order-calculator";
 import { isRequestStatus } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
 import { fieldLimits } from "@/lib/field-limits";
@@ -15,7 +16,8 @@ import {
   imageUploadSchema,
   imageParentTypeSchema,
   orderRequestSchema,
-  pageKeySchema
+  pageKeySchema,
+  servicePackageSchema
 } from "@/lib/validation";
 
 describe("validation helpers", () => {
@@ -25,7 +27,13 @@ describe("validation helpers", () => {
       contactMethod: "Telegram",
       contactValue: "@anna",
       serviceId: "svc-brand",
-      comment: "Нужна айдентика для небольшого бренда косметики."
+      packageId: "pkg-brand-start",
+      addonIds: ["addon-brand-guide"],
+      referenceProjectId: "project-botanica",
+      resultDescription: "Нужна айдентика для небольшого бренда косметики.",
+      stylePreferences: "Минималистично, спокойно, с натуральной палитрой.",
+      materials: "Есть название и фотографии продукта.",
+      desiredDeadline: "До конца месяца"
     });
 
     expect(result.success).toBe(true);
@@ -36,10 +44,35 @@ describe("validation helpers", () => {
       clientName: "",
       contactMethod: "",
       contactValue: "",
-      comment: ""
+      serviceId: "",
+      packageId: "",
+      resultDescription: "",
+      stylePreferences: ""
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("calculates package and add-on estimates", () => {
+    const estimate = calculateOrderEstimate({
+      package: {
+        priceFrom: 25000,
+        priceTo: 45000,
+        durationFromDays: 10,
+        durationToDays: 18
+      },
+      addons: [
+        { price: 18000, durationDays: 5 },
+        { price: 12000, durationDays: 0 }
+      ]
+    });
+
+    expect(estimate).toEqual({
+      priceFrom: 55000,
+      priceTo: 75000,
+      durationFromDays: 15,
+      durationToDays: 23
+    });
   });
 
   it("creates stable latin slugs from russian titles", () => {
@@ -50,6 +83,22 @@ describe("validation helpers", () => {
   it("keeps request statuses constrained", () => {
     expect(isRequestStatus("new")).toBe(true);
     expect(isRequestStatus("archived")).toBe(false);
+  });
+
+  it("rejects inconsistent package pricing and timing", () => {
+    const result = servicePackageSchema.safeParse({
+      serviceId: "svc-brand",
+      title: "Wrong",
+      description: "",
+      priceFrom: "50000",
+      priceTo: "25000",
+      durationFromDays: "20",
+      durationToDays: "10",
+      displayOrder: "10",
+      isActive: true
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it("keeps admin hidden/select values constrained", () => {

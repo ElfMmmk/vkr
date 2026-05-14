@@ -66,7 +66,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="border border-line bg-paper p-4">
               <p className="font-semibold text-ink">Активные услуги</p>
-              <p className="mt-2">Порядок на сайте совпадает со списком в админке</p>
+              <p className="mt-2">Порядок на сайте совпадает со списком в панели администратора</p>
             </div>
             <div className="border border-line bg-paper p-4">
               <p className="font-semibold text-ink">Новые заявки</p>

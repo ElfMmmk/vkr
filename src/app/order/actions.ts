@@ -4,12 +4,13 @@ import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { formString } from "@/lib/form";
+import { formString, formStringArray } from "@/lib/form";
+import { calculateOrderEstimate } from "@/lib/order-calculator";
 import {
   createSupabaseServerClient,
-  getOptionalSupabaseAdmin,
-  getOptionalSupabasePublic
+  getOptionalSupabaseAdmin
 } from "@/lib/supabase/server";
+import type { TablesInsert } from "@/lib/supabase/database.types";
 import { orderRequestSchema } from "@/lib/validation";
 
 export type OrderFormState = {
@@ -77,7 +78,14 @@ export async function submitOrderAction(
     contactMethod: formString(formData, "contactMethod"),
     contactValue: formString(formData, "contactValue"),
     serviceId: formString(formData, "serviceId"),
+    packageId: formString(formData, "packageId"),
+    addonIds: formStringArray(formData, "addonIds"),
+    referenceProjectId: formString(formData, "referenceProjectId") || undefined,
     serviceTitle: formString(formData, "serviceTitle") || undefined,
+    resultDescription: formString(formData, "resultDescription"),
+    stylePreferences: formString(formData, "stylePreferences"),
+    materials: formString(formData, "materials"),
+    desiredDeadline: formString(formData, "desiredDeadline"),
     comment: formString(formData, "comment")
   });
 
@@ -88,12 +96,11 @@ export async function submitOrderAction(
     };
   }
 
-  const client = getOptionalSupabasePublic();
+  const adminClient = getOptionalSupabaseAdmin();
 
-  if (!client) {
+  if (!adminClient) {
     return {
-      message:
-        "Заявка прошла проверку, но Supabase ещё не подключён. Настройте переменные окружения для сохранения заявок."
+      message: "Сохранение заказа временно недоступно. Попробуйте позже."
     };
   }
 
@@ -106,61 +113,156 @@ export async function submitOrderAction(
   }
 
   const serviceId = parsed.data.serviceId;
+  const packageId = parsed.data.packageId;
+  const uniqueAddonIds = Array.from(new Set(parsed.data.addonIds));
   let serviceTitle = parsed.data.serviceTitle ?? "";
+  const readClient = adminClient;
+  const { data: service, error: serviceError } = await readClient
+    .from("services")
+    .select("id, title, is_active, service_packages(*), service_addons(*)")
+    .eq("id", serviceId)
+    .maybeSingle();
 
-  if (serviceId) {
-    const { data: service } = await client
-      .from("services")
-      .select("title")
-      .eq("id", serviceId)
-      .eq("is_active", true)
+  if (serviceError || !service || service.is_active !== true || typeof service.title !== "string") {
+    return {
+      message: "Заполните обязательные поля",
+      fieldErrors: {
+        serviceId: ["Выберите услугу из списка"]
+      }
+    };
+  }
+
+  serviceTitle = service.title;
+  const packages = Array.isArray(service.service_packages) ? service.service_packages : [];
+  const addons = Array.isArray(service.service_addons) ? service.service_addons : [];
+  const selectedPackage = packages.find(
+    (item) => item.id === packageId && item.service_id === serviceId && item.is_active === true
+  );
+
+  if (!selectedPackage) {
+    return {
+      message: "Заполните обязательные поля",
+      fieldErrors: {
+        packageId: ["Выберите пакет работ"]
+      }
+    };
+  }
+
+  const selectedAddons = uniqueAddonIds.map((addonId) =>
+    addons.find((item) => item.id === addonId && item.service_id === serviceId && item.is_active === true)
+  );
+
+  if (selectedAddons.some((addon) => !addon)) {
+    return {
+      message: "Проверьте выбранные доплаты",
+      fieldErrors: {
+        addonIds: ["Выберите доплаты из списка услуги"]
+      }
+    };
+  }
+
+  let referenceProjectId: string | null = null;
+  let referenceProjectTitle = "";
+  let referenceProjectSlug = "";
+
+  if (parsed.data.referenceProjectId) {
+    const { data: referenceProject } = await readClient
+      .from("projects")
+      .select("id, title, slug, is_published, project_services(service_id)")
+      .eq("id", parsed.data.referenceProjectId)
+      .eq("is_published", true)
       .maybeSingle();
+    const projectServices = Array.isArray(referenceProject?.project_services)
+      ? referenceProject.project_services
+      : [];
+    const belongsToService = projectServices.some((relation) => relation.service_id === serviceId);
 
-    if (service && typeof service.title === "string") {
-      serviceTitle = service.title;
-    } else {
+    if (!referenceProject || !belongsToService) {
       return {
-        message: "Заполните обязательные поля",
+        message: "Выберите пример работы из списка услуги",
         fieldErrors: {
-          serviceId: ["Выберите услугу из списка"]
+          referenceProjectId: ["Выберите пример работы из списка услуги"]
         }
       };
     }
+
+    referenceProjectId = referenceProject.id;
+    referenceProjectTitle = referenceProject.title;
+    referenceProjectSlug = referenceProject.slug;
   }
+
+  const addonSnapshots = selectedAddons
+    .filter((addon): addon is NonNullable<typeof addon> => Boolean(addon))
+    .map((addon) => ({
+      id: addon.id,
+      title: addon.title,
+      description: addon.description ?? "",
+      price: addon.price ?? 0,
+      durationDays: addon.duration_days ?? 0
+    }));
+  const estimate = calculateOrderEstimate({
+    package: {
+      priceFrom: selectedPackage.price_from ?? 0,
+      priceTo: selectedPackage.price_to ?? 0,
+      durationFromDays: selectedPackage.duration_from_days ?? 1,
+      durationToDays: selectedPackage.duration_to_days ?? 1
+    },
+    addons: addonSnapshots
+  });
 
   const sessionClient = await createSupabaseServerClient();
   const { data: userData } = sessionClient
     ? await sessionClient.auth.getUser()
     : { data: { user: null } };
   const clientUserId = userData.user?.id ?? null;
-  const requestPayload = {
+  const requestPayload: TablesInsert<"requests"> = {
     client_name: parsed.data.clientName,
     contact_method: parsed.data.contactMethod,
     contact_value: parsed.data.contactValue,
     service_id: serviceId,
     service_title: serviceTitle,
-    comment: parsed.data.comment,
+    package_id: selectedPackage.id,
+    package_title: selectedPackage.title,
+    package_description: selectedPackage.description ?? "",
+    package_price_from: selectedPackage.price_from ?? 0,
+    package_price_to: selectedPackage.price_to ?? 0,
+    package_duration_from_days: selectedPackage.duration_from_days ?? 1,
+    package_duration_to_days: selectedPackage.duration_to_days ?? 1,
+    selected_addons: addonSnapshots,
+    reference_project_id: referenceProjectId,
+    reference_project_title: referenceProjectTitle,
+    reference_project_slug: referenceProjectSlug,
+    result_description: parsed.data.resultDescription,
+    style_preferences: parsed.data.stylePreferences,
+    materials: parsed.data.materials,
+    desired_deadline: parsed.data.desiredDeadline,
+    estimated_price_from: estimate.priceFrom,
+    estimated_price_to: estimate.priceTo,
+    estimated_duration_from_days: estimate.durationFromDays,
+    estimated_duration_to_days: estimate.durationToDays,
+    comment: parsed.data.resultDescription,
     source_hash: sourceHash,
     status: "new",
     ...(clientUserId ? { client_user_id: clientUserId } : {})
   };
-  const adminClient = getOptionalSupabaseAdmin();
-  const requestInsert = adminClient
-    ? await adminClient.from("requests").insert(requestPayload).select("id").single()
-    : await client.from("requests").insert(requestPayload);
+  const requestInsert = await adminClient
+    .from("requests")
+    .insert(requestPayload)
+    .select("id")
+    .single();
   const error = requestInsert.error;
 
   if (error) {
     return {
-      message: "Не удалось сохранить заявку. Попробуйте позже."
+      message: "Не удалось сохранить заказ. Попробуйте позже."
     };
   }
 
-  if (adminClient && "data" in requestInsert && requestInsert.data?.id) {
+  if (requestInsert.data?.id) {
     await adminClient.from("notifications").insert({
       type: "request_created",
-      title: "Новая заявка",
-      body: `${parsed.data.clientName} отправил(а) заявку${serviceTitle ? `: ${serviceTitle}` : ""}.`,
+      title: "Новый заказ",
+      body: `${parsed.data.clientName} оформил(а) заказ${serviceTitle ? `: ${serviceTitle}` : ""}.`,
       entity_type: "request",
       entity_id: requestInsert.data.id,
       audience_role: "manager"

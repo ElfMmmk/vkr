@@ -52,7 +52,6 @@ export function CharacterCount({
       id={id}
     >
       {value.length} / {max}
-      {typeof min === "number" ? `, минимум ${min}` : ""}
     </span>
   );
 }

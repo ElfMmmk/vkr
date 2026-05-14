@@ -4,6 +4,7 @@ import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminProjectOrderForm } from "@/components/admin-project-order-form";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
 import { deleteProjectAction, saveProjectAction } from "@/lib/actions/admin";
@@ -192,9 +193,11 @@ function ProjectForm({
             Показывать на сайте
           </label>
         </div>
-        <button className={adminPrimaryButtonClass}>
-          {project ? "Сохранить проект" : "Создать проект"}
-        </button>
+        <FormSubmitButton
+          className={adminPrimaryButtonClass}
+          idleLabel={project ? "Сохранить проект" : "Создать проект"}
+          pendingLabel="Сохранение..."
+        />
       </AdminFormFieldset>
     </form>
   );
