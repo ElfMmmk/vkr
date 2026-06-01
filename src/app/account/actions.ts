@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getAdminEmail, requireClientSession, resolveUserProfile } from "@/lib/auth";
+import { getRegistrationErrorMessage } from "@/lib/auth-errors";
 import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
 import {
@@ -106,7 +107,7 @@ export async function clientRegisterAction(
   });
 
   if (error) {
-    return { message: "Не удалось зарегистрироваться. Проверьте email или попробуйте позже." };
+    return { message: getRegistrationErrorMessage(error) };
   }
 
   if (data.user) {

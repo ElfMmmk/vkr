@@ -51,6 +51,49 @@ The target demo setup uses Supabase Free plan: 500 MB database, 1 GB file storag
 5. Create one Auth user for `ADMIN_EMAIL` and set this user's row in `public.profiles` to `role = 'admin'`.
 6. Copy the project URL, publishable key, and secret key into `.env.local` and later into Vercel environment variables.
 
+### Auth email and live registration demo
+
+Supabase's built-in Auth email sender is intentionally limited and is not reliable for a defense/demo where several new client accounts may be registered. For the live registration scenario on `/account/register`, configure Custom SMTP in Supabase before the demo. This is compatible with the Supabase Free plan; email volume limits then depend mostly on the selected SMTP provider and Supabase Auth rate-limit settings.
+
+The no-domain demo path uses SMTP2GO Free with a verified single sender email. In SMTP2GO, open Sending -> Verified Senders -> Single sender emails, add the sender email, confirm it from the mailbox, then open Sending -> SMTP Users and copy the SMTP username and password. In Supabase Dashboard, open Authentication -> Settings -> SMTP, enable Custom SMTP, and use:
+
+```text
+Host: mail.smtp2go.com
+Port: 587
+Username: SMTP username from SMTP2GO
+Password: SMTP password from SMTP2GO
+Sender email: verified single sender email
+Sender name: Graphic Designer Portfolio
+```
+
+If the mailbox domain has strict DMARC and SMTP2GO refuses single sender verification, use a verified sender domain instead or temporarily disable email confirmation only for the defense demo.
+
+Before the defense, register a fresh client email through `/account/register`, confirm that the email arrives, follow the confirmation link if email confirmation is enabled, sign in through `/account/login`, and place one test order. Keep a fallback client demo email and password outside Git, for example in a local password manager or private demo notes. Do not commit demo passwords to `.env.local`, README, seed files, or tests.
+
+## Vercel deployment
+
+Deploy only after live registration works through Custom SMTP. A `*.vercel.app` URL is used as the public site URL and Supabase redirect URL, not as an email sender domain.
+
+For a production Vercel deployment, set these environment variables in Vercel Project Settings -> Environment Variables:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SECRET_KEY
+ADMIN_EMAIL
+```
+
+After deployment, update Supabase Authentication -> URL Configuration:
+
+```text
+Site URL: https://your-vercel-project.vercel.app
+Redirect URLs:
+https://your-vercel-project.vercel.app/**
+http://localhost:3000/**
+```
+
+Then repeat the live flow on the Vercel URL: registration, email confirmation, login, order placement, manager contract-order, and client acceptance.
+
 For uploaded portfolio images, the app keeps a server-side 10 MB limit and accepts JPEG, PNG, WebP, GIF, and AVIF. Do not enable paid Storage Image Transformations for the Free plan demo.
 
 Legacy Supabase key names are still supported as fallback: `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Prefer the newer `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`.

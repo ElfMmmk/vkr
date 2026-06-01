@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { filterProjects } from "@/lib/data/public";
 import { demoProjects } from "@/lib/demo-data";
-import { calculateOrderEstimate } from "@/lib/order-calculator";
+import { calculateOrderEstimate, formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
 import { isRequestStatus } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
 import { fieldLimits } from "@/lib/field-limits";
@@ -73,6 +73,11 @@ describe("validation helpers", () => {
       durationFromDays: 15,
       durationToDays: 23
     });
+  });
+
+  it("formats price and duration ranges with spaced dashes", () => {
+    expect(formatPriceRange(25000, 45000)).toBe("25 000 ₽ – 45 000 ₽");
+    expect(formatDurationRange(10, 18)).toBe("10 – 18 раб. дн.");
   });
 
   it("creates stable latin slugs from russian titles", () => {

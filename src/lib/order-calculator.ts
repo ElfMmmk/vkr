@@ -28,7 +28,7 @@ export function calculateOrderEstimate(input: OrderEstimateInput): OrderEstimate
 }
 
 export function formatRubles(value: number): string {
-  return `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
+  return `${new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ")} ₽`;
 }
 
 export function formatPriceRange(priceFrom: number | null, priceTo: number | null): string {
@@ -40,7 +40,7 @@ export function formatPriceRange(priceFrom: number | null, priceTo: number | nul
     return formatRubles(priceFrom);
   }
 
-  return `${formatRubles(priceFrom)}–${formatRubles(priceTo)}`;
+  return `${formatRubles(priceFrom)} – ${formatRubles(priceTo)}`;
 }
 
 export function formatDurationRange(
@@ -55,5 +55,5 @@ export function formatDurationRange(
     return `${durationFromDays} раб. дн.`;
   }
 
-  return `${durationFromDays}–${durationToDays} раб. дн.`;
+  return `${durationFromDays} – ${durationToDays} раб. дн.`;
 }
