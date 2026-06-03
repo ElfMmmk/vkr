@@ -165,6 +165,14 @@ export type UserProfile = {
   updatedAt?: string;
 };
 
+export type AdminUserListResult = {
+  items: UserProfile[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
 export type AdminNotification = {
   id: string;
   type: "request_created" | "request_status_changed" | "system";

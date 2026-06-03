@@ -987,6 +987,7 @@ export async function updateUserRoleAction(formData: FormData): Promise<void> {
   const admin = await requireRoleAdmin();
   const id = cleanId(formString(formData, "id"));
   const role = parseUserRole(formString(formData, "role"));
+  const redirectTo = getAdminRedirectTo(formData, "/admin/users");
 
   if (!id || id === admin.id) {
     return;
@@ -1002,5 +1003,6 @@ export async function updateUserRoleAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/admin/users");
-  redirectWithNotice("/admin/users", "user-role-updated");
+  revalidatePath(`/admin/users/${id}`);
+  redirectWithNotice(redirectTo, "user-role-updated");
 }

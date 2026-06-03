@@ -1,4 +1,5 @@
 import { demoPages, demoProjects, demoRequests, demoServices, demoTags } from "@/lib/demo-data";
+import type { AdminUserListOptions } from "@/lib/admin-user-query";
 import {
   attachLegacyProjectImages,
   attachProjectMedia,
@@ -18,6 +19,7 @@ import {
 import { getOptionalSupabaseAdmin } from "@/lib/supabase/server";
 import type { RequestStatus } from "@/lib/supabase/database.types";
 import type {
+  AdminUserListResult,
   OrderRequest,
   PageContent,
   PortfolioImage,
@@ -211,6 +213,7 @@ export async function listAdminImages(): Promise<PortfolioImage[]> {
 
 export async function listAdminRequests(options: {
   query?: string;
+  clientUserId?: string;
   serviceId?: string;
   status?: string;
   sort?: "newest" | "oldest";
@@ -221,6 +224,7 @@ export async function listAdminRequests(options: {
   if (!client) {
     const requests = demoRequests.filter((request) => {
       const query = normalizeRequestSearch(options.query);
+      const clientMatches = !options.clientUserId || request.clientUserId === options.clientUserId;
       const statusMatches = !options.status || request.status === options.status;
       const serviceMatches = !options.serviceId || request.serviceId === options.serviceId;
       const queryMatches =
@@ -229,7 +233,7 @@ export async function listAdminRequests(options: {
           .toLowerCase()
           .includes(query);
 
-      return statusMatches && serviceMatches && queryMatches;
+      return clientMatches && statusMatches && serviceMatches && queryMatches;
     }).sort((a, b) => {
       const direction = options.sort === "oldest" ? 1 : -1;
 
@@ -249,6 +253,10 @@ export async function listAdminRequests(options: {
 
     if (options.status && isRequestStatus(options.status)) {
       requestQuery = requestQuery.eq("status", options.status);
+    }
+
+    if (options.clientUserId) {
+      requestQuery = requestQuery.eq("client_user_id", options.clientUserId);
     }
 
     if (options.serviceId) {
@@ -325,28 +333,102 @@ type ProfileRow = {
   updated_at?: string | null;
 };
 
-export async function listUserProfiles(): Promise<UserProfile[]> {
-  const client = getOptionalSupabaseAdmin();
-
-  if (!client) {
-    return [];
-  }
-
-  const { data, error } = await client
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return [];
-  }
-
-  return ((data as ProfileRow[] | null) ?? []).map((profile) => ({
+function mapProfile(profile: ProfileRow): UserProfile {
+  return {
     id: profile.id,
     email: profile.email,
     fullName: profile.full_name ?? "",
     role: profile.role,
     createdAt: profile.created_at ?? undefined,
     updatedAt: profile.updated_at ?? undefined
-  }));
+  };
+}
+
+function escapeProfileSearch(query: string): string {
+  return query.replace(/[^\p{L}\p{N}@._\-\s]/gu, " ").replace(/\s+/g, " ").trim();
+}
+
+export async function listUserProfiles(options: AdminUserListOptions): Promise<AdminUserListResult> {
+  const client = getOptionalSupabaseAdmin();
+
+  if (!client) {
+    return {
+      items: [],
+      total: 0,
+      page: options.page,
+      pageSize: options.pageSize,
+      pageCount: 1
+    };
+  }
+
+  const from = (options.page - 1) * options.pageSize;
+  const to = from + options.pageSize - 1;
+  const search = options.query ? escapeProfileSearch(options.query) : "";
+  let query = client
+    .from("profiles")
+    .select("*", { count: "exact" });
+
+  if (options.role) {
+    query = query.eq("role", options.role);
+  }
+
+  if (search) {
+    query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
+  }
+
+  if (options.sort === "email") {
+    query = query.order("email", { ascending: true });
+  } else {
+    query = query.order("created_at", { ascending: options.sort === "oldest" });
+  }
+
+  const { data, error, count } = await query.range(from, to);
+
+  if (error) {
+    return {
+      items: [],
+      total: 0,
+      page: options.page,
+      pageSize: options.pageSize,
+      pageCount: 1
+    };
+  }
+
+  const total = count ?? 0;
+
+  return {
+    items: ((data as ProfileRow[] | null) ?? []).map(mapProfile),
+    total,
+    page: options.page,
+    pageSize: options.pageSize,
+    pageCount: Math.max(1, Math.ceil(total / options.pageSize))
+  };
+}
+
+export async function getUserProfileById(id: string): Promise<UserProfile | null> {
+  const client = getOptionalSupabaseAdmin();
+
+  if (!client) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load user profile: ${error.message}`);
+  }
+
+  return data ? mapProfile(data as ProfileRow) : null;
+}
+
+export async function listUserRequests(clientUserId: string): Promise<OrderRequest[]> {
+  return listAdminRequests({
+    clientUserId,
+    limit: null,
+    sort: "newest"
+  });
 }
