@@ -98,6 +98,19 @@ create table if not exists public.images (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null check (event_type in ('page_view', 'cta_click')),
+  path text not null,
+  search text not null default '',
+  referrer text not null default '',
+  href text not null default '',
+  label text not null default '',
+  source_hash text not null default '',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 alter table public.images add column if not exists title text not null default '';
 
 alter table public.projects
@@ -237,6 +250,10 @@ create index if not exists projects_cover_image_idx on public.projects (cover_im
 create index if not exists project_services_service_idx on public.project_services (service_id);
 create index if not exists project_tags_tag_idx on public.project_tags (tag_id);
 create index if not exists images_parent_idx on public.images (parent_type, parent_id, sort_order);
+create index if not exists analytics_events_type_created_idx on public.analytics_events (event_type, created_at desc);
+create index if not exists analytics_events_path_created_idx on public.analytics_events (path, created_at desc);
+create index if not exists analytics_events_source_created_idx on public.analytics_events (source_hash, created_at desc)
+where source_hash <> '';
 create index if not exists project_images_project_order_idx on public.project_images (project_id, sort_order);
 create index if not exists project_images_image_idx on public.project_images (image_id);
 create index if not exists requests_status_created_idx on public.requests (status, created_at desc);
@@ -320,6 +337,7 @@ alter table public.projects enable row level security;
 alter table public.project_services enable row level security;
 alter table public.project_tags enable row level security;
 alter table public.images enable row level security;
+alter table public.analytics_events enable row level security;
 alter table public.project_images enable row level security;
 alter table public.requests enable row level security;
 alter table public.order_contracts enable row level security;
@@ -451,6 +469,7 @@ grant select on public.project_services to anon, authenticated;
 grant select on public.project_tags to anon, authenticated;
 grant select on public.project_images to anon, authenticated;
 grant select on public.images to anon, authenticated;
+revoke all on public.analytics_events from anon, authenticated;
 revoke insert on public.requests from anon, authenticated;
 
 grant all privileges on public.pages to service_role;
@@ -463,6 +482,7 @@ grant all privileges on public.project_services to service_role;
 grant all privileges on public.project_tags to service_role;
 grant all privileges on public.project_images to service_role;
 grant all privileges on public.images to service_role;
+grant all privileges on public.analytics_events to service_role;
 grant all privileges on public.requests to service_role;
 grant all privileges on public.order_contracts to service_role;
 

@@ -61,7 +61,9 @@ export default async function AboutPage() {
               ))}
             </div>
             <div className="mt-8">
-              <ButtonLink href="/order">Обсудить задачу</ButtonLink>
+              <ButtonLink analyticsCta analyticsLabel="Обсудить задачу" href="/order">
+                Обсудить задачу
+              </ButtonLink>
             </div>
           </div>
         </section>

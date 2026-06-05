@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-analytics";
 import { requireRequestManager } from "@/lib/auth";
 import {
+  listAdminAnalyticsEvents,
   listAdminImages,
   listAdminProjects,
   listAdminRequests,
@@ -44,17 +45,23 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+function formatPercent(value: number): string {
+  return `${formatNumber(value)}%`;
+}
+
 export default async function AdminAnalyticsPage({ searchParams }: AdminAnalyticsPageProps) {
   await requireRequestManager();
   const params = await searchParams;
   const period = parseAdminAnalyticsPeriod(params.period);
-  const [requests, services, projects, images] = await Promise.all([
+  const [requests, services, projects, images, analyticsEvents] = await Promise.all([
     listAdminRequests({ limit: null }),
     listAdminServices(),
     listAdminProjects(),
-    listAdminImages()
+    listAdminImages(),
+    listAdminAnalyticsEvents()
   ]);
   const analytics = buildAdminAnalytics({
+    analyticsEvents,
     images,
     period,
     projects,
@@ -102,6 +109,26 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
       label: "Файлов в медиатеке",
       meta: "загруженные изображения",
       value: formatNumber(analytics.kpis.mediaFiles)
+    },
+    {
+      label: "Просмотры страниц",
+      meta: analytics.periodLabel,
+      value: formatNumber(analytics.traffic.totalPageViews)
+    },
+    {
+      label: "Уникальные посетители",
+      meta: "по дневному хешу источника",
+      value: formatNumber(analytics.traffic.uniqueVisitors)
+    },
+    {
+      label: "Клики по CTA",
+      meta: analytics.periodLabel,
+      value: formatNumber(analytics.traffic.ctaClicks)
+    },
+    {
+      label: "CTR CTA",
+      meta: "клики относительно просмотров",
+      value: formatPercent(analytics.traffic.ctaClickRate)
     }
   ];
 
@@ -112,8 +139,8 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
           <p className="text-sm uppercase tracking-[0.18em] text-muted">Аналитика</p>
           <h1 className="mt-2 text-4xl font-semibold">Заявки, договоры и контент</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-            Панель показывает управленческие показатели по текущим заявкам и договор-заказам. Трафик
-            сайта не включён в V1, потому что в проекте пока нет таблицы событий просмотров.
+            Панель показывает управленческие показатели по текущим заявкам, договор-заказам,
+            контенту и публичному трафику сайта.
           </p>
         </div>
         <nav className="flex flex-wrap gap-2" aria-label="Период аналитики">
@@ -146,6 +173,44 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
             <p className="mt-2 text-xs leading-5 text-muted">{metric.meta}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <AdminCard title="Топ страниц" description={`Период: ${analytics.periodLabel}`}>
+          {analytics.traffic.topPages.length ? (
+            <div className="grid gap-3">
+              {analytics.traffic.topPages.map((item) => (
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-sm" key={item.path}>
+                  <span className="min-w-0 truncate text-muted">{item.path}</span>
+                  <span className="font-semibold text-ink">{formatNumber(item.views)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">За выбранный период просмотров публичных страниц пока нет.</p>
+          )}
+        </AdminCard>
+
+        <AdminCard title="Топ CTA" description={`Период: ${analytics.periodLabel}`}>
+          {analytics.traffic.topCtas.length ? (
+            <div className="grid gap-3">
+              {analytics.traffic.topCtas.map((item) => (
+                <div
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-sm"
+                  key={`${item.href}-${item.label}`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-ink">{item.label}</span>
+                    <span className="mt-1 block truncate text-muted">{item.href}</span>
+                  </span>
+                  <span className="font-semibold text-ink">{formatNumber(item.clicks)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">За выбранный период кликов по CTA пока нет.</p>
+          )}
+        </AdminCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">

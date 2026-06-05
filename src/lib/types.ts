@@ -9,6 +9,8 @@ export type ContractStatus = "draft" | "sent" | "accepted" | "cancelled";
 
 export type UserRole = "admin" | "manager" | "client";
 
+export type AnalyticsEventType = "page_view" | "cta_click";
+
 export type PageKey = "home" | "about" | "services" | "contacts";
 
 export type PageContent = {
@@ -124,6 +126,19 @@ export type OrderRequest = {
   createdAt: string;
   updatedAt?: string;
   contract?: OrderContract | null;
+};
+
+export type AnalyticsEvent = {
+  id: string;
+  eventType: AnalyticsEventType;
+  path: string;
+  search: string;
+  referrer: string;
+  href: string;
+  label: string;
+  sourceHash: string;
+  metadata: Record<string, string>;
+  createdAt: string;
 };
 
 export type OrderAddonSnapshot = {

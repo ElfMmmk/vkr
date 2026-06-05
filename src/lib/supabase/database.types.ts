@@ -3,6 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type RequestStatus = "new" | "in_progress" | "approved" | "completed" | "rejected";
 export type ContractStatus = "draft" | "sent" | "accepted" | "cancelled";
 export type UserRole = "admin" | "manager" | "client";
+export type AnalyticsEventType = "page_view" | "cta_click";
 export type NotificationType = "request_created" | "request_status_changed" | "system";
 export type NotificationAudienceRole = "admin" | "manager";
 export type ImageParentType = "project" | "page" | "service" | "free";
@@ -12,6 +13,45 @@ export type TranslationLocale = "ru" | "en";
 export type Database = {
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          id: string;
+          event_type: AnalyticsEventType;
+          path: string;
+          search: string;
+          referrer: string;
+          href: string;
+          label: string;
+          source_hash: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_type: AnalyticsEventType;
+          path: string;
+          search?: string;
+          referrer?: string;
+          href?: string;
+          label?: string;
+          source_hash?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_type?: AnalyticsEventType;
+          path?: string;
+          search?: string;
+          referrer?: string;
+          href?: string;
+          label?: string;
+          source_hash?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       entity_translations: {
         Row: {
           id: string;

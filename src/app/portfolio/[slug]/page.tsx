@@ -85,7 +85,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 ))}
               </div>
               <div className="mt-8">
-                <ButtonLink href={primaryService ? `/order?service=${primaryService.slug}` : "/order"}>
+                <ButtonLink
+                  analyticsCta
+                  analyticsLabel={locale === "en" ? "Order a similar project" : "Заказать похожий проект"}
+                  href={primaryService ? `/order?service=${primaryService.slug}` : "/order"}
+                >
                   {locale === "en" ? "Order a similar project" : "Заказать похожий проект"}
                 </ButtonLink>
               </div>

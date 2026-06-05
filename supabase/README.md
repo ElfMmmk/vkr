@@ -20,6 +20,8 @@ The hosted `vkr-portfolio` Supabase project was updated with the media/security 
 
 The order workflow uses `service_packages` and `service_addons` for admin-managed preliminary pricing, stores the submitted calculation snapshot in `requests`, and stores manager-confirmed final terms in `order_contracts`. `order_contracts` are visible to authenticated clients only when the linked request belongs to them and the contract is sent or accepted. Order insertion is server-only: the public form posts to a Next.js server action, and that action saves through `SUPABASE_SECRET_KEY`; direct public Data API inserts into `requests` are rejected.
 
+Analytics V2 uses `public.analytics_events` for public `page_view` and explicit `cta_click` events. Browser code posts to `/api/analytics`; the route validates the payload, creates a daily `source_hash`, and writes through the server-side secret/service-role client. The table has RLS enabled, no `anon`/`authenticated` grants, and explicit `service_role` privileges. For an existing hosted project, run `supabase/migrations/20260605000000_analytics_events.sql` in the Supabase SQL Editor before expecting traffic metrics or the live admin analytics e2e test to work.
+
 Use these preferred variable names:
 
 ```bash

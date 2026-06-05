@@ -33,8 +33,19 @@ export default async function HomePage() {
             </h1>
             <p className="mt-5 text-base leading-8 text-muted md:mt-7 md:text-xl">{home.body}</p>
             <div className="mt-7 flex flex-wrap gap-3 md:mt-9">
-              <ButtonLink href="/order">{home.blocks.cta ?? dictionary.nav.order}</ButtonLink>
-              <ButtonLink href="/portfolio" variant="secondary">
+              <ButtonLink
+                analyticsCta
+                analyticsLabel={home.blocks.cta ?? dictionary.nav.order}
+                href="/order"
+              >
+                {home.blocks.cta ?? dictionary.nav.order}
+              </ButtonLink>
+              <ButtonLink
+                analyticsCta
+                analyticsLabel={home.blocks.secondaryCta ?? dictionary.nav.portfolio}
+                href="/portfolio"
+                variant="secondary"
+              >
                 {home.blocks.secondaryCta ?? dictionary.nav.portfolio}
               </ButtonLink>
             </div>
@@ -76,7 +87,12 @@ export default async function HomePage() {
                   {dictionary.common.recentProjects}
                 </h2>
               </div>
-              <ButtonLink href="/portfolio" variant="secondary">
+              <ButtonLink
+                analyticsCta
+                analyticsLabel={dictionary.common.allWorks}
+                href="/portfolio"
+                variant="secondary"
+              >
                 {dictionary.common.allWorks}
               </ButtonLink>
             </div>

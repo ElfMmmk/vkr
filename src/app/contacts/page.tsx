@@ -31,7 +31,12 @@ export default async function ContactsPage() {
               <p className="text-sm uppercase tracking-[0.18em] text-white/60">Заявка</p>
               <p className="mt-4 text-2xl font-semibold">Короткая форма для описания задачи</p>
               <div className="mt-6">
-                <ButtonLink href="/order" variant="secondary">
+                <ButtonLink
+                  analyticsCta
+                  analyticsLabel="Перейти к форме"
+                  href="/order"
+                  variant="secondary"
+                >
                   Перейти к форме
                 </ButtonLink>
               </div>

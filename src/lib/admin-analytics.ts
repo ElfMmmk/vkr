@@ -1,6 +1,7 @@
 import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
 import type {
   OrderRequest,
+  AnalyticsEvent,
   PortfolioImage,
   Project,
   RequestStatus,
@@ -42,6 +43,21 @@ export type AdminAnalytics = {
     averageEstimate: number;
     publishedProjects: number;
     mediaFiles: number;
+  };
+  traffic: {
+    totalPageViews: number;
+    uniqueVisitors: number;
+    ctaClicks: number;
+    ctaClickRate: number;
+    topPages: Array<{
+      path: string;
+      views: number;
+    }>;
+    topCtas: Array<{
+      href: string;
+      label: string;
+      clicks: number;
+    }>;
   };
   statuses: Array<{
     status: RequestStatus;
@@ -94,6 +110,12 @@ function getPeriodStart(now: Date, period: AdminAnalyticsPeriod): Date | null {
 
 function isInsidePeriod(request: OrderRequest, periodStart: Date | null, now: Date): boolean {
   const createdAt = new Date(request.createdAt);
+
+  return (!periodStart || createdAt >= periodStart) && createdAt <= now;
+}
+
+function isEventInsidePeriod(event: AnalyticsEvent, periodStart: Date | null, now: Date): boolean {
+  const createdAt = new Date(event.createdAt);
 
   return (!periodStart || createdAt >= periodStart) && createdAt <= now;
 }
@@ -236,6 +258,43 @@ function buildAttentionItems(requests: OrderRequest[], now: Date): AdminAttentio
   });
 }
 
+function buildTopPages(events: AnalyticsEvent[]) {
+  const counts = new Map<string, number>();
+
+  for (const event of events) {
+    if (event.eventType !== "page_view") {
+      continue;
+    }
+
+    counts.set(event.path, (counts.get(event.path) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([path, views]) => ({ path, views }))
+    .sort((a, b) => b.views - a.views || a.path.localeCompare(b.path, "ru"))
+    .slice(0, 8);
+}
+
+function buildTopCtas(events: AnalyticsEvent[]) {
+  const counts = new Map<string, { href: string; label: string; clicks: number }>();
+
+  for (const event of events) {
+    if (event.eventType !== "cta_click") {
+      continue;
+    }
+
+    const href = event.href || event.path;
+    const label = event.label || href;
+    const key = `${href}\n${label}`;
+    const current = counts.get(key) ?? { href, label, clicks: 0 };
+    counts.set(key, { ...current, clicks: current.clicks + 1 });
+  }
+
+  return Array.from(counts.values())
+    .sort((a, b) => b.clicks - a.clicks || a.label.localeCompare(b.label, "ru"))
+    .slice(0, 8);
+}
+
 export function parseAdminAnalyticsPeriod(value: string | string[] | undefined): AdminAnalyticsPeriod {
   const period = Array.isArray(value) ? value[0] : value;
 
@@ -256,6 +315,7 @@ export function toAdminAnalyticsSearchParams(period: AdminAnalyticsPeriod): URLS
 
 export function buildAdminAnalytics({
   images,
+  analyticsEvents = [],
   now = new Date(),
   period,
   projects,
@@ -263,6 +323,7 @@ export function buildAdminAnalytics({
   services
 }: {
   images: PortfolioImage[];
+  analyticsEvents?: AnalyticsEvent[];
   now?: Date;
   period: AdminAnalyticsPeriod;
   projects: Project[];
@@ -271,6 +332,12 @@ export function buildAdminAnalytics({
 }): AdminAnalytics {
   const periodStart = getPeriodStart(now, period);
   const periodRequests = requests.filter((request) => isInsidePeriod(request, periodStart, now));
+  const periodEvents = analyticsEvents.filter((event) => isEventInsidePeriod(event, periodStart, now));
+  const pageViewEvents = periodEvents.filter((event) => event.eventType === "page_view");
+  const ctaClicks = periodEvents.filter((event) => event.eventType === "cta_click").length;
+  const uniqueVisitors = new Set(
+    pageViewEvents.map((event) => event.sourceHash).filter(Boolean)
+  ).size;
   const acceptedContracts = periodRequests.filter(
     (request) => request.contract?.status === "accepted"
   );
@@ -296,6 +363,14 @@ export function buildAdminAnalytics({
       averageEstimate,
       publishedProjects: projects.filter((project) => project.isPublished).length,
       mediaFiles: images.length
+    },
+    traffic: {
+      totalPageViews: pageViewEvents.length,
+      uniqueVisitors,
+      ctaClicks,
+      ctaClickRate: pageViewEvents.length ? Math.round((ctaClicks / pageViewEvents.length) * 100) : 0,
+      topPages: buildTopPages(periodEvents),
+      topCtas: buildTopCtas(periodEvents)
     },
     statuses: requestStatuses.map((status) => ({
       status,

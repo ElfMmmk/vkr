@@ -50,6 +50,16 @@ describe("supabase security schema", () => {
     expect(schemaSql).toContain("grant all privileges on public.order_contracts to service_role;");
   });
 
+  it("adds private analytics events for server-side traffic tracking", () => {
+    expect(schemaSql).toContain("create table if not exists public.analytics_events");
+    expect(schemaSql).toContain("event_type text not null check (event_type in ('page_view', 'cta_click'))");
+    expect(schemaSql).toContain("analytics_events_type_created_idx");
+    expect(schemaSql).toContain("analytics_events_source_created_idx");
+    expect(schemaSql).toContain("alter table public.analytics_events enable row level security;");
+    expect(schemaSql).toContain("revoke all on public.analytics_events from anon, authenticated;");
+    expect(schemaSql).toContain("grant all privileges on public.analytics_events to service_role;");
+  });
+
   it("adds request order columns before indexes reference them", () => {
     const addPackageColumnIndex = schemaSql.indexOf("add column if not exists package_id");
     const packageIndexIndex = schemaSql.indexOf("requests_package_created_idx");

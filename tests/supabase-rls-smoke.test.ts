@@ -233,5 +233,5 @@ describeRlsSmoke("live Supabase RLS smoke", () => {
         }
       }
     }
-  });
+  }, 60_000);
 });

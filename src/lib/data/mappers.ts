@@ -2,6 +2,7 @@ import type {
   OrderRequest,
   OrderAddonSnapshot,
   OrderContract,
+  AnalyticsEvent,
   PageContent,
   PageKey,
   PortfolioImage,
@@ -15,6 +16,7 @@ import type { Json, Tables } from "@/lib/supabase/database.types";
 
 export type ServicePackageRow = Tables<"service_packages">;
 export type ServiceAddonRow = Tables<"service_addons">;
+export type AnalyticsEventRow = Tables<"analytics_events">;
 export type ServiceRow = Tables<"services"> & {
   service_packages?: ServicePackageRow[] | null;
   service_addons?: ServiceAddonRow[] | null;
@@ -54,6 +56,21 @@ function mapJsonRecord(value: Json | null): Record<string, string> {
   return Object.fromEntries(
     Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string")
   );
+}
+
+export function mapAnalyticsEvent(row: AnalyticsEventRow): AnalyticsEvent {
+  return {
+    id: row.id,
+    eventType: row.event_type,
+    path: row.path,
+    search: row.search ?? "",
+    referrer: row.referrer ?? "",
+    href: row.href ?? "",
+    label: row.label ?? "",
+    sourceHash: row.source_hash ?? "",
+    metadata: mapJsonRecord(row.metadata),
+    createdAt: row.created_at
+  };
 }
 
 export function mapService(row: ServiceRow): Service {

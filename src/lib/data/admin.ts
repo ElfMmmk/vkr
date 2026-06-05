@@ -4,12 +4,14 @@ import {
   attachLegacyProjectImages,
   attachProjectMedia,
   mapImage,
+  mapAnalyticsEvent,
   mapPage,
   mapProject,
   mapRequest,
   mapService,
   mapTag,
   type ImageRow,
+  type AnalyticsEventRow,
   type PageRow,
   type ProjectRow,
   type RequestRow,
@@ -20,6 +22,7 @@ import { getOptionalSupabaseAdmin } from "@/lib/supabase/server";
 import type { RequestStatus } from "@/lib/supabase/database.types";
 import type {
   AdminUserListResult,
+  AnalyticsEvent,
   OrderRequest,
   PageContent,
   PortfolioImage,
@@ -52,6 +55,12 @@ function isMissingFeaturedColumn(error: { message?: string } | null): boolean {
 
 function isMissingDisplayOrderColumn(error: { message?: string } | null): boolean {
   return Boolean(error?.message?.includes("display_order"));
+}
+
+function isMissingAnalyticsEventsTable(error: { message?: string } | null): boolean {
+  const message = error?.message ?? "";
+
+  return message.includes("analytics_events") || message.includes("schema cache");
 }
 
 function isRequestStatus(value: string): value is RequestStatus {
@@ -209,6 +218,28 @@ export async function listAdminImages(): Promise<PortfolioImage[]> {
     .order("created_at", { ascending: false });
 
   return requireAdminData(data as ImageRow[] | null, error, "admin images").map(mapImage);
+}
+
+export async function listAdminAnalyticsEvents(): Promise<AnalyticsEvent[]> {
+  const client = getOptionalSupabaseAdmin();
+
+  if (!client) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("analytics_events")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (isMissingAnalyticsEventsTable(error)) {
+    return [];
+  }
+
+  return requireAdminData(data as AnalyticsEventRow[] | null, error, "admin analytics events").map(
+    mapAnalyticsEvent
+  );
 }
 
 export async function listAdminRequests(options: {

@@ -53,12 +53,16 @@ export default async function ServicesPage() {
                 <div className="flex flex-wrap gap-2 md:flex-col">
                   <Link
                     className="focus-ring inline-flex min-h-12 min-w-36 items-center justify-center border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
+                    data-analytics-cta="true"
+                    data-analytics-label={`${service.title}: examples`}
                     href={`/portfolio?service=${service.slug}`}
                   >
                     {dictionary.common.serviceExamples}
                   </Link>
                   <Link
                     className="focus-ring inline-flex min-h-12 min-w-36 items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                    data-analytics-cta="true"
+                    data-analytics-label={`${service.title}: order`}
                     href={`/order?service=${service.slug}`}
                   >
                     {dictionary.common.order}

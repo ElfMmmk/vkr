@@ -5,7 +5,13 @@ import {
   parseAdminAnalyticsPeriod,
   toAdminAnalyticsSearchParams
 } from "@/lib/admin-analytics";
-import type { OrderRequest, PortfolioImage, Project, Service } from "@/lib/types";
+import type {
+  AnalyticsEvent,
+  OrderRequest,
+  PortfolioImage,
+  Project,
+  Service
+} from "@/lib/types";
 
 const now = new Date("2026-06-03T12:00:00.000Z");
 
@@ -100,6 +106,69 @@ const images = [
   }
 ] satisfies PortfolioImage[];
 
+const analyticsEvents = [
+  {
+    id: "view-home-1",
+    eventType: "page_view",
+    path: "/",
+    search: "",
+    referrer: "",
+    href: "",
+    label: "",
+    sourceHash: "visitor-a",
+    metadata: {},
+    createdAt: "2026-06-02T08:00:00.000Z"
+  },
+  {
+    id: "view-home-2",
+    eventType: "page_view",
+    path: "/",
+    search: "",
+    referrer: "",
+    href: "",
+    label: "",
+    sourceHash: "visitor-b",
+    metadata: {},
+    createdAt: "2026-06-02T09:00:00.000Z"
+  },
+  {
+    id: "view-services",
+    eventType: "page_view",
+    path: "/services",
+    search: "",
+    referrer: "",
+    href: "",
+    label: "",
+    sourceHash: "visitor-a",
+    metadata: {},
+    createdAt: "2026-06-03T09:00:00.000Z"
+  },
+  {
+    id: "cta-order",
+    eventType: "cta_click",
+    path: "/services",
+    search: "",
+    referrer: "",
+    href: "/order?service=brand",
+    label: "Заказать",
+    sourceHash: "visitor-a",
+    metadata: {},
+    createdAt: "2026-06-03T09:05:00.000Z"
+  },
+  {
+    id: "outside-period-event",
+    eventType: "page_view",
+    path: "/old",
+    search: "",
+    referrer: "",
+    href: "",
+    label: "",
+    sourceHash: "visitor-old",
+    metadata: {},
+    createdAt: "2026-04-01T09:00:00.000Z"
+  }
+] satisfies AnalyticsEvent[];
+
 describe("admin analytics helpers", () => {
   it("normalizes supported analytics periods", () => {
     expect(parseAdminAnalyticsPeriod("7")).toBe("7");
@@ -113,6 +182,7 @@ describe("admin analytics helpers", () => {
   it("builds period-scoped KPI, distributions, trend, and attention items", () => {
     const analytics = buildAdminAnalytics({
       images,
+      analyticsEvents,
       now,
       period: "30",
       projects,
@@ -184,6 +254,17 @@ describe("admin analytics helpers", () => {
     expect(analytics.kpis.averageEstimate).toBe(35000);
     expect(analytics.kpis.publishedProjects).toBe(1);
     expect(analytics.kpis.mediaFiles).toBe(1);
+    expect(analytics.traffic.totalPageViews).toBe(3);
+    expect(analytics.traffic.uniqueVisitors).toBe(2);
+    expect(analytics.traffic.ctaClicks).toBe(1);
+    expect(analytics.traffic.ctaClickRate).toBe(33);
+    expect(analytics.traffic.topPages).toEqual([
+      { path: "/", views: 2 },
+      { path: "/services", views: 1 }
+    ]);
+    expect(analytics.traffic.topCtas).toEqual([
+      { href: "/order?service=brand", label: "Заказать", clicks: 1 }
+    ]);
     expect(analytics.statuses.find((item) => item.status === "completed")?.count).toBe(0);
     expect(analytics.services.map((item) => [item.title, item.count])).toEqual([
       ["Website", 2],

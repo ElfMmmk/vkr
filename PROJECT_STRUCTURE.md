@@ -16,6 +16,7 @@
 - `PROJECT_STRUCTURE.md` - карта проекта; обновлять вместе со структурными изменениями.
 - `supabase/schema.sql` - текущая схема БД, RLS, grants, Storage bucket.
 - `supabase/seed.sql` - демо-контент для страниц, услуг, проектов, пакетов и доплат.
+- `supabase/migrations/20260605000000_analytics_events.sql` - ручная migration для событий `page_view` и `cta_click`.
 - `package.json` - npm scripts: `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e`.
 - `playwright.config.ts` - e2e webServer и Supabase e2e flags.
 
@@ -27,6 +28,7 @@ Public routes live in `src/app`:
 - `/about`, `/services`, `/contacts`, `/privacy` - static public sections.
 - `/portfolio` and `/portfolio/[slug]` - portfolio listing and project detail.
 - `/order` and `/order/success` - order form and success page.
+- `/api/analytics` - server-side endpoint for public page view and CTA click events.
 
 Account routes:
 
@@ -51,6 +53,7 @@ Admin routes:
 - `src/app/admin/login/actions.ts` - admin login.
 - `src/app/order/actions.ts` - public order submission.
 - `src/app/account/actions.ts` - client profile/auth and contract acceptance.
+- `src/app/api/analytics/route.ts` - validates analytics event payloads and writes them with the server-side Supabase admin client.
 - `src/app/admin/(protected)/requests/export/route.ts` - XLSX export route handler.
 
 ## Data Layer
@@ -64,6 +67,8 @@ Admin routes:
 - `src/lib/types.ts` - app-level domain types.
 - `src/lib/supabase/server.ts` - lazy Supabase server/admin clients.
 - `src/lib/supabase/database.types.ts` - generated-style DB types; update when `supabase/schema.sql` changes.
+- `src/lib/analytics-events.ts` - public analytics event payload normalization, daily source hashing, and insert payload helpers.
+- `src/lib/analytics-routes.ts` - client-safe public route predicate used by analytics tracking.
 
 ## Domain Helpers
 
@@ -79,7 +84,7 @@ Admin routes:
 ## Components
 
 - Admin UI: `src/components/admin-card.tsx`, `admin-form-lock.tsx`, `admin-request-status-form.tsx`, `admin-user-role-form.tsx`, `admin-page-form.tsx`, `admin-image-upload-form.tsx`, order/content forms.
-- Public UI: `site-header.tsx`, `site-footer.tsx`, `project-card.tsx`, `project-gallery-slider.tsx`, `order-form.tsx`, `page-extra-blocks.tsx`.
+- Public UI: `site-header.tsx`, `site-footer.tsx`, `project-card.tsx`, `project-gallery-slider.tsx`, `order-form.tsx`, `page-extra-blocks.tsx`, `analytics-tracker.tsx`.
 - Shared form controls: `form-controls.tsx`, `limited-text-control.tsx`, `form-submit-button.tsx`, `confirm-submit-button.tsx`.
 
 ## Tests
@@ -90,6 +95,7 @@ Admin routes:
   - `tests/page-blocks.test.ts` - page builder block serialization/reorder.
   - `tests/admin-user-query.test.ts` - users list query params.
   - `tests/admin-analytics.test.ts` - analytics periods, KPI, distributions, trend and attention items.
+  - `tests/analytics-events.test.ts` - analytics payload normalization, source hashing, and insert payload privacy.
 - Live Supabase smoke tests are opt-in only:
   - `SUPABASE_RLS_SMOKE=1 npm run test -- tests/supabase-rls-smoke.test.ts`
   - `PLAYWRIGHT_SUPABASE_E2E=1 npm run test:e2e -- tests/e2e/supabase-admin.spec.ts --reporter=line`

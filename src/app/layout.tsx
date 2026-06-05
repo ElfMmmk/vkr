@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "@/app/globals.css";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { getLocale } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
@@ -18,7 +19,10 @@ export default async function RootLayout({
 
   return (
     <html data-scroll-behavior="smooth" lang={locale}>
-      <body>{children}</body>
+      <body>
+        <AnalyticsTracker />
+        {children}
+      </body>
     </html>
   );
 }
