@@ -24,6 +24,8 @@ const contactPlaceholders: Record<string, string> = {
   "Другой способ": "Напишите удобный способ связи"
 };
 
+const submitUnlockDelayMs = 2500;
+
 function invalidClass(hasError: boolean) {
   return hasError ? " border-accent bg-accent/5 focus-visible:border-accent" : "";
 }
@@ -50,6 +52,8 @@ export function OrderForm({
   const initialPackage = initialService?.packages.find((item) => item.isActive) ?? initialService?.packages[0];
   const [state, formAction] = useActionState(submitOrderAction, initialState);
   const formStartedAtRef = useRef<HTMLInputElement>(null);
+  const [isSubmitDelayActive, setIsSubmitDelayActive] = useState(true);
+  const [submitDelaySeconds, setSubmitDelaySeconds] = useState(Math.ceil(submitUnlockDelayMs / 1000));
   const [clientName, setClientName] = useState("");
   const [contactMethod, setContactMethod] = useState("Telegram");
   const [contactValue, setContactValue] = useState("");
@@ -89,6 +93,20 @@ export function OrderForm({
     if (formStartedAtRef.current) {
       formStartedAtRef.current.value = String(Date.now());
     }
+
+    const startedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      const remainingMs = Math.max(0, submitUnlockDelayMs - (Date.now() - startedAt));
+
+      setSubmitDelaySeconds(Math.ceil(remainingMs / 1000));
+
+      if (remainingMs === 0) {
+        setIsSubmitDelayActive(false);
+        window.clearInterval(intervalId);
+      }
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -459,9 +477,15 @@ export function OrderForm({
           Отправка заказа будет доступна после выбора услуги с настроенным пакетом работ.
         </div>
       ) : null}
+      {canSubmitOrder && isSubmitDelayActive ? (
+        <p className="text-sm leading-6 text-muted" id="order-submit-delay" aria-live="polite">
+          Отправка будет доступна через {submitDelaySeconds} сек.
+        </p>
+      ) : null}
       <FormSubmitButton
         className="focus-ring inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px active:border-ink active:bg-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-y-0 md:w-auto"
-        disabled={!canSubmitOrder}
+        describedBy={canSubmitOrder && isSubmitDelayActive ? "order-submit-delay" : undefined}
+        disabled={!canSubmitOrder || isSubmitDelayActive}
         idleLabel="Отправить заказ"
         pendingLabel="Отправка..."
       />

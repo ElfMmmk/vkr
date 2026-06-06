@@ -207,6 +207,17 @@ test("order form blocks empty submissions with browser field validation", async 
   await expect(page.getByText("Заполните обязательные поля")).toHaveCount(0);
 });
 
+test("order form briefly delays submit availability", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+
+  const submitButton = page.getByRole("button", { name: "Отправить заказ" });
+
+  await expect(submitButton).toBeDisabled();
+  await expect(page.getByText(/Отправка будет доступна через/)).toBeVisible();
+  await expect(submitButton).toBeEnabled({ timeout: 4_000 });
+  await expect(page.getByText(/Отправка будет доступна через/)).toHaveCount(0);
+});
+
 test("order form recalculates package and add-ons", async ({ page }) => {
   await page.goto("/order?service=brand-identity");
 
@@ -251,7 +262,13 @@ test("order form preserves contact fields after fast-submit guard", async ({ pag
   await form.locator('input[name="contactValue"]').fill(email);
   await form.locator('textarea[name="resultDescription"]').fill("QA fast submit guard check.");
   await form.locator('textarea[name="stylePreferences"]').fill("Clean, minimal audit data.");
-  await form.getByRole("button", { name: "Отправить заказ" }).click();
+  const submitButton = form.getByRole("button", { name: "Отправить заказ" });
+
+  await expect(submitButton).toBeEnabled({ timeout: 4_000 });
+  await form.locator('input[name="formStartedAt"]').evaluate((element) => {
+    (element as HTMLInputElement).value = String(Date.now());
+  });
+  await submitButton.click();
 
   await expect(page.getByText("Форма отправлена слишком быстро. Проверьте данные и попробуйте ещё раз.")).toBeVisible();
   await expect(form.locator('select[name="contactMethod"]')).toHaveValue("Email");
