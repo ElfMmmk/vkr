@@ -99,6 +99,7 @@ Admin routes:
 - Live Supabase smoke tests are opt-in only:
   - `SUPABASE_RLS_SMOKE=1 npm run test -- tests/supabase-rls-smoke.test.ts`
   - `PLAYWRIGHT_SUPABASE_E2E=1 npm run test:e2e -- tests/e2e/supabase-admin.spec.ts --reporter=line`
+  - `tests/e2e/supabase-admin.spec.ts` also covers `/api/analytics` browser keepalive writes with DB-level row verification and cleanup.
 
 ## Local Rules
 

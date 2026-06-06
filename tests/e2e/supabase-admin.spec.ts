@@ -393,6 +393,121 @@ test.describe("real Supabase admin smoke", () => {
     }
   });
 
+  test("analytics endpoint persists browser keepalive events in the database", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+
+    const adminClient = fixture!.adminClient;
+    const marker = `${fixture!.prefix}-endpoint`;
+    const search = `?analytics-db-smoke=${marker}`;
+    const createdEventIds: string[] = [];
+
+    try {
+      await page.goto("/");
+
+      const statuses = await page.evaluate(
+        async ({ marker, search }) => {
+          const payloads = [
+            {
+              eventType: "page_view",
+              path: "/portfolio",
+              search,
+              referrer: "",
+              metadata: {
+                fixture: marker,
+                smoke: "analytics-db"
+              }
+            },
+            {
+              eventType: "cta_click",
+              path: "/portfolio",
+              search,
+              referrer: "",
+              href: `/order${search}`,
+              label: `Analytics DB smoke ${marker}`,
+              metadata: {
+                fixture: marker,
+                smoke: "analytics-db"
+              }
+            }
+          ];
+
+          return Promise.all(
+            payloads.map(async (payload) => {
+              const response = await window.fetch("/api/analytics", {
+                body: JSON.stringify(payload),
+                headers: {
+                  "content-type": "application/json"
+                },
+                keepalive: true,
+                method: "POST"
+              });
+
+              return response.status;
+            })
+          );
+        },
+        { marker, search }
+      );
+
+      expect(statuses).toEqual([204, 204]);
+
+      await expect
+        .poll(
+          async () => {
+            const { data, error } = await adminClient
+              .from("analytics_events")
+              .select("id")
+              .eq("path", "/portfolio")
+              .eq("search", search);
+
+            if (error) {
+              throw new Error(`Failed to read analytics smoke rows: ${error.message}`);
+            }
+
+            return data?.length ?? 0;
+          },
+          { timeout: 10_000 }
+        )
+        .toBe(2);
+
+      const { data: events, error } = await adminClient
+        .from("analytics_events")
+        .select("id, event_type, path, search, href, label, metadata, source_hash")
+        .eq("path", "/portfolio")
+        .eq("search", search);
+
+      expect(error).toBeNull();
+      expect(events).toHaveLength(2);
+
+      createdEventIds.push(...(events?.map((event) => event.id) ?? []));
+      fixture!.analyticsEventIds.push(...createdEventIds);
+
+      const eventTypes = events?.map((event) => event.event_type).sort();
+      const pageView = events?.find((event) => event.event_type === "page_view");
+      const ctaClick = events?.find((event) => event.event_type === "cta_click");
+
+      expect(eventTypes).toEqual(["cta_click", "page_view"]);
+      expect(pageView?.href).toBe("");
+      expect(pageView?.label).toBe("");
+      expect(ctaClick?.href).toBe(`/order${search}`);
+      expect(ctaClick?.label).toBe(`Analytics DB smoke ${marker}`);
+      expect(pageView?.metadata).toMatchObject({ fixture: marker, smoke: "analytics-db" });
+      expect(ctaClick?.metadata).toMatchObject({ fixture: marker, smoke: "analytics-db" });
+      expect(new Set(events?.map((event) => event.source_hash).filter(Boolean)).size).toBe(1);
+      expect(JSON.stringify(events)).not.toContain("Playwright");
+    } finally {
+      if (createdEventIds.length > 0) {
+        await adminClient.from("analytics_events").delete().in("id", createdEventIds);
+      }
+
+      await adminClient
+        .from("analytics_events")
+        .delete()
+        .eq("path", "/portfolio")
+        .eq("search", search);
+    }
+  });
+
   test("admin can create a service and manager can export requests", async ({ page }) => {
     expect(fixture).not.toBeNull();
     const adminClient = fixture!.adminClient;

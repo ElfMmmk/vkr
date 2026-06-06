@@ -125,6 +125,10 @@ $env:PLAYWRIGHT_PORT='3003'
 npm run test:e2e -- tests/e2e/supabase-admin.spec.ts --reporter=line
 ```
 
+The live admin e2e suite also verifies that browser `fetch(..., keepalive)` calls to
+`/api/analytics` persist `page_view` and `cta_click` rows in `analytics_events`, then removes
+the temporary smoke rows.
+
 They require `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`.
 
 File cleanup notes are tracked in `FILE-CLEANUP-AUDIT.md`.
