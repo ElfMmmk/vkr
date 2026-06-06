@@ -96,6 +96,34 @@ test("mobile public navigation opens without horizontal overflow", async ({ page
   expect(hasHorizontalOverflow).toBe(false);
 });
 
+test("tablet public header stays inside viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "Графический дизайн, который помогает брендам говорить точнее" })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Оставить заявку" })).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const clippedInteractive = Array.from(document.querySelectorAll("a, button"))
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+
+        return rect.width > 0 && rect.height > 0 && (rect.left < -1 || rect.right > window.innerWidth + 1);
+      })
+      .map((element) => (element.textContent || element.getAttribute("aria-label") || "").trim());
+
+    return {
+      clippedInteractive,
+      hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+    };
+  });
+
+  expect(layout.hasHorizontalOverflow).toBe(false);
+  expect(layout.clippedInteractive).toEqual([]);
+});
+
 test("portfolio filters can be reset", async ({ page }) => {
   await page.goto("/portfolio?service=brand-identity");
   await expect(page.getByRole("link", { name: "Сбросить фильтры" })).toBeVisible();
@@ -211,6 +239,23 @@ test("mobile order form keeps visual examples inside viewport", async ({ page })
   );
 
   expect(hasHorizontalOverflow).toBe(false);
+});
+
+test("order form preserves contact fields after fast-submit guard", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+  const form = page.locator('main form:has(input[name="clientName"])');
+  const email = `qa-fast-${Date.now()}@example.test`;
+
+  await form.locator('input[name="clientName"]').fill("QA Fast Submit");
+  await form.locator('select[name="contactMethod"]').selectOption("Email");
+  await form.locator('input[name="contactValue"]').fill(email);
+  await form.locator('textarea[name="resultDescription"]').fill("QA fast submit guard check.");
+  await form.locator('textarea[name="stylePreferences"]').fill("Clean, minimal audit data.");
+  await form.getByRole("button", { name: "Отправить заказ" }).click();
+
+  await expect(page.getByText("Форма отправлена слишком быстро. Проверьте данные и попробуйте ещё раз.")).toBeVisible();
+  await expect(form.locator('select[name="contactMethod"]')).toHaveValue("Email");
+  await expect(form.locator('input[name="contactValue"]')).toHaveValue(email);
 });
 
 test("public routes send baseline security headers", async ({ page }) => {

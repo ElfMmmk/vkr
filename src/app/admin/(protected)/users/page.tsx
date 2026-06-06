@@ -123,50 +123,53 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
         }
       >
         {profiles.items.length ? (
-          <div className="overflow-x-auto">
-            <div className="min-w-[920px]">
-              <div className="grid grid-cols-[minmax(220px,1.4fr)_minmax(160px,1fr)_130px_160px_160px_120px] border-b border-line bg-paper px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                <span>Email</span>
-                <span>Имя</span>
-                <span>Роль</span>
-                <span>Создан</span>
-                <span>Обновлён</span>
-                <span>Действия</span>
-              </div>
-              <div className="divide-y divide-line">
-                {profiles.items.map((profile) => (
-                  <article
-                    className="grid grid-cols-[minmax(220px,1.4fr)_minmax(160px,1fr)_130px_160px_160px_120px] items-start gap-3 px-4 py-4 text-sm"
-                    key={profile.id}
+          <div className="grid gap-4">
+            {profiles.items.map((profile) => (
+              <article className="border border-line bg-white p-4" key={profile.id}>
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_auto] xl:items-start">
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold text-ink">{profile.email}</p>
+                    <p className="mt-1 break-all text-xs text-muted">{profile.id}</p>
+                  </div>
+                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Имя</dt>
+                      <dd className="mt-1 break-words text-ink">{profile.fullName || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Роль</dt>
+                      <dd className="mt-1">
+                        <span className="inline-flex border border-line bg-paper px-2 py-1 text-xs font-semibold text-ink">
+                          {userRoleLabels[profile.role]}
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Создан</dt>
+                      <dd className="mt-1 text-muted">{formatDate(profile.createdAt)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Обновлён</dt>
+                      <dd className="mt-1 text-muted">{formatDate(profile.updatedAt)}</dd>
+                    </div>
+                  </dl>
+                  <Link
+                    className="focus-ring inline-flex min-h-10 w-full items-center justify-center border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px sm:w-auto"
+                    href={`/admin/users/${profile.id}`}
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-ink">{profile.email}</p>
-                      <p className="mt-1 truncate text-xs text-muted">{profile.id}</p>
-                    </div>
-                    <p className="min-w-0 truncate text-muted">{profile.fullName || "—"}</p>
-                    <span className="inline-flex w-fit border border-line bg-paper px-2 py-1 text-xs font-semibold text-ink">
-                      {userRoleLabels[profile.role]}
-                    </span>
-                    <p className="text-muted">{formatDate(profile.createdAt)}</p>
-                    <p className="text-muted">{formatDate(profile.updatedAt)}</p>
-                    <Link
-                      className="focus-ring inline-flex min-h-10 items-center justify-center border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
-                      href={`/admin/users/${profile.id}`}
-                    >
-                      Открыть
-                    </Link>
-                    <div className="col-span-6 border-t border-line pt-3">
-                      <AdminUserRoleForm
-                        canManageRoles={admin.canManageRoles}
-                        currentAdminId={admin.id}
-                        profile={profile}
-                        redirectTo={redirectTo}
-                      />
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
+                    Открыть
+                  </Link>
+                </div>
+                <div className="mt-4 border-t border-line pt-4">
+                  <AdminUserRoleForm
+                    canManageRoles={admin.canManageRoles}
+                    currentAdminId={admin.id}
+                    profile={profile}
+                    redirectTo={redirectTo}
+                  />
+                </div>
+              </article>
+            ))}
           </div>
         ) : (
           <div className="border border-dashed border-line bg-paper p-8 text-center">

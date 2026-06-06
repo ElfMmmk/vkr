@@ -91,6 +91,29 @@ export function OrderForm({
     }
   }, []);
 
+  useEffect(() => {
+    const restoredValues = state.values;
+    if (!restoredValues) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setClientName(restoredValues.clientName);
+      setContactMethod(restoredValues.contactMethod || "Telegram");
+      setContactValue(restoredValues.contactValue);
+      setSelectedServiceId(restoredValues.serviceId || initialService?.id || "");
+      setSelectedPackageId(restoredValues.packageId || initialPackage?.id || "");
+      setSelectedAddonIds(restoredValues.addonIds);
+      setReferenceProjectId(restoredValues.referenceProjectId);
+      setResultDescription(restoredValues.resultDescription);
+      setStylePreferences(restoredValues.stylePreferences);
+      setMaterials(restoredValues.materials);
+      setDesiredDeadline(restoredValues.desiredDeadline);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [initialPackage?.id, initialService?.id, state.values]);
+
   function toggleAddon(addonId: string) {
     setSelectedAddonIds((current) =>
       current.includes(addonId)
@@ -119,9 +142,9 @@ export function OrderForm({
     >
       <input name="formStartedAt" ref={formStartedAtRef} type="hidden" />
       <input name="serviceTitle" type="hidden" value={selectedService?.title ?? ""} />
-      <label className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
+      <label aria-hidden="true" className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
         Website
-        <input autoComplete="off" name="website" tabIndex={-1} type="text" />
+        <input aria-hidden="true" autoComplete="off" name="website" tabIndex={-1} type="text" />
       </label>
 
       <div className="grid gap-5 md:grid-cols-2">

@@ -16,6 +16,23 @@ import { orderRequestSchema } from "@/lib/validation";
 export type OrderFormState = {
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  values?: OrderFormValues;
+};
+
+export type OrderFormValues = {
+  clientName: string;
+  contactMethod: string;
+  contactValue: string;
+  serviceId: string;
+  packageId: string;
+  addonIds: string[];
+  referenceProjectId: string;
+  serviceTitle: string;
+  resultDescription: string;
+  stylePreferences: string;
+  materials: string;
+  desiredDeadline: string;
+  comment: string;
 };
 
 const MIN_FORM_FILL_MS = 2500;
@@ -56,12 +73,31 @@ async function isRequestThrottled(sourceHash: string): Promise<boolean> {
   return (data?.length ?? 0) >= REQUEST_THROTTLE_LIMIT;
 }
 
+function getSubmittedValues(formData: FormData): OrderFormValues {
+  return {
+    addonIds: formStringArray(formData, "addonIds"),
+    clientName: formString(formData, "clientName"),
+    comment: formString(formData, "comment"),
+    contactMethod: formString(formData, "contactMethod"),
+    contactValue: formString(formData, "contactValue"),
+    desiredDeadline: formString(formData, "desiredDeadline"),
+    materials: formString(formData, "materials"),
+    packageId: formString(formData, "packageId"),
+    referenceProjectId: formString(formData, "referenceProjectId"),
+    resultDescription: formString(formData, "resultDescription"),
+    serviceId: formString(formData, "serviceId"),
+    serviceTitle: formString(formData, "serviceTitle"),
+    stylePreferences: formString(formData, "stylePreferences")
+  };
+}
+
 export async function submitOrderAction(
   _previousState: OrderFormState,
   formData: FormData
 ): Promise<OrderFormState> {
   const honeypot = formString(formData, "website");
   const startedAt = Number(formString(formData, "formStartedAt"));
+  const values = getSubmittedValues(formData);
 
   if (honeypot) {
     redirect("/order/success");
@@ -69,7 +105,8 @@ export async function submitOrderAction(
 
   if (!Number.isFinite(startedAt) || Date.now() - startedAt < MIN_FORM_FILL_MS) {
     return {
-      message: "Форма отправлена слишком быстро. Проверьте данные и попробуйте ещё раз."
+      message: "Форма отправлена слишком быстро. Проверьте данные и попробуйте ещё раз.",
+      values
     };
   }
 
@@ -92,7 +129,8 @@ export async function submitOrderAction(
   if (!parsed.success) {
     return {
       message: "Заполните обязательные поля",
-      fieldErrors: parsed.error.flatten().fieldErrors
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      values
     };
   }
 
@@ -100,7 +138,8 @@ export async function submitOrderAction(
 
   if (!adminClient) {
     return {
-      message: "Сохранение заказа временно недоступно. Попробуйте позже."
+      message: "Сохранение заказа временно недоступно. Попробуйте позже.",
+      values
     };
   }
 
@@ -108,7 +147,8 @@ export async function submitOrderAction(
 
   if (await isRequestThrottled(sourceHash)) {
     return {
-      message: "Слишком много заявок за короткое время. Попробуйте позже."
+      message: "Слишком много заявок за короткое время. Попробуйте позже.",
+      values
     };
   }
 
@@ -128,7 +168,8 @@ export async function submitOrderAction(
       message: "Заполните обязательные поля",
       fieldErrors: {
         serviceId: ["Выберите услугу из списка"]
-      }
+      },
+      values
     };
   }
 
@@ -144,7 +185,8 @@ export async function submitOrderAction(
       message: "Заполните обязательные поля",
       fieldErrors: {
         packageId: ["Выберите пакет работ"]
-      }
+      },
+      values
     };
   }
 
@@ -157,7 +199,8 @@ export async function submitOrderAction(
       message: "Проверьте выбранные доплаты",
       fieldErrors: {
         addonIds: ["Выберите доплаты из списка услуги"]
-      }
+      },
+      values
     };
   }
 
@@ -182,7 +225,8 @@ export async function submitOrderAction(
         message: "Выберите пример работы из списка услуги",
         fieldErrors: {
           referenceProjectId: ["Выберите пример работы из списка услуги"]
-        }
+        },
+        values
       };
     }
 
@@ -254,7 +298,8 @@ export async function submitOrderAction(
 
   if (error) {
     return {
-      message: "Не удалось сохранить заказ. Попробуйте позже."
+      message: "Не удалось сохранить заказ. Попробуйте позже.",
+      values
     };
   }
 

@@ -47,7 +47,7 @@ export function SiteHeaderClient({
       >
         {locale === "en" ? "Skip to content" : "К содержанию"}
       </a>
-      <div className="container-shell flex min-h-20 flex-wrap items-center justify-between gap-3 py-4 md:flex-nowrap md:gap-6">
+      <div className="container-shell flex min-h-20 flex-wrap items-center justify-between gap-3 py-4 lg:flex-nowrap lg:gap-6">
         <Link className="group flex items-center gap-3 focus-ring" href="/">
           <span className="grid h-11 w-11 place-items-center border border-ink bg-ink text-sm font-semibold text-white">
             GD
@@ -59,7 +59,7 @@ export function SiteHeaderClient({
             <span className="block text-lg font-semibold">Graphic Designer</span>
           </span>
         </Link>
-        <nav className="hidden items-center gap-2 text-sm font-medium text-muted md:flex">
+        <nav className="hidden items-center gap-2 text-sm font-medium text-muted lg:flex">
           {navItems.map((item) => {
             const active = isActivePath(pathname, item.href);
             const href = item.key === "account" && !session ? "/account/login" : item.href;
@@ -84,7 +84,7 @@ export function SiteHeaderClient({
             );
           })}
         </nav>
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <LocaleSwitcher locale={locale} />
         </div>
         <Link
@@ -98,7 +98,7 @@ export function SiteHeaderClient({
         >
           {dictionary.nav.order}
         </Link>
-        <details className="group w-full md:hidden">
+        <details className="group w-full lg:hidden">
           <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink active:translate-y-px [&::-webkit-details-marker]:hidden">
             <span>{dictionary.nav.navigation}</span>
             <Menu aria-hidden="true" size={18} />

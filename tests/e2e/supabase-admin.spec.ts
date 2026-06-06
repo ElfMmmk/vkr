@@ -32,10 +32,17 @@ type SmokeFixture = {
   analyticsEventIds: string[];
 };
 
+type AnalyticsEventInsert = Database["public"]["Tables"]["analytics_events"]["Insert"];
+
 type PageSnapshot = {
   title: string;
   body: string;
   blocks: Json;
+};
+
+type AnalyticsSeedCounts = {
+  ctaClicks: number;
+  pageViews: number;
 };
 
 function createAdminClient(): AppClient {
@@ -85,9 +92,85 @@ async function createTestUser(
   };
 }
 
+function startOfUtcDay(date: Date): Date {
+  const copy = new Date(date);
+  copy.setUTCHours(0, 0, 0, 0);
+
+  return copy;
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+
+  return copy;
+}
+
+function isInsideAnalyticsSmokePeriod(createdAt: string | null, periodStart: Date | null, now: Date): boolean {
+  if (!createdAt) {
+    return false;
+  }
+
+  const eventDate = new Date(createdAt);
+
+  return (!periodStart || eventDate >= periodStart) && eventDate <= now;
+}
+
+async function getAnalyticsSeedCounts(adminClient: AppClient): Promise<AnalyticsSeedCounts> {
+  const { data, error } = await adminClient
+    .from("analytics_events")
+    .select("event_type, path, href, label, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (error) {
+    throw new Error(`Failed to inspect analytics events: ${error.message}`);
+  }
+
+  const now = new Date();
+  const periodStarts = [
+    addUtcDays(startOfUtcDay(now), -6),
+    addUtcDays(startOfUtcDay(now), -29),
+    null
+  ];
+  let maxPageViews = 0;
+  let maxCtaClicks = 0;
+
+  for (const periodStart of periodStarts) {
+    const pageCounts = new Map<string, number>();
+    const ctaCounts = new Map<string, number>();
+
+    for (const event of data ?? []) {
+      if (!isInsideAnalyticsSmokePeriod(event.created_at, periodStart, now)) {
+        continue;
+      }
+
+      if (event.event_type === "page_view") {
+        pageCounts.set(event.path, (pageCounts.get(event.path) ?? 0) + 1);
+      }
+
+      if (event.event_type === "cta_click") {
+        const href = event.href || event.path;
+        const label = event.label || href;
+        const key = `${href}\n${label}`;
+        ctaCounts.set(key, (ctaCounts.get(key) ?? 0) + 1);
+      }
+    }
+
+    maxPageViews = Math.max(maxPageViews, ...pageCounts.values());
+    maxCtaClicks = Math.max(maxCtaClicks, ...ctaCounts.values());
+  }
+
+  return {
+    ctaClicks: Math.max(2, maxCtaClicks + 1),
+    pageViews: Math.max(3, maxPageViews + 1)
+  };
+}
+
 async function setupSmokeFixture(): Promise<SmokeFixture> {
   const adminClient = createAdminClient();
   const prefix = `pw-smoke-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const analyticsSeedCounts = await getAnalyticsSeedCounts(adminClient);
   const [admin, manager, client] = await Promise.all([
     createTestUser(adminClient, prefix, "admin"),
     createTestUser(adminClient, prefix, "manager"),
@@ -119,40 +202,32 @@ async function setupSmokeFixture(): Promise<SmokeFixture> {
     throw new Error(`Failed to create export request: ${requestError.message}`);
   }
 
+  const analyticsRows: AnalyticsEventInsert[] = [
+    ...Array.from({ length: analyticsSeedCounts.pageViews }, (_, index) => ({
+      event_type: "page_view" as const,
+      path: `/qa-${prefix}`,
+      search: "",
+      referrer: "",
+      href: "",
+      label: "",
+      source_hash: `${prefix}-visitor-${index}`,
+      metadata: { fixture: prefix }
+    })),
+    ...Array.from({ length: analyticsSeedCounts.ctaClicks }, (_, index) => ({
+      event_type: "cta_click" as const,
+      path: `/qa-${prefix}`,
+      search: "",
+      referrer: "",
+      href: `/order?qa=${prefix}`,
+      label: `QA order ${prefix}`,
+      source_hash: `${prefix}-visitor-${index}`,
+      metadata: { fixture: prefix }
+    }))
+  ];
+
   const { data: analyticsEvents, error: analyticsError } = await adminClient
     .from("analytics_events")
-    .insert([
-      {
-        event_type: "page_view",
-        path: `/qa-${prefix}`,
-        search: "",
-        referrer: "",
-        href: "",
-        label: "",
-        source_hash: `${prefix}-visitor-a`,
-        metadata: { fixture: prefix }
-      },
-      {
-        event_type: "page_view",
-        path: `/qa-${prefix}`,
-        search: "",
-        referrer: "",
-        href: "",
-        label: "",
-        source_hash: `${prefix}-visitor-b`,
-        metadata: { fixture: prefix }
-      },
-      {
-        event_type: "cta_click",
-        path: `/qa-${prefix}`,
-        search: "",
-        referrer: "",
-        href: `/order?qa=${prefix}`,
-        label: `QA order ${prefix}`,
-        source_hash: `${prefix}-visitor-a`,
-        metadata: { fixture: prefix }
-      }
-    ])
+    .insert(analyticsRows)
     .select("id");
 
   if (analyticsError) {
@@ -274,6 +349,33 @@ test.describe("real Supabase admin smoke", () => {
     await expect(page).toHaveURL(/\/admin$/);
 
     await loginAsRejected(page, fixture!.users.client);
+  });
+
+  test("admin users list keeps row actions inside the desktop viewport", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+
+    await loginAs(page, fixture!.users.admin);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto("/admin/users");
+    await expect(page.getByRole("heading", { name: "Пользователи и роли" })).toBeVisible();
+
+    const clippedInteractive = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("a, button"))
+        .filter((element) => {
+          const label = (element.textContent || element.getAttribute("aria-label") || "").trim();
+
+          if (!/Открыть|Сохранить роль/.test(label)) {
+            return false;
+          }
+
+          const rect = element.getBoundingClientRect();
+
+          return rect.width > 0 && rect.height > 0 && (rect.left < -1 || rect.right > window.innerWidth + 1);
+        })
+        .map((element) => (element.textContent || element.getAttribute("aria-label") || "").trim())
+    );
+
+    expect(clippedInteractive).toEqual([]);
   });
 
   test("admin analytics shows seeded traffic events across periods", async ({ page }) => {
