@@ -241,6 +241,54 @@ export type Database = {
           }
         ];
       };
+      order_attachments: {
+        Row: {
+          id: string;
+          request_id: string;
+          client_user_id: string | null;
+          storage_path: string;
+          file_name: string;
+          content_type: string;
+          size: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          client_user_id?: string | null;
+          storage_path: string;
+          file_name: string;
+          content_type: string;
+          size: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          request_id?: string;
+          client_user_id?: string | null;
+          storage_path?: string;
+          file_name?: string;
+          content_type?: string;
+          size?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_attachments_client_user_id_fkey";
+            columns: ["client_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_attachments_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "requests";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       pages: {
         Row: {
           id: string;
@@ -446,6 +494,41 @@ export type Database = {
             columns: ["cover_image_id"];
             isOneToOne: false;
             referencedRelation: "images";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      request_claim_tokens: {
+        Row: {
+          id: string;
+          request_id: string;
+          token_hash: string;
+          expires_at: string;
+          used_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          token_hash: string;
+          expires_at: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          request_id?: string;
+          token_hash?: string;
+          expires_at?: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "request_claim_tokens_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "requests";
             referencedColumns: ["id"];
           }
         ];

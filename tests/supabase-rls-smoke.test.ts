@@ -108,6 +108,7 @@ describeRlsSmoke("live Supabase RLS smoke", () => {
       createdUserIds.push(ownerUser.id, otherUser.id);
 
       const ownerClient = await createAuthenticatedClient(ownerUser);
+      const otherClient = await createAuthenticatedClient(otherUser);
       const anonSourceHash = `${prefix}-anon`;
       const { error: anonInsertError } = await publicClient.from("requests").insert({
         client_name: "Anon Smoke",
@@ -211,6 +212,89 @@ describeRlsSmoke("live Supabase RLS smoke", () => {
 
       expect(visibleOtherRowsError).toBeNull();
       expect(visibleOtherRows).toEqual([]);
+
+      const { error: clientUserUpdateError } = await ownerClient
+        .from("requests")
+        .update({ client_user_id: otherUser.id })
+        .eq("id", ownRequest?.id ?? "");
+
+      expect(clientUserUpdateError).not.toBeNull();
+
+      const { data: ownAttachment, error: ownAttachmentError } = await adminClient
+        .from("order_attachments")
+        .insert({
+          client_user_id: ownerUser.id,
+          content_type: "text/plain",
+          file_name: "owner-brief.txt",
+          request_id: ownRequest?.id ?? "",
+          size: 12,
+          storage_path: `${prefix}/owner-brief.txt`
+        })
+        .select("id")
+        .single();
+
+      expect(ownAttachmentError).toBeNull();
+      expect(ownAttachment?.id).toBeTruthy();
+
+      const { data: otherAttachment, error: otherAttachmentError } = await adminClient
+        .from("order_attachments")
+        .insert({
+          client_user_id: otherUser.id,
+          content_type: "text/plain",
+          file_name: "other-brief.txt",
+          request_id: otherRequest?.id ?? "",
+          size: 12,
+          storage_path: `${prefix}/other-brief.txt`
+        })
+        .select("id")
+        .single();
+
+      expect(otherAttachmentError).toBeNull();
+      expect(otherAttachment?.id).toBeTruthy();
+
+      const { data: visibleOwnAttachments, error: visibleOwnAttachmentsError } = await ownerClient
+        .from("order_attachments")
+        .select("id")
+        .eq("id", ownAttachment?.id ?? "");
+
+      expect(visibleOwnAttachmentsError).toBeNull();
+      expect(visibleOwnAttachments).toEqual([{ id: ownAttachment?.id }]);
+
+      const { data: hiddenOtherAttachments, error: hiddenOtherAttachmentsError } = await ownerClient
+        .from("order_attachments")
+        .select("id")
+        .eq("id", otherAttachment?.id ?? "");
+
+      expect(hiddenOtherAttachmentsError).toBeNull();
+      expect(hiddenOtherAttachments).toEqual([]);
+
+      const { data: visibleOtherOwnAttachments, error: visibleOtherOwnAttachmentsError } = await otherClient
+        .from("order_attachments")
+        .select("id")
+        .eq("id", otherAttachment?.id ?? "");
+
+      expect(visibleOtherOwnAttachmentsError).toBeNull();
+      expect(visibleOtherOwnAttachments).toEqual([{ id: otherAttachment?.id }]);
+
+      const { error: ownerAttachmentInsertError } = await ownerClient
+        .from("order_attachments")
+        .insert({
+          client_user_id: ownerUser.id,
+          content_type: "text/plain",
+          file_name: "direct-insert.txt",
+          request_id: ownRequest?.id ?? "",
+          size: 12,
+          storage_path: `${prefix}/direct-insert.txt`
+        });
+
+      expect(ownerAttachmentInsertError).not.toBeNull();
+
+      const { error: claimTokenReadError } = await ownerClient
+        .from("request_claim_tokens")
+        .select("id")
+        .limit(1);
+
+      expect(claimTokenReadError).not.toBeNull();
 
       const { error: roleUpdateError } = await ownerClient
         .from("profiles")

@@ -126,6 +126,7 @@ export type OrderRequest = {
   createdAt: string;
   updatedAt?: string;
   contract?: OrderContract | null;
+  attachments: OrderAttachment[];
 };
 
 export type AnalyticsEvent = {
@@ -161,6 +162,18 @@ export type OrderContract = {
   acceptedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
+};
+
+export type OrderAttachment = {
+  id: string;
+  requestId: string;
+  clientUserId?: string | null;
+  storagePath: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  createdAt: string;
+  signedUrl?: string;
 };
 
 export type PortfolioFilter = {

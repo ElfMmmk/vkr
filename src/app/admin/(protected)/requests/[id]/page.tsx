@@ -10,8 +10,10 @@ import { saveOrderContractAction } from "@/lib/actions/admin";
 import { requireRequestManager } from "@/lib/auth";
 import { getAdminRequestById } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
+import { createOrderAttachmentSignedUrls } from "@/lib/order-attachment-storage";
 import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
 import { requestStatusLabels } from "@/lib/request-status";
+import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
 
 type AdminRequestDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -42,6 +44,10 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
     request.estimatedDurationToDays ??
     request.estimatedDurationFromDays ??
     1;
+  const attachments = await createOrderAttachmentSignedUrls(
+    getSupabaseAdminOrThrow(),
+    request.attachments
+  );
 
   return (
     <div className="space-y-6">
@@ -123,6 +129,25 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                       <li key={addon.id}>
                         {addon.title}: +{formatRubles(addon.price)}
                         {addon.durationDays ? `, +${addon.durationDays} раб. дн.` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {attachments.length ? (
+                <section>
+                  <h2 className="font-semibold">Материалы клиента</h2>
+                  <ul className="mt-2 grid gap-2 text-muted">
+                    {attachments.map((attachment) => (
+                      <li key={attachment.id}>
+                        {attachment.signedUrl ? (
+                          <a className="font-semibold text-accent hover:text-ink" href={attachment.signedUrl}>
+                            {attachment.fileName}
+                          </a>
+                        ) : (
+                          <span className="font-semibold">{attachment.fileName}</span>
+                        )}
+                        <span> · {Math.max(1, Math.round(attachment.size / 1024))} КБ</span>
                       </li>
                     ))}
                   </ul>

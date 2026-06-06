@@ -11,7 +11,7 @@ export async function listClientRequests(clientUserId: string): Promise<OrderReq
 
   const { data, error } = await client
     .from("requests")
-    .select("*, order_contracts(*)")
+    .select("*, order_contracts(*), order_attachments(*)")
     .eq("client_user_id", clientUserId)
     .order("created_at", { ascending: false });
 
@@ -20,4 +20,28 @@ export async function listClientRequests(clientUserId: string): Promise<OrderReq
   }
 
   return ((data as RequestRow[] | null) ?? []).map(mapRequest);
+}
+
+export async function getClientRequestById(
+  clientUserId: string,
+  requestId: string
+): Promise<OrderRequest | null> {
+  const client = getOptionalSupabaseAdmin();
+
+  if (!client) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("requests")
+    .select("*, order_contracts(*), order_attachments(*)")
+    .eq("id", requestId)
+    .eq("client_user_id", clientUserId)
+    .maybeSingle();
+
+  if (error) {
+    return null;
+  }
+
+  return data ? mapRequest(data as RequestRow) : null;
 }

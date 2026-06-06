@@ -17,6 +17,7 @@
 - `supabase/schema.sql` - текущая схема БД, RLS, grants, Storage bucket.
 - `supabase/seed.sql` - демо-контент для страниц, услуг, проектов, пакетов и доплат.
 - `supabase/migrations/20260605000000_analytics_events.sql` - ручная migration для событий `page_view` и `cta_click`.
+- `supabase/migrations/20260606000000_order_attachments_and_claim_tokens.sql` - migration для private order attachments, bucket `order-attachments` и guest claim tokens.
 - `package.json` - npm scripts: `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e`.
 - `playwright.config.ts` - e2e webServer и Supabase e2e flags.
 
@@ -27,12 +28,13 @@ Public routes live in `src/app`:
 - `/` - `src/app/page.tsx`.
 - `/about`, `/services`, `/contacts`, `/privacy` - static public sections.
 - `/portfolio` and `/portfolio/[slug]` - portfolio listing and project detail.
-- `/order` and `/order/success` - order form and success page.
+- `/order` and `/order/success` - step-by-step order wizard and useful success page with guest claim CTA.
 - `/api/analytics` - server-side endpoint for public page view and CTA click events.
 
 Account routes:
 
 - `/account` - client cabinet with own requests and contract-orders.
+- `/account/requests/[id]` - request detail with brief, estimate, contract-order, timeline, and private materials.
 - `/account/login`, `/account/register` - client auth pages.
 - Server actions: `src/app/account/actions.ts`.
 
@@ -51,8 +53,8 @@ Admin routes:
 
 - `src/lib/actions/admin.ts` - admin mutations: content, pages, requests, contracts, images, notifications, user roles.
 - `src/app/admin/login/actions.ts` - admin login.
-- `src/app/order/actions.ts` - public order submission.
-- `src/app/account/actions.ts` - client profile/auth and contract acceptance.
+- `src/app/order/actions.ts` - public order submission, attachment upload, anti-spam guard, guest claim token creation.
+- `src/app/account/actions.ts` - client profile/auth, guest claim, contract acceptance, and post-order attachment upload.
 - `src/app/api/analytics/route.ts` - validates analytics event payloads and writes them with the server-side Supabase admin client.
 - `src/app/admin/(protected)/requests/export/route.ts` - XLSX export route handler.
 
@@ -73,6 +75,11 @@ Admin routes:
 ## Domain Helpers
 
 - `src/lib/order-calculator.ts` - preliminary price/duration calculation and formatting.
+- `src/lib/order-draft.ts` - versioned local draft parsing, wizard step ids, and brief chip appending.
+- `src/lib/order-quiz.ts` - local no-AI service/package recommendation helper and quiz brief text.
+- `src/lib/order-attachments.ts` - private order attachment type/size/count validation and filename normalization.
+- `src/lib/order-attachment-storage.ts` - server-side private Storage upload, cleanup, metadata insert, and signed URLs.
+- `src/lib/request-claim.ts` - one-time guest claim token generation, hashing, TTL, and expiry checks.
 - `src/lib/validation.ts` - Zod schemas for forms and admin fields.
 - `src/lib/request-status.ts` - request statuses and labels.
 - `src/lib/page-blocks.ts` - editable page block row helpers for `/admin/pages`.
@@ -84,7 +91,7 @@ Admin routes:
 ## Components
 
 - Admin UI: `src/components/admin-card.tsx`, `admin-form-lock.tsx`, `admin-request-status-form.tsx`, `admin-user-role-form.tsx`, `admin-page-form.tsx`, `admin-image-upload-form.tsx`, order/content forms.
-- Public UI: `site-header.tsx`, `site-footer.tsx`, `project-card.tsx`, `project-gallery-slider.tsx`, `order-form.tsx`, `page-extra-blocks.tsx`, `analytics-tracker.tsx`.
+- Public UI: `site-header.tsx`, `site-footer.tsx`, `project-card.tsx`, `project-gallery-slider.tsx`, `order-form.tsx`, `order-success-client.tsx`, `page-extra-blocks.tsx`, `analytics-tracker.tsx`.
 - Shared form controls: `form-controls.tsx`, `limited-text-control.tsx`, `form-submit-button.tsx`, `confirm-submit-button.tsx`.
 
 ## Tests
@@ -96,10 +103,12 @@ Admin routes:
   - `tests/admin-user-query.test.ts` - users list query params.
   - `tests/admin-analytics.test.ts` - analytics periods, KPI, distributions, trend and attention items.
   - `tests/analytics-events.test.ts` - analytics payload normalization, source hashing, and insert payload privacy.
+  - `tests/order-experience.test.ts` - order draft, chips, quiz recommendation, attachment validation/cleanup, and claim token helpers.
+  - `tests/supabase-schema.test.ts` - reproducible schema/migration coverage for RLS, grants, analytics, attachments, and claim tokens.
 - Live Supabase smoke tests are opt-in only:
   - `SUPABASE_RLS_SMOKE=1 npm run test -- tests/supabase-rls-smoke.test.ts`
   - `PLAYWRIGHT_SUPABASE_E2E=1 npm run test:e2e -- tests/e2e/supabase-admin.spec.ts --reporter=line`
-  - `tests/e2e/supabase-admin.spec.ts` also covers `/api/analytics` browser keepalive writes with DB-level row verification and cleanup.
+  - `tests/e2e/supabase-admin.spec.ts` also covers `/api/analytics` browser keepalive writes, private order attachments, and single-use guest claim tokens with DB-level verification and cleanup.
 
 ## Local Rules
 

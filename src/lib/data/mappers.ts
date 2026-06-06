@@ -1,6 +1,7 @@
 import type {
   OrderRequest,
   OrderAddonSnapshot,
+  OrderAttachment,
   OrderContract,
   AnalyticsEvent,
   PageContent,
@@ -24,6 +25,7 @@ export type ServiceRow = Tables<"services"> & {
 export type TagRow = Tables<"tags">;
 export type ImageRow = Tables<"images">;
 export type OrderContractRow = Tables<"order_contracts">;
+export type OrderAttachmentRow = Tables<"order_attachments">;
 
 export type ProjectImageRow = {
   image_id: string;
@@ -46,6 +48,7 @@ export type ProjectRow = Tables<"projects"> & {
 
 export type RequestRow = Tables<"requests"> & {
   order_contracts?: OrderContractRow | OrderContractRow[] | null;
+  order_attachments?: OrderAttachmentRow[] | null;
 };
 
 function mapJsonRecord(value: Json | null): Record<string, string> {
@@ -269,6 +272,7 @@ export function attachLegacyProjectImages(rows: ProjectRow[], images: ImageRow[]
 export function mapRequest(row: RequestRow): OrderRequest {
   const contractRows = row.order_contracts;
   const contract = Array.isArray(contractRows) ? contractRows[0] : contractRows;
+  const attachmentRows = row.order_attachments ?? [];
 
   return {
     id: row.id,
@@ -301,7 +305,21 @@ export function mapRequest(row: RequestRow): OrderRequest {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? undefined,
-    contract: contract ? mapOrderContract(contract) : null
+    contract: contract ? mapOrderContract(contract) : null,
+    attachments: attachmentRows.map(mapOrderAttachment)
+  };
+}
+
+export function mapOrderAttachment(row: OrderAttachmentRow): OrderAttachment {
+  return {
+    id: row.id,
+    requestId: row.request_id,
+    clientUserId: row.client_user_id ?? null,
+    storagePath: row.storage_path,
+    fileName: row.file_name,
+    contentType: row.content_type,
+    size: row.size,
+    createdAt: row.created_at
   };
 }
 

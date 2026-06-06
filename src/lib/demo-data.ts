@@ -369,6 +369,7 @@ export const demoRequests: OrderRequest[] = [
     comment: "Нужна визуальная система для запуска новой студии.",
     status: "new",
     createdAt: projectDate,
+    attachments: [],
     contract: {
       id: "contract-demo",
       requestId: "request-demo",

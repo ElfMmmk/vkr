@@ -4,7 +4,14 @@ import { AccountAuthForm } from "@/components/account-auth-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
-export default function AccountLoginPage() {
+export default async function AccountLoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ claim?: string }>;
+}) {
+  const params = await searchParams;
+  const claimQuery = params.claim ? `?claim=${encodeURIComponent(params.claim)}` : "";
+
   return (
     <>
       <SiteHeader />
@@ -18,11 +25,11 @@ export default function AccountLoginPage() {
             В кабинете клиент видит отправленные заявки, выбранные услуги и текущие статусы
             обработки без доступа к административным данным.
           </p>
-          <Link className="focus-ring mt-6 inline-flex text-sm font-semibold text-accent hover:text-ink" href="/account/register">
+          <Link className="focus-ring mt-6 inline-flex text-sm font-semibold text-accent hover:text-ink" href={`/account/register${claimQuery}`}>
             Нет кабинета? Зарегистрироваться
           </Link>
         </div>
-        <AccountAuthForm mode="login" />
+        <AccountAuthForm claimToken={params.claim ?? ""} mode="login" />
       </main>
       <SiteFooter />
     </>

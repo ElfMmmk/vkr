@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 
 const schemaSql = readFileSync(join(process.cwd(), "supabase", "schema.sql"), "utf8");
 const seedSql = readFileSync(join(process.cwd(), "supabase", "seed.sql"), "utf8");
+const orderAttachmentsMigrationSql = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260606000000_order_attachments_and_claim_tokens.sql"),
+  "utf8"
+);
 
 describe("supabase security schema", () => {
   it("keeps order inserts server-only for public Supabase clients", () => {
@@ -78,6 +82,34 @@ describe("supabase security schema", () => {
     expect(schemaSql).toContain('create policy "Clients can read own order contracts"');
     expect(schemaSql).toContain("status in ('sent', 'accepted')");
     expect(schemaSql).toContain("request.client_user_id = auth.uid()");
+  });
+
+  it("adds private order attachments and guest claim tokens", () => {
+    expect(schemaSql).toContain("create table if not exists public.order_attachments");
+    expect(schemaSql).toContain("create table if not exists public.request_claim_tokens");
+    expect(schemaSql).toContain("'order-attachments'");
+    expect(schemaSql).toContain("order_attachments_request_created_idx");
+    expect(schemaSql).toContain("request_claim_tokens_hash_idx");
+    expect(schemaSql).toContain("alter table public.order_attachments enable row level security;");
+    expect(schemaSql).toContain("alter table public.request_claim_tokens enable row level security;");
+    expect(schemaSql).toContain('create policy "Clients can read own order attachments"');
+    expect(schemaSql).toContain("request.client_user_id = auth.uid()");
+    expect(schemaSql).toContain("revoke all on public.order_attachments from anon, authenticated;");
+    expect(schemaSql).toContain("grant select on public.order_attachments to authenticated;");
+    expect(schemaSql).toContain("revoke all on public.request_claim_tokens from anon, authenticated;");
+    expect(schemaSql).toContain("grant all privileges on public.request_claim_tokens to service_role;");
+    expect(schemaSql).toContain("grant all privileges on public.order_attachments to service_role;");
+  });
+
+  it("keeps private attachments and claim token changes reproducible in a migration", () => {
+    expect(orderAttachmentsMigrationSql).toContain("create table if not exists public.order_attachments");
+    expect(orderAttachmentsMigrationSql).toContain("create table if not exists public.request_claim_tokens");
+    expect(orderAttachmentsMigrationSql).toContain('create policy "Clients can read own order attachments"');
+    expect(orderAttachmentsMigrationSql).toContain("revoke all on public.order_attachments from anon, authenticated;");
+    expect(orderAttachmentsMigrationSql).toContain("grant select on public.order_attachments to authenticated;");
+    expect(orderAttachmentsMigrationSql).toContain("revoke all on public.request_claim_tokens from anon, authenticated;");
+    expect(orderAttachmentsMigrationSql).toContain("'order-attachments'");
+    expect(orderAttachmentsMigrationSql).toContain("10485760");
   });
 
   it("seeds package and add-on prices after demo services are created", () => {

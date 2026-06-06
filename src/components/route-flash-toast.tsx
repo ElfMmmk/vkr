@@ -29,6 +29,12 @@ const routeNotices: Record<string, { message: string; tone: ToastTone }> = {
   "order-contract-locked": { message: "Принятый договор-заказ нельзя изменить", tone: "info" },
   "order-contract-accepted": { message: "Договор-заказ принят", tone: "success" },
   "order-contract-accept-failed": { message: "Не удалось принять договор-заказ. Обновите страницу и попробуйте ещё раз.", tone: "error" },
+  "request-claimed": { message: "Заявка привязана к кабинету", tone: "success" },
+  "attachment-uploaded": { message: "Материалы добавлены", tone: "success" },
+  "attachment-empty": { message: "Выберите файл для загрузки", tone: "info" },
+  "attachment-limit": { message: "Достигнут лимит материалов для заявки", tone: "error" },
+  "attachment-failed": { message: "Не удалось загрузить материалы. Проверьте файл и попробуйте ещё раз.", tone: "error" },
+  "attachments-closed": { message: "Добавление материалов для этой заявки закрыто", tone: "info" },
   "image-deleted": { message: "Изображение удалено", tone: "success" },
   "notification-read": { message: "Уведомление отмечено как прочитанное", tone: "success" },
   "user-role-updated": { message: "Роль пользователя сохранена", tone: "success" }

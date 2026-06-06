@@ -279,7 +279,7 @@ export async function listAdminRequests(options: {
   const buildRequestQuery = () => {
     let requestQuery = client
       .from("requests")
-      .select("*, order_contracts(*)")
+      .select("*, order_contracts(*), order_attachments(*)")
       .order("created_at", { ascending: options.sort === "oldest" });
 
     if (options.status && isRequestStatus(options.status)) {
@@ -344,7 +344,7 @@ export async function getAdminRequestById(id: string): Promise<OrderRequest | nu
 
   const { data, error } = await client
     .from("requests")
-    .select("*, order_contracts(*)")
+    .select("*, order_contracts(*), order_attachments(*)")
     .eq("id", id)
     .maybeSingle();
 
