@@ -1,24 +1,17 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 
 import { submitOrderAction, type OrderFormState } from "@/app/order/actions";
-import { FormSubmitButton } from "@/components/form-submit-button";
-import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
-import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
-import {
-  contactPlaceholders,
-  materialChips,
-  orderSteps as steps,
-  quizQuestionOptions,
-  resultChips,
-  styleChips,
-  submitUnlockDelayMs
-} from "@/components/order/order-form-config";
+import { BriefStep } from "@/components/order/brief-step";
+import { ContactStep } from "@/components/order/contact-step";
+import { ExtrasStep } from "@/components/order/extras-step";
+import { StepPanel } from "@/components/order/form-parts";
+import { orderSteps as steps, submitUnlockDelayMs } from "@/components/order/order-form-config";
 import { MobileOrderSummary, OrderSummaryAside } from "@/components/order/order-summary";
 import { PackageStep } from "@/components/order/package-step";
+import { ReviewStep } from "@/components/order/review-step";
+import { ServiceStep } from "@/components/order/service-step";
 import { StepNavigation } from "@/components/order/step-navigation";
 import { fieldLimits } from "@/lib/field-limits";
 import {
@@ -28,16 +21,11 @@ import {
   parseOrderDraft,
   type OrderStepId
 } from "@/lib/order-draft";
-import {
-  MAX_ORDER_ATTACHMENT_COUNT,
-  validateOrderAttachmentList,
-  type OrderAttachmentFileLike
-} from "@/lib/order-attachments";
+import type { OrderAttachmentFileLike } from "@/lib/order-attachments";
 import {
   calculateOrderEstimate,
   formatDurationRange,
-  formatPriceRange,
-  formatRubles
+  formatPriceRange
 } from "@/lib/order-calculator";
 import {
   quizAnswersToBrief,
@@ -45,50 +33,6 @@ import {
   type OrderQuizAnswers
 } from "@/lib/order-quiz";
 import type { Project, Service } from "@/lib/types";
-
-function invalidClass(hasError: boolean) {
-  return hasError ? " border-accent bg-accent/5 focus-visible:border-accent" : "";
-}
-
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) {
-    return null;
-  }
-
-  return <p className="mt-2 text-sm text-accent">{errors[0]}</p>;
-}
-
-function StepPanel({
-  active,
-  children,
-  id
-}: {
-  active: boolean;
-  children: React.ReactNode;
-  id: OrderStepId;
-}) {
-  return (
-    <section aria-labelledby={`order-step-${id}`} hidden={!active}>
-      {children}
-    </section>
-  );
-}
-
-function formatBytes(size: number): string {
-  if (size < 1024 * 1024) {
-    return `${Math.max(1, Math.round(size / 1024))} КБ`;
-  }
-
-  return `${(size / 1024 / 1024).toFixed(1)} МБ`;
-}
-
-function fileListToMetadata(fileList: FileList | null): OrderAttachmentFileLike[] {
-  return Array.from(fileList ?? []).map((file) => ({
-    name: file.name,
-    size: file.size,
-    type: file.type
-  }));
-}
 
 function canUseQuizAnswers(answers: Partial<OrderQuizAnswers>): answers is OrderQuizAnswers {
   return Boolean(answers.taskType && answers.goal && answers.urgency && answers.materials && answers.scope);
@@ -460,89 +404,22 @@ export function OrderForm({
           </div>
 
           <StepPanel active={activeStepId === "service"} id="service">
-            <div className="grid gap-5">
-              <div className="border border-line bg-paper p-5">
-                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-                  <div>
-                    <h3 className="text-xl font-semibold">Не знаете, что выбрать?</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted">
-                      Ответьте на пять вопросов, и форма подставит подходящее направление.
-                    </p>
-                  </div>
-                  <button
-                    className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
-                    onClick={() => setIsQuizOpen((current) => !current)}
-                    type="button"
-                  >
-                    Помочь выбрать
-                  </button>
-                </div>
-                {isQuizOpen ? (
-                  <div className="mt-5 grid gap-4">
-                    {Object.entries(quizQuestionOptions).map(([key, options]) => (
-                      <div key={key}>
-                        <p className="text-sm font-semibold text-ink">
-                          {key === "taskType"
-                            ? "Тип задачи"
-                            : key === "goal"
-                              ? "Цель"
-                              : key === "urgency"
-                                ? "Срок"
-                                : key === "materials"
-                                  ? "Материалы"
-                                  : "Объём"}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {options.map((option) => (
-                            <button
-                              className={`focus-ring border px-3 py-2 text-sm font-semibold transition ${
-                                quizAnswers[key as keyof OrderQuizAnswers] === option.value
-                                  ? "border-cobalt bg-cobalt text-white"
-                                  : "border-line bg-white text-ink hover:border-ink"
-                              }`}
-                              key={option.value}
-                              onClick={() =>
-                                setQuizAnswers((current) => ({
-                                  ...current,
-                                  [key]: option.value
-                                }))
-                              }
-                              type="button"
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      className="focus-ring inline-flex min-h-11 w-fit items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent"
-                      onClick={applyQuizRecommendation}
-                      type="button"
-                    >
-                      Подобрать услугу
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <Field label="Услуга" required>
-                <select
-                  className={`${selectClass}${invalidClass(Boolean(state.fieldErrors?.serviceId))}`}
-                  name="serviceId"
-                  onChange={(event) => applyService(event.target.value)}
-                  required
-                  value={selectedServiceId}
-                >
-                  {services.map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {service.title}
-                    </option>
-                  ))}
-                </select>
-                <FieldError errors={state.fieldErrors?.serviceId} />
-              </Field>
-            </div>
+            <ServiceStep
+              fieldErrors={state.fieldErrors}
+              isQuizOpen={isQuizOpen}
+              onApplyQuizRecommendation={applyQuizRecommendation}
+              onSelectQuizAnswer={(key, value) => {
+                setQuizAnswers((current) => ({
+                  ...current,
+                  [key]: value
+                }));
+              }}
+              onSelectService={applyService}
+              onToggleQuiz={() => setIsQuizOpen((current) => !current)}
+              quizAnswers={quizAnswers}
+              selectedServiceId={selectedServiceId}
+              services={services}
+            />
           </StepPanel>
 
           <StepPanel active={activeStepId === "package"} id="package">
@@ -555,355 +432,64 @@ export function OrderForm({
           </StepPanel>
 
           <StepPanel active={activeStepId === "extras"} id="extras">
-            <div className="grid gap-6">
-              {serviceAddons.length ? (
-                <section className="border border-line bg-white p-5">
-                  <h3 className="text-xl font-semibold">Доплаты</h3>
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {serviceAddons.map((addon) => (
-                      <label
-                        className={`flex cursor-pointer gap-3 border p-4 transition hover:border-ink ${
-                          selectedAddonIds.includes(addon.id)
-                            ? "border-cobalt bg-cobalt/10"
-                            : "border-line bg-white"
-                        }`}
-                        key={addon.id}
-                      >
-                        <input
-                          checked={selectedAddonIds.includes(addon.id)}
-                          className="mt-1"
-                          name="addonIds"
-                          onChange={() => toggleAddon(addon.id)}
-                          type="checkbox"
-                          value={addon.id}
-                        />
-                        <span>
-                          <span className="block font-semibold">{addon.title}</span>
-                          <span className="mt-1 block text-sm leading-6 text-muted">{addon.description}</span>
-                          <span className="mt-2 block text-sm font-semibold text-cobalt">
-                            +{formatRubles(addon.price)}
-                            {addon.durationDays ? ` · +${addon.durationDays} раб. дн.` : ""}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <FieldError errors={state.fieldErrors?.addonIds} />
-                </section>
-              ) : (
-                <p className="border border-line bg-paper p-4 text-sm leading-6 text-muted">
-                  Для этой услуги нет дополнительных опций. Можно перейти дальше.
-                </p>
-              )}
-
-              {serviceExamples.length ? (
-                <section className="border border-line bg-paper p-5">
-                  <h3 className="text-xl font-semibold">Пример работы для ориентира</h3>
-                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                    {serviceExamples.map((project) => (
-                      <article
-                        className={`border bg-white transition ${
-                          referenceProjectId === project.id ? "border-cobalt" : "border-line"
-                        }`}
-                        key={project.id}
-                      >
-                        <label className="block cursor-pointer">
-                          <span className="relative block aspect-[4/3] overflow-hidden bg-line">
-                            {project.coverImageUrl ? (
-                              <Image
-                                alt={project.title}
-                                className="object-cover"
-                                fill
-                                sizes="(min-width: 1024px) 18vw, (min-width: 768px) 30vw, 100vw"
-                                src={project.coverImageUrl}
-                              />
-                            ) : (
-                              <span className="grid h-full place-items-center px-4 text-center text-sm text-muted">
-                                Обложка пока не добавлена
-                              </span>
-                            )}
-                          </span>
-                          <span className="flex gap-3 p-4">
-                            <input
-                              checked={referenceProjectId === project.id}
-                              className="mt-1"
-                              name="referenceProjectId"
-                              onChange={() => setReferenceProjectId(project.id)}
-                              type="radio"
-                              value={project.id}
-                            />
-                            <span className="min-w-0">
-                              <span className="block font-semibold">{project.title}</span>
-                              <span className="mt-1 line-clamp-3 block text-sm leading-6 text-muted">
-                                {project.shortDescription}
-                              </span>
-                            </span>
-                          </span>
-                        </label>
-                        <Link
-                          className="focus-ring mx-4 mb-4 inline-flex text-sm font-semibold text-accent transition hover:text-ink active:translate-y-px"
-                          href={`/portfolio/${project.slug}`}
-                        >
-                          Открыть проект
-                        </Link>
-                      </article>
-                    ))}
-                    <label className="flex cursor-pointer gap-3 border border-line bg-white p-4 lg:col-span-3">
-                      <input
-                        checked={!referenceProjectId}
-                        className="mt-1"
-                        name="referenceProjectId"
-                        onChange={() => setReferenceProjectId("")}
-                        type="radio"
-                        value=""
-                      />
-                      <span className="text-sm font-semibold text-muted">Без конкретного примера</span>
-                    </label>
-                  </div>
-                  <FieldError errors={state.fieldErrors?.referenceProjectId} />
-                </section>
-              ) : null}
-            </div>
+            <ExtrasStep
+              fieldErrors={state.fieldErrors}
+              onSelectReferenceProject={setReferenceProjectId}
+              onToggleAddon={toggleAddon}
+              referenceProjectId={referenceProjectId}
+              selectedAddonIds={selectedAddonIds}
+              serviceAddons={serviceAddons}
+              serviceExamples={serviceExamples}
+            />
           </StepPanel>
 
           <StepPanel active={activeStepId === "brief"} id="brief">
-            <div className="grid gap-5">
-              <Field label="Ожидаемый результат" required>
-                <LimitedTextarea
-                  aria-invalid={Boolean(state.fieldErrors?.resultDescription) || undefined}
-                  className={`${textareaClass}${invalidClass(Boolean(state.fieldErrors?.resultDescription))}`}
-                  maxLength={fieldLimits.order.resultDescription.max}
-                  minLength={fieldLimits.order.resultDescription.min}
-                  name="resultDescription"
-                  onChange={(event) => setResultDescription(event.target.value)}
-                  placeholder="Что должно быть сделано: логотип, презентация, упаковка, шаблоны, носители"
-                  required
-                  value={resultDescription}
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {resultChips.map((chip) => (
-                    <button
-                      className="focus-ring border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:border-ink"
-                      key={chip}
-                      onClick={() => setResultDescription((current) => appendBriefChip(current, chip))}
-                      type="button"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-                <FieldError errors={state.fieldErrors?.resultDescription} />
-              </Field>
-
-              <Field label="Стиль и ориентиры" required>
-                <LimitedTextarea
-                  aria-invalid={Boolean(state.fieldErrors?.stylePreferences) || undefined}
-                  className={`${textareaClass}${invalidClass(Boolean(state.fieldErrors?.stylePreferences))}`}
-                  maxLength={fieldLimits.order.stylePreferences.max}
-                  minLength={fieldLimits.order.stylePreferences.min}
-                  name="stylePreferences"
-                  onChange={(event) => setStylePreferences(event.target.value)}
-                  placeholder="Например: минималистично, ярко, премиально, похоже на выбранный пример"
-                  required
-                  value={stylePreferences}
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {styleChips.map((chip) => (
-                    <button
-                      className="focus-ring border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:border-ink"
-                      key={chip}
-                      onClick={() => setStylePreferences((current) => appendBriefChip(current, chip))}
-                      type="button"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-                <FieldError errors={state.fieldErrors?.stylePreferences} />
-              </Field>
-
-              <Field label="Материалы">
-                <LimitedTextarea
-                  className={textareaClass}
-                  maxLength={fieldLimits.order.materials.max}
-                  name="materials"
-                  onChange={(event) => setMaterials(event.target.value)}
-                  placeholder="Что уже есть: тексты, логотип, фото, брендбук, размеры"
-                  value={materials}
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {materialChips.map((chip) => (
-                    <button
-                      className="focus-ring border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:border-ink"
-                      key={chip}
-                      onClick={() => setMaterials((current) => appendBriefChip(current, chip))}
-                      type="button"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-              <Field label="Желаемый срок">
-                <LimitedInput
-                  className={inputClass}
-                  maxLength={fieldLimits.order.desiredDeadline.max}
-                  name="desiredDeadline"
-                  onChange={(event) => setDesiredDeadline(event.target.value)}
-                  placeholder="Например: до 20 июня или к запуску"
-                  value={desiredDeadline}
-                />
-              </Field>
-            </div>
+            <BriefStep
+              desiredDeadline={desiredDeadline}
+              fieldErrors={state.fieldErrors}
+              materials={materials}
+              resultDescription={resultDescription}
+              setDesiredDeadline={setDesiredDeadline}
+              setMaterials={setMaterials}
+              setResultDescription={setResultDescription}
+              setStylePreferences={setStylePreferences}
+              stylePreferences={stylePreferences}
+            />
           </StepPanel>
 
           <StepPanel active={activeStepId === "contact"} id="contact">
-            <div className="grid gap-5">
-              <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Имя" required>
-                  <LimitedInput
-                    aria-invalid={Boolean(state.fieldErrors?.clientName) || undefined}
-                    className={`${inputClass}${invalidClass(Boolean(state.fieldErrors?.clientName))}`}
-                    maxLength={fieldLimits.order.clientName.max}
-                    name="clientName"
-                    onChange={(event) => setClientName(event.target.value)}
-                    placeholder="Как к вам обращаться"
-                    required
-                    value={clientName}
-                  />
-                  <FieldError errors={state.fieldErrors?.clientName} />
-                </Field>
-                <Field label="Способ связи" required>
-                  <select
-                    className={`${selectClass}${invalidClass(Boolean(state.fieldErrors?.contactMethod))}`}
-                    name="contactMethod"
-                    onChange={(event) => {
-                      setContactMethod(event.target.value);
-                      setContactValue("");
-                    }}
-                    required
-                    value={contactMethod}
-                  >
-                    <option>Telegram</option>
-                    <option>Email</option>
-                    <option>Телефон</option>
-                    <option>Другой способ</option>
-                  </select>
-                  <FieldError errors={state.fieldErrors?.contactMethod} />
-                </Field>
-              </div>
-              <Field label="Контакт" required>
-                <LimitedInput
-                  aria-invalid={Boolean(state.fieldErrors?.contactValue) || undefined}
-                  className={`${inputClass}${invalidClass(Boolean(state.fieldErrors?.contactValue))}`}
-                  maxLength={fieldLimits.order.contactValue.max}
-                  name="contactValue"
-                  onChange={(event) => setContactValue(event.target.value)}
-                  placeholder={contactPlaceholders[contactMethod]}
-                  required
-                  type={contactMethod === "Email" ? "email" : "text"}
-                  value={contactValue}
-                />
-                <FieldError errors={state.fieldErrors?.contactValue} />
-              </Field>
-              <Field label="Материалы к заказу">
-                <input
-                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,text/plain"
-                  className={inputClass}
-                  multiple
-                  name="attachments"
-                  onChange={(event) => {
-                    const files = fileListToMetadata(event.target.files);
-                    setAttachmentFiles(files);
-                    setAttachmentError(validateOrderAttachmentList(files) ?? "");
-                  }}
-                  type="file"
-                />
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  До {MAX_ORDER_ATTACHMENT_COUNT} файлов: PDF, DOC, DOCX, TXT, JPEG, PNG или WebP, до 10 МБ каждый.
-                </p>
-                {attachmentFiles.length ? (
-                  <ul className="mt-3 grid gap-2 text-sm text-muted">
-                    {attachmentFiles.map((file) => (
-                      <li key={`${file.name}-${file.size}`}>
-                        {file.name} · {formatBytes(file.size)}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {attachmentError ? <p className="mt-2 text-sm text-accent">{attachmentError}</p> : null}
-              </Field>
-            </div>
+            <ContactStep
+              attachmentError={attachmentError}
+              attachmentFiles={attachmentFiles}
+              clientName={clientName}
+              contactMethod={contactMethod}
+              contactValue={contactValue}
+              fieldErrors={state.fieldErrors}
+              setAttachmentError={setAttachmentError}
+              setAttachmentFiles={setAttachmentFiles}
+              setClientName={setClientName}
+              setContactMethod={setContactMethod}
+              setContactValue={setContactValue}
+            />
           </StepPanel>
 
           <StepPanel active={activeStepId === "review"} id="review">
-            <div className="grid gap-5">
-              <div className="border border-cobalt/25 bg-cobalt/10 p-5">
-                <h3 className="text-xl font-semibold text-ink">Проверьте заказ</h3>
-                <dl className="mt-4 grid gap-3 text-sm leading-6 md:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold text-ink">Услуга</dt>
-                    <dd>{selectedService?.title ?? "Не выбрана"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink">Пакет</dt>
-                    <dd>{selectedPackage?.title ?? "Не выбран"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink">Предварительная стоимость</dt>
-                    <dd>{estimate ? formatPriceRange(estimate.priceFrom, estimate.priceTo) : "Уточняется"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink">Предварительный срок</dt>
-                    <dd>{estimate ? formatDurationRange(estimate.durationFromDays, estimate.durationToDays) : "Уточняется"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink">Контакт</dt>
-                    <dd>{clientName ? `${clientName}, ${contactMethod}: ${contactValue}` : "Не указан"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink">Файлы</dt>
-                    <dd>{attachmentFiles.length ? `${attachmentFiles.length} файл(ов)` : "Не приложены"}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              <Field label="Комментарий">
-                <LimitedTextarea
-                  className={textareaClass}
-                  maxLength={fieldLimits.order.comment.max}
-                  name="comment"
-                  onChange={(event) => setComment(event.target.value)}
-                  placeholder="Дополнительные пожелания, вопросы или ограничения"
-                  value={comment}
-                />
-              </Field>
-
-              {state.message ? (
-                <div className="border border-accent/30 bg-accent/10 px-4 py-3 text-sm leading-6 text-accent">
-                  {state.message}
-                </div>
-              ) : null}
-              {!canSubmitOrder ? (
-                <div className="border border-line bg-paper px-4 py-3 text-sm leading-6 text-muted">
-                  Отправка заказа будет доступна после выбора услуги с настроенным пакетом работ и проверки файлов.
-                </div>
-              ) : null}
-              {canSubmitOrder && isSubmitDelayActive ? (
-                <p className="text-sm leading-6 text-muted" id="order-submit-delay" aria-live="polite">
-                  Отправка будет доступна через {submitDelaySeconds} сек.
-                </p>
-              ) : null}
-              <FormSubmitButton
-                className="focus-ring inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px active:border-ink active:bg-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-y-0 md:w-auto"
-                describedBy={canSubmitOrder && isSubmitDelayActive ? "order-submit-delay" : undefined}
-                disabled={!canSubmitOrder || isSubmitDelayActive}
-                idleLabel="Отправить заказ"
-                pendingLabel="Отправка..."
-              />
-            </div>
+            <ReviewStep
+              attachmentCount={attachmentFiles.length}
+              canSubmitOrder={canSubmitOrder}
+              clientName={clientName}
+              comment={comment}
+              contactMethod={contactMethod}
+              contactValue={contactValue}
+              estimate={estimate}
+              isSubmitDelayActive={isSubmitDelayActive}
+              message={state.message}
+              packageTitle={selectedPackage?.title ?? ""}
+              serviceTitle={selectedService?.title ?? ""}
+              setComment={setComment}
+              submitDelaySeconds={submitDelaySeconds}
+            />
           </StepPanel>
-
           <div className="flex flex-col justify-between gap-3 border-t border-line pt-5 sm:flex-row">
             <button
               className="focus-ring inline-flex min-h-11 items-center justify-center border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink disabled:cursor-not-allowed disabled:opacity-50"

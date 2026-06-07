@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { OrderStepId } from "@/lib/order-draft";
+import type { OrderAttachmentFileLike } from "@/lib/order-attachments";
 
 export function invalidClass(hasError: boolean) {
   return hasError ? " border-accent bg-accent/5 focus-visible:border-accent" : "";
@@ -28,4 +29,20 @@ export function StepPanel({
       {children}
     </section>
   );
+}
+
+export function formatBytes(size: number): string {
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} КБ`;
+  }
+
+  return `${(size / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+export function fileListToMetadata(fileList: FileList | null): OrderAttachmentFileLike[] {
+  return Array.from(fileList ?? []).map((file) => ({
+    name: file.name,
+    size: file.size,
+    type: file.type
+  }));
 }
