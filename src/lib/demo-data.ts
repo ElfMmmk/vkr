@@ -21,24 +21,34 @@ export const demoServices: Service[] = [
         serviceId: "svc-brand",
         title: "Старт",
         description: "Логотип, палитра, базовая типографика и краткая памятка по применению.",
+        badge: "Популярный",
+        bestFor: "Для запуска или обновления малого бренда",
+        outcome: "Логотип, палитра и базовая памятка по применению",
+        includedItems: ["Логотип", "Палитра", "Базовая типографика", "Памятка по применению"],
         priceFrom: 25000,
         priceTo: 45000,
         durationFromDays: 10,
         durationToDays: 18,
         displayOrder: 10,
-        isActive: true
+        isActive: true,
+        isRecommended: true
       },
       {
         id: "pkg-brand-system",
         serviceId: "svc-brand",
         title: "Система",
         description: "Айдентика с носителями, правилами применения и подготовкой макетов для запуска.",
+        badge: "Комплекс",
+        bestFor: "Для бренда, которому нужна система носителей",
+        outcome: "Айдентика с правилами и стартовыми макетами",
+        includedItems: ["Логотип", "Палитра", "Типографика", "Правила применения", "Стартовые носители"],
         priceFrom: 60000,
         priceTo: 120000,
         durationFromDays: 18,
         durationToDays: 30,
         displayOrder: 20,
-        isActive: true
+        isActive: true,
+        isRecommended: false
       }
     ],
     addons: [
@@ -78,12 +88,17 @@ export const demoServices: Service[] = [
         serviceId: "svc-social",
         title: "Контент-месяц",
         description: "Набор шаблонов и визуальная сетка для регулярных публикаций.",
+        badge: "Регулярно",
+        bestFor: "Для стабильного визуального контента в соцсетях",
+        outcome: "Набор шаблонов и визуальная сетка публикаций",
+        includedItems: ["Шаблоны постов", "Обложки", "Визуальная сетка"],
         priceFrom: 18000,
         priceTo: 36000,
         durationFromDays: 7,
         durationToDays: 14,
         displayOrder: 10,
-        isActive: true
+        isActive: true,
+        isRecommended: true
       }
     ],
     addons: [
@@ -113,12 +128,17 @@ export const demoServices: Service[] = [
         serviceId: "svc-packaging",
         title: "Один носитель",
         description: "Дизайн этикетки, упаковки или печатного макета с подготовкой к производству.",
+        badge: "Тираж",
+        bestFor: "Для одного печатного или упаковочного носителя",
+        outcome: "Готовый макет с подготовкой к производству",
+        includedItems: ["Дизайн носителя", "Подготовка к печати", "Финальные файлы"],
         priceFrom: 22000,
         priceTo: 50000,
         durationFromDays: 10,
         durationToDays: 20,
         displayOrder: 10,
-        isActive: true
+        isActive: true,
+        isRecommended: true
       }
     ],
     addons: [
@@ -148,12 +168,17 @@ export const demoServices: Service[] = [
         serviceId: "svc-presentation",
         title: "До 20 слайдов",
         description: "Структура, визуальный стиль и оформление презентации для выступления или продажи.",
+        badge: "Презентация",
+        bestFor: "Для коммерческого предложения или выступления",
+        outcome: "Структурная презентация до 20 слайдов",
+        includedItems: ["Структура", "Визуальный стиль", "Оформление слайдов"],
         priceFrom: 20000,
         priceTo: 42000,
         durationFromDays: 7,
         durationToDays: 14,
         displayOrder: 10,
-        isActive: true
+        isActive: true,
+        isRecommended: true
       }
     ],
     addons: [

@@ -15,6 +15,7 @@ import { getClientRequestById } from "@/lib/data/client";
 import { MAX_ORDER_ATTACHMENT_COUNT } from "@/lib/order-attachments";
 import { createOrderAttachmentSignedUrls } from "@/lib/order-attachment-storage";
 import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
+import { buildRequestTimeline } from "@/lib/request-timeline";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
 
 type AccountRequestDetailPageProps = {
@@ -40,6 +41,7 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
 
   const client = getSupabaseAdminOrThrow();
   const attachments = await createOrderAttachmentSignedUrls(client, request.attachments);
+  const timeline = buildRequestTimeline(request);
   const canUploadAttachments =
     request.status !== "completed" &&
     request.status !== "rejected" &&
@@ -184,9 +186,13 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
               {canUploadAttachments ? (
                 <form action={uploadClientOrderAttachmentAction} className="mt-5 grid gap-3">
                   <input name="requestId" type="hidden" value={request.id} />
+                  <label className="text-sm font-semibold" htmlFor="account-request-attachments">
+                    Добавить материалы
+                  </label>
                   <input
                     accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,text/plain"
                     className="block w-full border border-line bg-white px-3 py-2 text-sm"
+                    id="account-request-attachments"
                     multiple
                     name="attachments"
                     type="file"
@@ -210,12 +216,18 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
             <section className="border border-line bg-paper p-5">
               <h2 className="text-xl font-semibold">Таймлайн</h2>
               <ol className="mt-4 grid gap-3 text-sm leading-6">
-                <li>Заявка создана: {new Date(request.createdAt).toLocaleString("ru-RU")}</li>
-                <li>Статус: {request.status}</li>
-                {request.contract ? <li>Договор-заказ подготовлен</li> : <li>Договор-заказ ожидает подготовки</li>}
-                {request.contract?.acceptedAt ? (
-                  <li>Принят: {new Date(request.contract.acceptedAt).toLocaleString("ru-RU")}</li>
-                ) : null}
+                {timeline.map((event) => (
+                  <li className="border-l-2 border-cobalt/30 pl-3" key={event.id}>
+                    <time
+                      className="block text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+                      dateTime={event.createdAt}
+                    >
+                      {new Date(event.createdAt).toLocaleString("ru-RU")}
+                    </time>
+                    <span className="mt-1 block font-semibold text-ink">{event.title}</span>
+                    <span className="mt-1 block text-muted">{event.description}</span>
+                  </li>
+                ))}
               </ol>
             </section>
           </aside>

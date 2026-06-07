@@ -8,6 +8,10 @@ const orderAttachmentsMigrationSql = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260606000000_order_attachments_and_claim_tokens.sql"),
   "utf8"
 );
+const servicePackageMarketingMigrationSql = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260607000000_service_package_marketing.sql"),
+  "utf8"
+);
 
 describe("supabase security schema", () => {
   it("keeps order inserts server-only for public Supabase clients", () => {
@@ -43,6 +47,9 @@ describe("supabase security schema", () => {
 
   it("adds order pricing tables with explicit grants and RLS", () => {
     expect(schemaSql).toContain("create table if not exists public.service_packages");
+    expect(schemaSql).toContain("badge text not null default ''");
+    expect(schemaSql).toContain("included_items text[] not null default '{}'::text[]");
+    expect(schemaSql).toContain("is_recommended boolean not null default false");
     expect(schemaSql).toContain("create table if not exists public.service_addons");
     expect(schemaSql).toContain("create table if not exists public.order_contracts");
     expect(schemaSql).toContain("alter table public.service_packages enable row level security;");
@@ -110,6 +117,15 @@ describe("supabase security schema", () => {
     expect(orderAttachmentsMigrationSql).toContain("revoke all on public.request_claim_tokens from anon, authenticated;");
     expect(orderAttachmentsMigrationSql).toContain("'order-attachments'");
     expect(orderAttachmentsMigrationSql).toContain("10485760");
+  });
+
+  it("keeps service package marketing columns reproducible in a migration", () => {
+    expect(servicePackageMarketingMigrationSql).toContain("alter table public.service_packages");
+    expect(servicePackageMarketingMigrationSql).toContain("add column if not exists badge");
+    expect(servicePackageMarketingMigrationSql).toContain("add column if not exists best_for");
+    expect(servicePackageMarketingMigrationSql).toContain("add column if not exists outcome");
+    expect(servicePackageMarketingMigrationSql).toContain("add column if not exists included_items");
+    expect(servicePackageMarketingMigrationSql).toContain("add column if not exists is_recommended");
   });
 
   it("seeds package and add-on prices after demo services are created", () => {

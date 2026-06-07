@@ -39,12 +39,17 @@ export type ServicePackage = {
   serviceId: string;
   title: string;
   description: string;
+  badge: string;
+  bestFor: string;
+  outcome: string;
+  includedItems: string[];
   priceFrom: number;
   priceTo: number;
   durationFromDays: number;
   durationToDays: number;
   displayOrder: number;
   isActive: boolean;
+  isRecommended: boolean;
 };
 
 export type ServiceAddon = {
@@ -127,6 +132,7 @@ export type OrderRequest = {
   updatedAt?: string;
   contract?: OrderContract | null;
   attachments: OrderAttachment[];
+  statusHistory?: RequestStatusHistory[];
 };
 
 export type AnalyticsEvent = {
@@ -174,6 +180,16 @@ export type OrderAttachment = {
   size: number;
   createdAt: string;
   signedUrl?: string;
+};
+
+export type RequestStatusHistory = {
+  id: string;
+  requestId: string;
+  fromStatus?: RequestStatus | null;
+  toStatus: RequestStatus;
+  changedByUserId?: string | null;
+  changedByRole: string;
+  createdAt: string;
 };
 
 export type PortfolioFilter = {

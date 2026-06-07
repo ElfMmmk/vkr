@@ -687,7 +687,7 @@ test.describe("real Supabase admin smoke", () => {
       });
       await attachmentForm.locator('button[type="submit"]').click();
       await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}.*notice=attachment-uploaded`));
-      await expect(page.getByText(fileName)).toBeVisible();
+      await expect(page.getByRole("link", { name: fileName })).toBeVisible();
 
       await expect
         .poll(async () => {
@@ -710,7 +710,7 @@ test.describe("real Supabase admin smoke", () => {
 
       await loginAs(page, fixture!.users.manager);
       await page.goto(`/admin/requests/${fixture!.requestId}`);
-      await expect(page.getByText(fileName)).toBeVisible();
+      await expect(page.getByRole("link", { name: fileName })).toBeVisible();
     } finally {
       if (storagePaths.length > 0) {
         await adminClient.storage.from("order-attachments").remove(storagePaths);

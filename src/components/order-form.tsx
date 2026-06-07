@@ -8,6 +8,18 @@ import { submitOrderAction, type OrderFormState } from "@/app/order/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import {
+  contactPlaceholders,
+  materialChips,
+  orderSteps as steps,
+  quizQuestionOptions,
+  resultChips,
+  styleChips,
+  submitUnlockDelayMs
+} from "@/components/order/order-form-config";
+import { MobileOrderSummary, OrderSummaryAside } from "@/components/order/order-summary";
+import { PackageStep } from "@/components/order/package-step";
+import { StepNavigation } from "@/components/order/step-navigation";
 import { fieldLimits } from "@/lib/field-limits";
 import {
   ORDER_DRAFT_STORAGE_KEY,
@@ -33,57 +45,6 @@ import {
   type OrderQuizAnswers
 } from "@/lib/order-quiz";
 import type { Project, Service } from "@/lib/types";
-
-const contactPlaceholders: Record<string, string> = {
-  Telegram: "@username",
-  Email: "name@example.com",
-  Телефон: "+7 999 000-00-00",
-  "Другой способ": "Напишите удобный способ связи"
-};
-
-const submitUnlockDelayMs = 2500;
-
-const steps: Array<{ id: OrderStepId; title: string; description: string }> = [
-  { id: "service", title: "Услуга", description: "Выберите направление или пройдите короткий подбор." },
-  { id: "package", title: "Пакет", description: "Сравните состав, стоимость и срок." },
-  { id: "extras", title: "Доплаты и пример", description: "Добавьте опции и визуальный ориентир." },
-  { id: "brief", title: "Бриф", description: "Опишите результат, стиль и материалы." },
-  { id: "contact", title: "Контакты", description: "Оставьте способ связи и приложите файлы." },
-  { id: "review", title: "Проверка", description: "Проверьте сводку перед отправкой." }
-];
-
-const resultChips = ["логотип", "презентация", "упаковка", "шаблоны для соцсетей", "бренд-гайд"];
-const styleChips = ["минимализм", "премиально", "ярко", "строго", "как в выбранном референсе"];
-const materialChips = ["тексты есть", "нужна помощь с текстом", "есть логотип", "есть брендбук", "есть фото"];
-
-const quizQuestionOptions = {
-  taskType: [
-    { label: "Бренд", value: "brand" },
-    { label: "Презентация", value: "presentation" },
-    { label: "Соцсети", value: "social" },
-    { label: "Упаковка", value: "packaging" },
-    { label: "Другое", value: "other" }
-  ],
-  goal: [
-    { label: "Запуск", value: "launch" },
-    { label: "Продажи", value: "sell" },
-    { label: "Обновление", value: "refresh" },
-    { label: "Событие", value: "event" }
-  ],
-  urgency: [
-    { label: "Обычный срок", value: "standard" },
-    { label: "Нужно быстро", value: "fast" }
-  ],
-  materials: [
-    { label: "Нет материалов", value: "none" },
-    { label: "Часть есть", value: "partial" },
-    { label: "Всё готово", value: "ready" }
-  ],
-  scope: [
-    { label: "Одна задача", value: "single" },
-    { label: "Полный цикл", value: "full" }
-  ]
-} as const;
 
 function invalidClass(hasError: boolean) {
   return hasError ? " border-accent bg-accent/5 focus-visible:border-accent" : "";
@@ -133,6 +94,12 @@ function canUseQuizAnswers(answers: Partial<OrderQuizAnswers>): answers is Order
   return Boolean(answers.taskType && answers.goal && answers.urgency && answers.materials && answers.scope);
 }
 
+function getDefaultPackage(service: Service | undefined) {
+  const activePackages = service?.packages.filter((item) => item.isActive) ?? [];
+
+  return activePackages.find((item) => item.isRecommended) ?? activePackages[0] ?? service?.packages[0];
+}
+
 export function OrderForm({
   projects,
   services,
@@ -144,7 +111,7 @@ export function OrderForm({
 }) {
   const initialState: OrderFormState = {};
   const initialService = services.find((service) => service.slug === selectedServiceSlug) ?? services[0];
-  const initialPackage = initialService?.packages.find((item) => item.isActive) ?? initialService?.packages[0];
+  const initialPackage = getDefaultPackage(initialService);
   const [state, formAction] = useActionState(submitOrderAction, initialState);
   const formStartedAtRef = useRef<HTMLInputElement>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -195,7 +162,7 @@ export function OrderForm({
 
   function applyService(nextServiceId: string) {
     const nextService = services.find((service) => service.id === nextServiceId);
-    const nextPackage = nextService?.packages.find((item) => item.isActive) ?? nextService?.packages[0];
+    const nextPackage = getDefaultPackage(nextService);
 
     setSelectedServiceId(nextServiceId);
     setSelectedPackageId(nextPackage?.id ?? "");
@@ -466,30 +433,16 @@ export function OrderForm({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">
-          <nav aria-label="Шаги оформления заказа" className="grid gap-2 sm:grid-cols-3">
-            {steps.map((step, index) => (
-              <button
-                aria-current={step.id === activeStepId ? "step" : undefined}
-                className={`focus-ring min-h-12 border px-3 py-2 text-left text-sm transition ${
-                  step.id === activeStepId
-                    ? "border-ink bg-ink text-white"
-                    : index <= activeStepIndex
-                      ? "border-cobalt/30 bg-cobalt/10 text-cobalt"
-                      : "border-line bg-white text-muted"
-                }`}
-                key={step.id}
-                onClick={() => {
-                  if (index <= activeStepIndex || validateCurrentStep()) {
-                    setActiveStepId(step.id);
-                  }
-                }}
-                type="button"
-              >
-                <span className="block text-xs font-semibold uppercase">Шаг {index + 1} из {steps.length}</span>
-                <span className="mt-1 block font-semibold">{step.title}</span>
-              </button>
-            ))}
-          </nav>
+          <StepNavigation
+            activeStepId={activeStepId}
+            activeStepIndex={activeStepIndex}
+            onSelectStep={(stepId, stepIndex) => {
+              if (stepIndex <= activeStepIndex || validateCurrentStep()) {
+                setActiveStepId(stepId);
+              }
+            }}
+            steps={steps}
+          />
 
           <div className="border border-line bg-white p-5 md:p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-accent">
@@ -593,51 +546,12 @@ export function OrderForm({
           </StepPanel>
 
           <StepPanel active={activeStepId === "package"} id="package">
-            <div className="grid gap-3">
-              {servicePackages.map((item, index) => (
-                <label
-                  className={`flex cursor-pointer gap-3 border p-4 transition hover:border-ink ${
-                    selectedPackageId === item.id ? "border-cobalt bg-cobalt/10" : "border-line bg-white"
-                  }`}
-                  key={item.id}
-                >
-                  <input
-                    checked={selectedPackageId === item.id}
-                    className="mt-1"
-                    name="packageId"
-                    onChange={() => setSelectedPackageId(item.id)}
-                    required
-                    type="radio"
-                    value={item.id}
-                  />
-                  <span className="min-w-0">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-ink">{item.title}</span>
-                      {index === 0 ? (
-                        <span className="border border-cobalt/25 bg-white px-2 py-1 text-xs font-semibold text-cobalt">
-                          Оптимальный выбор
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="mt-1 block text-sm leading-6 text-muted">{item.description}</span>
-                    <span className="mt-2 block text-sm leading-6 text-ink">
-                      Подойдёт, если нужен понятный состав работ и предварительный диапазон до обсуждения деталей.
-                    </span>
-                    <span className="mt-2 block text-sm font-semibold text-cobalt">
-                      {formatPriceRange(item.priceFrom, item.priceTo)} ·{" "}
-                      {formatDurationRange(item.durationFromDays, item.durationToDays)}
-                    </span>
-                  </span>
-                </label>
-              ))}
-              {!servicePackages.length ? (
-                <p className="border border-line bg-white p-4 text-sm leading-6 text-muted">
-                  По этой услуге пока нельзя оформить заказ: дизайнер уточняет состав работ и ориентиры по стоимости.
-                  Выберите другую услугу или вернитесь к заказу позже.
-                </p>
-              ) : null}
-              <FieldError errors={state.fieldErrors?.packageId} />
-            </div>
+            <PackageStep
+              errors={state.fieldErrors?.packageId}
+              onSelectPackage={setSelectedPackageId}
+              packages={servicePackages}
+              selectedPackageId={selectedPackageId}
+            />
           </StepPanel>
 
           <StepPanel active={activeStepId === "extras"} id="extras">
@@ -1020,52 +934,21 @@ export function OrderForm({
           </div>
         </div>
 
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 border border-cobalt/25 bg-cobalt/10 p-5">
-            <h2 className="text-xl font-semibold text-ink">Сводка заказа</h2>
-            <dl className="mt-4 grid gap-3 text-sm leading-6">
-              <div>
-                <dt className="font-semibold text-ink">Услуга</dt>
-                <dd>{selectedService?.title ?? "Не выбрана"}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-ink">Пакет</dt>
-                <dd>{selectedPackage?.title ?? "Не выбран"}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-ink">Доплаты</dt>
-                <dd>{selectedAddons.length ? selectedAddons.map((addon) => addon.title).join(", ") : "Без доплат"}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-ink">Стоимость</dt>
-                <dd>{estimate ? formatPriceRange(estimate.priceFrom, estimate.priceTo) : "Уточняется"}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-ink">Срок</dt>
-                <dd>{estimate ? formatDurationRange(estimate.durationFromDays, estimate.durationToDays) : "Уточняется"}</dd>
-              </div>
-            </dl>
-          </div>
-        </aside>
+        <OrderSummaryAside
+          addonTitles={selectedAddons.map((addon) => addon.title)}
+          estimate={estimate}
+          packageTitle={selectedPackage?.title ?? ""}
+          serviceTitle={selectedService?.title ?? ""}
+        />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-cobalt/20 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(17,24,39,0.08)] backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-screen-sm items-center justify-between gap-3">
-          <div className="min-w-0 text-sm">
-            <p className="truncate font-semibold text-ink">{selectedService?.title ?? "Услуга не выбрана"}</p>
-            <p className="truncate text-muted">
-              {estimate ? `${formatPriceRange(estimate.priceFrom, estimate.priceTo)} · ${formatDurationRange(estimate.durationFromDays, estimate.durationToDays)}` : "Расчёт уточняется"}
-            </p>
-          </div>
-          <button
-            className="focus-ring shrink-0 border border-line bg-white px-3 py-2 text-sm font-semibold text-ink"
-            onClick={() => setActiveStepId("review")}
-            type="button"
-          >
-            Сводка
-          </button>
-        </div>
-      </div>
+      <MobileOrderSummary
+        addonTitles={selectedAddons.map((addon) => addon.title)}
+        estimate={estimate}
+        onOpenReview={() => setActiveStepId("review")}
+        packageTitle={selectedPackage?.title ?? ""}
+        serviceTitle={selectedService?.title ?? ""}
+      />
     </form>
   );
 }

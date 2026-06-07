@@ -11,6 +11,7 @@ import type {
   Service,
   ServiceAddon,
   ServicePackage,
+  RequestStatusHistory,
   Tag
 } from "@/lib/types";
 import type { Json, Tables } from "@/lib/supabase/database.types";
@@ -26,6 +27,7 @@ export type TagRow = Tables<"tags">;
 export type ImageRow = Tables<"images">;
 export type OrderContractRow = Tables<"order_contracts">;
 export type OrderAttachmentRow = Tables<"order_attachments">;
+export type RequestStatusHistoryRow = Tables<"request_status_history">;
 
 export type ProjectImageRow = {
   image_id: string;
@@ -49,6 +51,7 @@ export type ProjectRow = Tables<"projects"> & {
 export type RequestRow = Tables<"requests"> & {
   order_contracts?: OrderContractRow | OrderContractRow[] | null;
   order_attachments?: OrderAttachmentRow[] | null;
+  request_status_history?: RequestStatusHistoryRow[] | null;
 };
 
 function mapJsonRecord(value: Json | null): Record<string, string> {
@@ -59,6 +62,10 @@ function mapJsonRecord(value: Json | null): Record<string, string> {
   return Object.fromEntries(
     Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string")
   );
+}
+
+function mapStringArray(value: string[] | null | undefined): string[] {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.trim()) : [];
 }
 
 export function mapAnalyticsEvent(row: AnalyticsEventRow): AnalyticsEvent {
@@ -104,12 +111,17 @@ export function mapServicePackage(row: ServicePackageRow): ServicePackage {
     serviceId: row.service_id,
     title: row.title,
     description: row.description ?? "",
+    badge: row.badge ?? "",
+    bestFor: row.best_for ?? "",
+    outcome: row.outcome ?? "",
+    includedItems: mapStringArray(row.included_items),
     priceFrom: row.price_from ?? 0,
     priceTo: row.price_to ?? 0,
     durationFromDays: row.duration_from_days ?? 1,
     durationToDays: row.duration_to_days ?? 1,
     displayOrder: row.display_order ?? 100,
-    isActive: row.is_active ?? true
+    isActive: row.is_active ?? true,
+    isRecommended: row.is_recommended ?? false
   };
 }
 
@@ -306,7 +318,24 @@ export function mapRequest(row: RequestRow): OrderRequest {
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? undefined,
     contract: contract ? mapOrderContract(contract) : null,
-    attachments: attachmentRows.map(mapOrderAttachment)
+    attachments: attachmentRows.map(mapOrderAttachment),
+    statusHistory:
+      row.request_status_history
+        ?.slice()
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .map(mapRequestStatusHistory) ?? []
+  };
+}
+
+export function mapRequestStatusHistory(row: RequestStatusHistoryRow): RequestStatusHistory {
+  return {
+    id: row.id,
+    requestId: row.request_id,
+    fromStatus: row.from_status ?? null,
+    toStatus: row.to_status,
+    changedByUserId: row.changed_by_user_id ?? null,
+    changedByRole: row.changed_by_role,
+    createdAt: row.created_at
   };
 }
 

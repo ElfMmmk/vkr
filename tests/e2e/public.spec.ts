@@ -244,6 +244,17 @@ test("order form recalculates package and add-ons", async ({ page }) => {
   }
 });
 
+test("order package cards show marketing fields and recommended state", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+
+  await expect(page.getByRole("heading", { name: "Пакет" })).toBeVisible();
+  await expect(page.getByText("Оптимальный выбор").first()).toBeVisible();
+  await expect(page.getByText("Популярный").first()).toBeVisible();
+  await expect(page.getByText("Для запуска или обновления малого бренда")).toBeVisible();
+  await expect(page.getByText("Логотип").first()).toBeVisible();
+});
+
 test("mobile order form keeps visual examples inside viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/order?service=brand-identity");

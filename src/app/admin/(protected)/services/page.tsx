@@ -16,6 +16,7 @@ import { requireContentAdmin } from "@/lib/auth";
 import { listAdminServices } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
+import { formatPackageIncludedItems } from "@/lib/service-package-marketing";
 import type { Service, ServiceAddon, ServicePackage } from "@/lib/types";
 
 function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boolean }) {
@@ -136,6 +137,44 @@ function PackageForm({
             placeholder="Что входит в пакет и какой результат получает клиент"
           />
         </Field>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="Бейдж">
+            <LimitedInput
+              className={inputClass}
+              defaultValue={packageItem?.badge}
+              maxLength={fieldLimits.servicePackage.badge.max}
+              name="badge"
+              placeholder="Популярный"
+            />
+          </Field>
+          <Field label="Кому подходит">
+            <LimitedInput
+              className={inputClass}
+              defaultValue={packageItem?.bestFor}
+              maxLength={fieldLimits.servicePackage.bestFor.max}
+              name="bestFor"
+              placeholder="Для запуска бренда"
+            />
+          </Field>
+          <Field label="Ожидаемый результат">
+            <LimitedInput
+              className={inputClass}
+              defaultValue={packageItem?.outcome}
+              maxLength={fieldLimits.servicePackage.outcome.max}
+              name="outcome"
+              placeholder="Готовая визуальная система"
+            />
+          </Field>
+        </div>
+        <Field label="Что входит" hint="Один пункт на строку, пустые строки будут пропущены">
+          <textarea
+            className={textareaClass}
+            defaultValue={formatPackageIncludedItems(packageItem?.includedItems ?? [])}
+            name="includedItems"
+            placeholder={"Логотип\nПалитра\nБазовый бренд-гайд"}
+            rows={4}
+          />
+        </Field>
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="Цена от" required>
             <input
@@ -182,6 +221,10 @@ function PackageForm({
             />
           </Field>
         </div>
+        <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
+          <input defaultChecked={packageItem?.isRecommended ?? false} name="isRecommended" type="checkbox" />
+          Рекомендованный пакет
+        </label>
         <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
           <input defaultChecked={packageItem?.isActive ?? true} name="isActive" type="checkbox" />
           Показывать пакет клиентам

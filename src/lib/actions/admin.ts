@@ -12,6 +12,7 @@ import {
 import { fieldLimits } from "@/lib/field-limits";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { createSlug } from "@/lib/slug";
+import { parsePackageIncludedItems } from "@/lib/service-package-marketing";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
 import {
   getPortfolioImageExtension,
@@ -210,23 +211,33 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
     serviceId: cleanId(formString(formData, "serviceId")) ?? "",
     title: formString(formData, "title"),
     description: formString(formData, "description"),
+    badge: formString(formData, "badge"),
+    bestFor: formString(formData, "bestFor"),
+    outcome: formString(formData, "outcome"),
+    includedItems: parsePackageIncludedItems(formString(formData, "includedItems")),
     priceFrom: formString(formData, "priceFrom"),
     priceTo: formString(formData, "priceTo"),
     durationFromDays: formString(formData, "durationFromDays"),
     durationToDays: formString(formData, "durationToDays"),
     displayOrder: formString(formData, "displayOrder") || "100",
-    isActive: formBoolean(formData, "isActive")
+    isActive: formBoolean(formData, "isActive"),
+    isRecommended: formBoolean(formData, "isRecommended")
   });
   const payload = {
     service_id: parsed.serviceId,
     title: parsed.title,
     description: parsed.description,
+    badge: parsed.badge,
+    best_for: parsed.bestFor,
+    outcome: parsed.outcome,
+    included_items: parsed.includedItems,
     price_from: parsed.priceFrom,
     price_to: parsed.priceTo,
     duration_from_days: parsed.durationFromDays,
     duration_to_days: parsed.durationToDays,
     display_order: parsed.displayOrder,
-    is_active: parsed.isActive
+    is_active: parsed.isActive,
+    is_recommended: parsed.isRecommended
   };
   const result = id
     ? await client.from("service_packages").update(payload).eq("id", id)

@@ -5,6 +5,7 @@ import {
   appendBriefChip,
   parseOrderDraft
 } from "@/lib/order-draft";
+import { parsePackageIncludedItems } from "@/lib/service-package-marketing";
 import {
   MAX_ORDER_ATTACHMENT_BYTES,
   MAX_ORDER_ATTACHMENT_COUNT,
@@ -19,7 +20,8 @@ import {
 } from "@/lib/request-claim";
 import { uploadOrderAttachmentFiles } from "@/lib/order-attachment-storage";
 import { recommendOrderSetup, type OrderQuizAnswers } from "@/lib/order-quiz";
-import type { Service } from "@/lib/types";
+import { buildRequestTimeline } from "@/lib/request-timeline";
+import type { OrderRequest, Service } from "@/lib/types";
 
 const services: Service[] = [
   {
@@ -36,12 +38,17 @@ const services: Service[] = [
         serviceId: "svc-brand",
         title: "Старт",
         description: "",
+        badge: "",
+        bestFor: "",
+        outcome: "",
+        includedItems: [],
         priceFrom: 25000,
         priceTo: 45000,
         durationFromDays: 7,
         durationToDays: 12,
         displayOrder: 10,
-        isActive: true
+        isActive: true,
+        isRecommended: false
       }
     ],
     addons: []
@@ -60,12 +67,17 @@ const services: Service[] = [
         serviceId: "svc-presentation",
         title: "Старт",
         description: "",
+        badge: "",
+        bestFor: "",
+        outcome: "",
+        includedItems: [],
         priceFrom: 15000,
         priceTo: 30000,
         durationFromDays: 5,
         durationToDays: 8,
         displayOrder: 10,
-        isActive: true
+        isActive: true,
+        isRecommended: false
       }
     ],
     addons: []
@@ -73,6 +85,97 @@ const services: Service[] = [
 ];
 
 describe("order experience helpers", () => {
+  it("parses package included items from textarea without blank rows", () => {
+    expect(parsePackageIncludedItems("Logo\n\n Palette \r\nLogo\n  Brand guide  ")).toEqual([
+      "Logo",
+      "Palette",
+      "Brand guide"
+    ]);
+  });
+
+  it("builds a dated client request timeline from request events", () => {
+    const request: OrderRequest = {
+      id: "request-1",
+      attachments: [
+        {
+          id: "attachment-1",
+          requestId: "request-1",
+          storagePath: "request-1/brief.pdf",
+          fileName: "brief.pdf",
+          contentType: "application/pdf",
+          size: 1000,
+          createdAt: "2026-06-06T10:30:00.000Z"
+        }
+      ],
+      clientName: "QA Client",
+      contactMethod: "Email",
+      contactValue: "qa@example.test",
+      serviceId: "service-1",
+      serviceTitle: "Identity",
+      packageId: "package-1",
+      packageTitle: "System",
+      packageDescription: "",
+      packagePriceFrom: 100,
+      packagePriceTo: 200,
+      packageDurationFromDays: 3,
+      packageDurationToDays: 5,
+      selectedAddons: [],
+      referenceProjectId: null,
+      referenceProjectTitle: "",
+      referenceProjectSlug: "",
+      resultDescription: "Detailed brief",
+      stylePreferences: "Minimal",
+      materials: "",
+      desiredDeadline: "",
+      estimatedPriceFrom: 100,
+      estimatedPriceTo: 200,
+      estimatedDurationFromDays: 3,
+      estimatedDurationToDays: 5,
+      comment: "",
+      status: "approved",
+      createdAt: "2026-06-06T10:00:00.000Z",
+      contract: {
+        id: "contract-1",
+        requestId: "request-1",
+        finalPrice: 180,
+        finalDurationDays: 4,
+        workScope: "Scope",
+        materials: "",
+        managerComment: "",
+        status: "accepted",
+        acceptedAt: "2026-06-06T12:00:00.000Z",
+        createdAt: "2026-06-06T11:00:00.000Z"
+      },
+      statusHistory: [
+        {
+          id: "history-1",
+          requestId: "request-1",
+          fromStatus: "new",
+          toStatus: "in_progress",
+          changedByRole: "manager",
+          createdAt: "2026-06-06T10:20:00.000Z"
+        },
+        {
+          id: "history-2",
+          requestId: "request-1",
+          fromStatus: "in_progress",
+          toStatus: "approved",
+          changedByRole: "manager",
+          createdAt: "2026-06-06T11:30:00.000Z"
+        }
+      ]
+    };
+
+    expect(buildRequestTimeline(request).map((event) => event.title)).toEqual([
+      "Заявка создана",
+      "Статус: В обработке",
+      "Материал загружен",
+      "Договор-заказ подготовлен",
+      "Статус: Согласована",
+      "Договор-заказ принят"
+    ]);
+  });
+
   it("parses only compatible order drafts", () => {
     expect(parseOrderDraft("not json")).toBeNull();
     expect(parseOrderDraft(JSON.stringify({ version: 999 }))).toBeNull();

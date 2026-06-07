@@ -27,12 +27,17 @@ create table if not exists public.service_packages (
   service_id uuid not null references public.services(id) on delete cascade,
   title text not null,
   description text not null default '',
+  badge text not null default '',
+  best_for text not null default '',
+  outcome text not null default '',
+  included_items text[] not null default '{}'::text[],
   price_from integer not null default 0 check (price_from >= 0),
   price_to integer not null default 0 check (price_to >= price_from),
   duration_from_days integer not null default 1 check (duration_from_days >= 1),
   duration_to_days integer not null default 1 check (duration_to_days >= duration_from_days),
   display_order integer not null default 100,
   is_active boolean not null default true,
+  is_recommended boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -260,6 +265,21 @@ add column if not exists estimated_duration_from_days integer;
 
 alter table public.requests
 add column if not exists estimated_duration_to_days integer;
+
+alter table public.service_packages
+add column if not exists badge text not null default '';
+
+alter table public.service_packages
+add column if not exists best_for text not null default '';
+
+alter table public.service_packages
+add column if not exists outcome text not null default '';
+
+alter table public.service_packages
+add column if not exists included_items text[] not null default '{}'::text[];
+
+alter table public.service_packages
+add column if not exists is_recommended boolean not null default false;
 
 create index if not exists services_active_order_idx on public.services (is_active, display_order);
 create index if not exists service_packages_service_order_idx on public.service_packages (service_id, is_active, display_order);
