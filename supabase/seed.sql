@@ -60,6 +60,25 @@ where not exists (
     and service_package.title = package_seed.title
 );
 
+update public.service_packages service_package
+set badge = package_marketing.badge,
+    best_for = package_marketing.best_for,
+    outcome = package_marketing.outcome,
+    included_items = package_marketing.included_items,
+    is_recommended = package_marketing.is_recommended
+from public.services service
+join (
+  values
+    ('brand-identity', 'Старт', 'Популярный', 'Для запуска или обновления малого бренда', 'Логотип, палитра и базовая памятка по применению', array['Логотип', 'Палитра', 'Базовая типографика', 'Памятка по применению']::text[], true),
+    ('brand-identity', 'Система', 'Комплекс', 'Для бренда, которому нужна система носителей', 'Айдентика с правилами и стартовыми макетами', array['Логотип', 'Палитра', 'Типографика', 'Правила применения', 'Стартовые носители']::text[], false),
+    ('social-media', 'Контент-месяц', 'Регулярно', 'Для стабильного визуального контента в соцсетях', 'Набор шаблонов и визуальная сетка публикаций', array['Шаблоны постов', 'Обложки', 'Визуальная сетка']::text[], true),
+    ('packaging-print', 'Один носитель', 'Тираж', 'Для одного печатного или упаковочного носителя', 'Готовый макет с подготовкой к производству', array['Дизайн носителя', 'Подготовка к печати', 'Финальные файлы']::text[], true),
+    ('presentation-design', 'До 20 слайдов', 'Презентация', 'Для коммерческого предложения или выступления', 'Структурная презентация до 20 слайдов', array['Структура', 'Визуальный стиль', 'Оформление слайдов']::text[], true)
+) as package_marketing(service_slug, title, badge, best_for, outcome, included_items, is_recommended)
+  on service.slug = package_marketing.service_slug
+where service_package.service_id = service.id
+  and service_package.title = package_marketing.title;
+
 with addon_seed (service_slug, title, description, price, duration_days, display_order, is_active) as (
   values
     ('brand-identity', 'Расширенный бренд-гайд', 'Дополнительные правила для команды, подрядчиков и печатных носителей.', 18000, 5, 10, true),

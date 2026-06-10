@@ -5,7 +5,17 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { formString, formStringArray } from "@/lib/form";
+import {
+  cleanupOrderAttachmentStorage,
+  getOrderAttachmentFiles,
+  uploadOrderAttachmentFiles
+} from "@/lib/order-attachment-storage";
 import { calculateOrderEstimate } from "@/lib/order-calculator";
+import {
+  createClaimToken,
+  createClaimTokenExpiresAt,
+  hashClaimToken
+} from "@/lib/request-claim";
 import {
   createSupabaseServerClient,
   getOptionalSupabaseAdmin
@@ -133,6 +143,8 @@ export async function submitOrderAction(
       values
     };
   }
+
+  const attachmentFiles = getOrderAttachmentFiles(formData);
 
   const adminClient = getOptionalSupabaseAdmin();
 
@@ -303,16 +315,53 @@ export async function submitOrderAction(
     };
   }
 
-  if (requestInsert.data?.id) {
-    await adminClient.from("notifications").insert({
-      type: "request_created",
-      title: "Новый заказ",
-      body: `${parsed.data.clientName} оформил(а) заказ${serviceTitle ? `: ${serviceTitle}` : ""}.`,
-      entity_type: "request",
-      entity_id: requestInsert.data.id,
-      audience_role: "manager"
-    });
+  const requestId = requestInsert.data.id;
+  const attachmentUpload: Awaited<ReturnType<typeof uploadOrderAttachmentFiles>> = attachmentFiles.length
+    ? await uploadOrderAttachmentFiles(adminClient, {
+        clientUserId,
+        files: attachmentFiles,
+        requestId
+      })
+    : { ok: true, attachments: [] };
+
+  if (!attachmentUpload.ok) {
+    await adminClient.from("requests").delete().eq("id", requestId);
+
+    return {
+      message: attachmentUpload.message,
+      values
+    };
   }
 
-  redirect("/order/success");
+  let claimToken = "";
+
+  if (!clientUserId) {
+    claimToken = createClaimToken();
+    const claimInsert = await adminClient.from("request_claim_tokens").insert({
+      expires_at: createClaimTokenExpiresAt(),
+      request_id: requestId,
+      token_hash: hashClaimToken(claimToken)
+    });
+
+    if (claimInsert.error) {
+      await cleanupOrderAttachmentStorage(adminClient, attachmentUpload.attachments);
+      await adminClient.from("requests").delete().eq("id", requestId);
+
+      return {
+        message: "Не удалось подготовить доступ к заявке. Попробуйте отправить форму ещё раз.",
+        values
+      };
+    }
+  }
+
+  await adminClient.from("notifications").insert({
+    type: "request_created",
+    title: "Новый заказ",
+    body: `${parsed.data.clientName} оформил(а) заказ${serviceTitle ? `: ${serviceTitle}` : ""}.`,
+    entity_type: "request",
+    entity_id: requestId,
+    audience_role: "manager"
+  });
+
+  redirect(clientUserId ? `/order/success?request=${requestId}` : `/order/success?claim=${claimToken}`);
 }

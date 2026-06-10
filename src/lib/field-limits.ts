@@ -12,6 +12,11 @@ export const fieldLimits = {
   servicePackage: {
     title: { min: 2, max: 120 },
     description: { max: 800 },
+    badge: { max: 80 },
+    bestFor: { max: 240 },
+    outcome: { max: 240 },
+    includedItem: { max: 180 },
+    includedItems: { max: 12 },
     price: { min: 0, max: 10000000 },
     durationDays: { min: 1, max: 365 },
     displayOrder: { min: 0, max: 10000 }

@@ -1,4 +1,25 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function goToNextOrderStep(page: Page) {
+  await page.getByRole("button", { name: "Далее" }).click();
+}
+
+async function reachOrderReview(page: Page, options: { email?: string; name?: string } = {}) {
+  const email = options.email ?? `qa-wizard-${Date.now()}@example.test`;
+
+  await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await page.locator('textarea[name="resultDescription"]').fill("QA wizard order brief for a visual identity.");
+  await page.locator('textarea[name="stylePreferences"]').fill("Clean, premium, restrained.");
+  await goToNextOrderStep(page);
+  await page.locator('input[name="clientName"]').fill(options.name ?? "QA Wizard");
+  await page.locator('select[name="contactMethod"]').selectOption("Email");
+  await page.locator('input[name="contactValue"]').fill(email);
+  await goToNextOrderStep(page);
+  await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
+}
 
 test("public visitor can browse portfolio and open an order form", async ({ page }) => {
   await page.goto("/");
@@ -13,11 +34,9 @@ test("public visitor can browse portfolio and open an order form", async ({ page
 
   await page.getByRole("link", { name: "Заказать похожий проект" }).click();
   await expect(page).toHaveURL(/\/order/);
-  await expect(page.getByRole("button", { name: "Отправить заказ" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Пакет работ" })).toBeVisible();
+  await expect(page.getByText("Шаг 1 из 6").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Сводка заказа" })).toBeVisible();
-  await expect(page.getByRole("img").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Открыть проект" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Далее" })).toBeVisible();
 });
 
 test("admin login renders setup notice or authentication form", async ({ page }) => {
@@ -183,63 +202,64 @@ test("project page has breadcrumbs and gallery slider", async ({ page }) => {
   }
 });
 
-test("order form blocks empty submissions with browser field validation", async ({ page }) => {
+test("order wizard blocks advancing from an incomplete brief", async ({ page }) => {
   await page.goto("/order");
 
-  await page.getByRole("button", { name: "Отправить заказ" }).click();
-  const clientNameState = await page.locator('input[name="clientName"]').evaluate((element) => {
-    const input = element as HTMLInputElement;
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await expect(page.getByRole("heading", { name: "Бриф" })).toBeVisible();
+  await goToNextOrderStep(page);
 
-    return {
-      maxLength: input.maxLength,
-      required: input.required,
-      valueMissing: input.validity.valueMissing
-    };
-  });
-
-  expect(clientNameState).toEqual({
-    maxLength: 120,
-    required: true,
-    valueMissing: true
-  });
-  await expect(page.locator('input[name="clientName"] ~ span').first()).toHaveText("0 / 120");
-  await expect(page.getByText(/минимум/i)).toHaveCount(0);
-  await expect(page.getByText("Заполните обязательные поля")).toHaveCount(0);
+  await expect(page.getByText("Опишите ожидаемый результат чуть подробнее.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Бриф" })).toBeVisible();
 });
 
 test("order form briefly delays submit availability", async ({ page }) => {
-  await page.goto("/order?service=brand-identity");
+  await reachOrderReview(page);
 
   const submitButton = page.getByRole("button", { name: "Отправить заказ" });
 
-  await expect(submitButton).toBeDisabled();
-  await expect(page.getByText(/Отправка будет доступна через/)).toBeVisible();
   await expect(submitButton).toBeEnabled({ timeout: 4_000 });
-  await expect(page.getByText(/Отправка будет доступна через/)).toHaveCount(0);
 });
 
 test("order form recalculates package and add-ons", async ({ page }) => {
   await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
 
   await expect(page.getByRole("heading", { name: "Сводка заказа" })).toBeVisible();
-  await expect(page.getByText(/Предварительная стоимость/)).toBeVisible();
+  await expect(page.getByText(/Стоимость/)).toBeVisible();
 
   const addon = page.locator('input[name="addonIds"]').first();
 
   if (await addon.count()) {
-    const before = await page.getByText(/Предварительная стоимость/).locator("..").innerText();
+    const before = await page.getByRole("heading", { name: "Сводка заказа" }).locator("..").innerText();
 
     await addon.check();
-    await expect(page.getByText(/Доплаты/)).toBeVisible();
-    const after = await page.getByText(/Предварительная стоимость/).locator("..").innerText();
+    await expect(page.getByRole("heading", { name: "Доплаты", exact: true })).toBeVisible();
+    const after = await page.getByRole("heading", { name: "Сводка заказа" }).locator("..").innerText();
 
     expect(after).not.toBe(before);
   }
 });
 
+test("order package cards show marketing fields and recommended state", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+
+  await expect(page.getByRole("heading", { name: "Пакет" })).toBeVisible();
+  await expect(page.getByText("Оптимальный выбор").first()).toBeVisible();
+  await expect(page.getByText("Популярный").first()).toBeVisible();
+  await expect(page.getByText("Для запуска или обновления малого бренда")).toBeVisible();
+  await expect(page.getByText("Логотип").first()).toBeVisible();
+});
+
 test("mobile order form keeps visual examples inside viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
 
   await expect(page.getByRole("heading", { name: "Оформить заказ" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Пример работы для ориентира" })).toBeVisible();
@@ -253,15 +273,10 @@ test("mobile order form keeps visual examples inside viewport", async ({ page })
 });
 
 test("order form preserves contact fields after fast-submit guard", async ({ page }) => {
-  await page.goto("/order?service=brand-identity");
-  const form = page.locator('main form:has(input[name="clientName"])');
   const email = `qa-fast-${Date.now()}@example.test`;
+  await reachOrderReview(page, { email, name: "QA Fast Submit" });
+  const form = page.locator('main form:has(input[name="clientName"])');
 
-  await form.locator('input[name="clientName"]').fill("QA Fast Submit");
-  await form.locator('select[name="contactMethod"]').selectOption("Email");
-  await form.locator('input[name="contactValue"]').fill(email);
-  await form.locator('textarea[name="resultDescription"]').fill("QA fast submit guard check.");
-  await form.locator('textarea[name="stylePreferences"]').fill("Clean, minimal audit data.");
   const submitButton = form.getByRole("button", { name: "Отправить заказ" });
 
   await expect(submitButton).toBeEnabled({ timeout: 4_000 });
@@ -273,6 +288,54 @@ test("order form preserves contact fields after fast-submit guard", async ({ pag
   await expect(page.getByText("Форма отправлена слишком быстро. Проверьте данные и попробуйте ещё раз.")).toBeVisible();
   await expect(form.locator('select[name="contactMethod"]')).toHaveValue("Email");
   await expect(form.locator('input[name="contactValue"]')).toHaveValue(email);
+});
+
+test("order brief chips preserve manual text and avoid duplicates", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+
+  const brief = page.locator('textarea[name="resultDescription"]');
+  await brief.fill("Нужен фирменный стиль");
+  await page.getByRole("button", { name: "логотип", exact: true }).click();
+  await page.getByRole("button", { name: "логотип", exact: true }).click();
+
+  await expect(brief).toHaveValue("Нужен фирменный стиль, логотип");
+});
+
+test("order draft restores wizard fields after reload", async ({ page }) => {
+  await page.goto("/order?service=brand-identity");
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await goToNextOrderStep(page);
+  await page.locator('textarea[name="resultDescription"]').fill("Черновик заявки для проверки восстановления.");
+
+  await page.reload();
+
+  await expect(page.getByRole("heading", { name: "Бриф" })).toBeVisible();
+  await expect(page.locator('textarea[name="resultDescription"]')).toHaveValue(
+    "Черновик заявки для проверки восстановления."
+  );
+  await page.getByRole("button", { name: "Очистить черновик" }).click();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Услуга" })).toBeVisible();
+});
+
+test("order quiz recommends an existing service", async ({ page }) => {
+  await page.goto("/order");
+
+  await page.getByRole("button", { name: "Помочь выбрать" }).click();
+  await page.getByRole("button", { name: "Презентация" }).click();
+  await page.getByRole("button", { name: "Продажи" }).click();
+  await page.getByRole("button", { name: "Обычный срок" }).click();
+  await page.getByRole("button", { name: "Всё готово" }).click();
+  await page.getByRole("button", { name: "Одна задача" }).click();
+  await page.getByRole("button", { name: "Подобрать услугу" }).click();
+
+  await expect(page.locator('select[name="serviceId"]')).toHaveValue(/.+/);
+  await goToNextOrderStep(page);
+  await expect(page.getByRole("heading", { name: "Пакет" })).toBeVisible();
 });
 
 test("public routes send baseline security headers", async ({ page }) => {

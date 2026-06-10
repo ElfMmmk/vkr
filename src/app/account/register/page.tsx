@@ -4,7 +4,14 @@ import { AccountAuthForm } from "@/components/account-auth-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
-export default function AccountRegisterPage() {
+export default async function AccountRegisterPage({
+  searchParams
+}: {
+  searchParams: Promise<{ claim?: string }>;
+}) {
+  const params = await searchParams;
+  const claimQuery = params.claim ? `?claim=${encodeURIComponent(params.claim)}` : "";
+
   return (
     <>
       <SiteHeader />
@@ -18,11 +25,11 @@ export default function AccountRegisterPage() {
             После регистрации новые заявки будут автоматически привязаны к кабинету, а клиент
             сможет отслеживать их состояние.
           </p>
-          <Link className="focus-ring mt-6 inline-flex text-sm font-semibold text-accent hover:text-ink" href="/account/login">
+          <Link className="focus-ring mt-6 inline-flex text-sm font-semibold text-accent hover:text-ink" href={`/account/login${claimQuery}`}>
             Уже есть кабинет? Войти
           </Link>
         </div>
-        <AccountAuthForm mode="register" />
+        <AccountAuthForm claimToken={params.claim ?? ""} mode="register" />
       </main>
       <SiteFooter />
     </>

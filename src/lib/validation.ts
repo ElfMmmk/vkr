@@ -59,6 +59,13 @@ export const servicePackageSchema = z
     serviceId: z.string().trim().min(1),
     title: z.string().trim().min(fieldLimits.servicePackage.title.min).max(fieldLimits.servicePackage.title.max),
     description: z.string().trim().max(fieldLimits.servicePackage.description.max).default(""),
+    badge: z.string().trim().max(fieldLimits.servicePackage.badge.max).default(""),
+    bestFor: z.string().trim().max(fieldLimits.servicePackage.bestFor.max).default(""),
+    outcome: z.string().trim().max(fieldLimits.servicePackage.outcome.max).default(""),
+    includedItems: z
+      .array(z.string().trim().min(1).max(fieldLimits.servicePackage.includedItem.max))
+      .max(fieldLimits.servicePackage.includedItems.max)
+      .default([]),
     priceFrom: z.coerce.number().int().min(fieldLimits.servicePackage.price.min).max(fieldLimits.servicePackage.price.max),
     priceTo: z.coerce.number().int().min(fieldLimits.servicePackage.price.min).max(fieldLimits.servicePackage.price.max),
     durationFromDays: z.coerce
@@ -76,7 +83,8 @@ export const servicePackageSchema = z
       .int()
       .min(fieldLimits.servicePackage.displayOrder.min)
       .max(fieldLimits.servicePackage.displayOrder.max),
-    isActive: z.boolean()
+    isActive: z.boolean(),
+    isRecommended: z.boolean().default(false)
   })
   .refine((value) => value.priceTo >= value.priceFrom, {
     message: "Максимальная цена не может быть меньше минимальной",

@@ -10,13 +10,14 @@ import {
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass } from "@/components/form-controls";
 
-export function AccountAuthForm({ mode }: { mode: "login" | "register" }) {
+export function AccountAuthForm({ claimToken = "", mode }: { claimToken?: string; mode: "login" | "register" }) {
   const action = mode === "login" ? clientLoginAction : clientRegisterAction;
   const [state, formAction] = useActionState<AccountFormState, FormData>(action, {});
   const isRegister = mode === "register";
 
   return (
     <form action={formAction} className="grid gap-5 border border-line bg-white p-6">
+      <input name="claimToken" type="hidden" value={claimToken} />
       {isRegister ? (
         <Field label="Имя" required>
           <input

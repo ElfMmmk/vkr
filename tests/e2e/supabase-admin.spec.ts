@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
+import { createClaimTokenExpiresAt, hashClaimToken } from "@/lib/request-claim";
 import type { Database, Json, UserRole } from "@/lib/supabase/database.types";
 import { noopRealtimeTransport } from "../supabase-test-transport";
 
@@ -254,6 +255,15 @@ async function cleanupSmokeFixture(fixture: SmokeFixture | null): Promise<void> 
   }
 
   const { adminClient, prefix, users, requestId, serviceSlug } = fixture;
+  const { data: smokeRequests } = await adminClient
+    .from("requests")
+    .select("id")
+    .like("source_hash", `${prefix}-%`);
+  const requestIds = Array.from(
+    new Set([requestId, ...(smokeRequests?.map((request) => request.id) ?? [])].filter(Boolean))
+  ) as string[];
+
+  await cleanupOrderAttachmentsForRequests(adminClient, requestIds);
 
   if (requestId) {
     await adminClient.from("requests").delete().eq("id", requestId);
@@ -292,6 +302,30 @@ async function cleanupSmokeFixture(fixture: SmokeFixture | null): Promise<void> 
   }
 }
 
+async function cleanupOrderAttachmentsForRequests(
+  adminClient: AppClient,
+  requestIds: string[]
+): Promise<void> {
+  if (!requestIds.length) {
+    return;
+  }
+
+  const { data: attachments } = await adminClient
+    .from("order_attachments")
+    .select("id, storage_path")
+    .in("request_id", requestIds);
+  const attachmentIds = attachments?.map((attachment) => attachment.id) ?? [];
+  const storagePaths = attachments?.map((attachment) => attachment.storage_path).filter(Boolean) ?? [];
+
+  if (storagePaths.length > 0) {
+    await adminClient.storage.from("order-attachments").remove(storagePaths);
+  }
+
+  if (attachmentIds.length > 0) {
+    await adminClient.from("order_attachments").delete().in("id", attachmentIds);
+  }
+}
+
 async function resetBrowserSession(page: Page): Promise<void> {
   await page.context().clearCookies();
   await page.goto("/");
@@ -318,6 +352,17 @@ async function loginAsRejected(page: Page, user: TestUser): Promise<void> {
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/admin\/login/, { timeout: 15_000 });
   await expect(page.locator("body")).toContainText("нет доступа");
+}
+
+async function loginAsClient(page: Page, user: TestUser, claimToken = ""): Promise<void> {
+  await resetBrowserSession(page);
+  await page.goto(claimToken ? `/account/login?claim=${claimToken}` : "/account/login");
+  const authForm = page.locator('form:has(input[name="email"])');
+
+  await authForm.locator('input[name="email"]').fill(user.email);
+  await authForm.locator('input[name="password"]').fill(user.password);
+  await authForm.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/account(?:\/requests\/[^?]+)?(?:\?|$)/, { timeout: 15_000 });
 }
 
 test.describe("real Supabase admin smoke", () => {
@@ -546,6 +591,137 @@ test.describe("real Supabase admin smoke", () => {
     );
   });
 
+  test("guest claim token links a request to the signed-in client once", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+    const adminClient = fixture!.adminClient;
+    const claimToken = `${fixture!.prefix}-${randomUUID()}`;
+    let claimRequestId: string | null = null;
+
+    try {
+      const { data: request, error: requestError } = await adminClient
+        .from("requests")
+        .insert({
+          client_name: `Claim ${fixture!.prefix}`,
+          contact_method: "email",
+          contact_value: `${fixture!.prefix}-claim@example.test`,
+          client_user_id: null,
+          service_id: null,
+          service_title: "Claim smoke",
+          comment: "Temporary guest request for claim smoke.",
+          result_description: "Temporary brief for guest claim smoke.",
+          source_hash: `${fixture!.prefix}-claim`,
+          status: "new"
+        })
+        .select("id")
+        .single();
+
+      expect(requestError).toBeNull();
+      expect(request?.id).toBeTruthy();
+      claimRequestId = request?.id ?? null;
+
+      if (!claimRequestId) {
+        throw new Error("Failed to create claim smoke request.");
+      }
+
+      const { error: claimError } = await adminClient.from("request_claim_tokens").insert({
+        expires_at: createClaimTokenExpiresAt(),
+        request_id: claimRequestId,
+        token_hash: hashClaimToken(claimToken)
+      });
+
+      expect(claimError).toBeNull();
+
+      await loginAsClient(page, fixture!.users.client, claimToken);
+      await expect(page).toHaveURL(new RegExp(`/account/requests/${claimRequestId}\\?notice=request-claimed`));
+
+      await expect
+        .poll(async () => {
+          const { data } = await adminClient
+            .from("requests")
+            .select("client_user_id")
+            .eq("id", claimRequestId ?? "")
+            .single();
+
+          return data?.client_user_id;
+        })
+        .toBe(fixture!.users.client.id);
+
+      const { data: usedToken } = await adminClient
+        .from("request_claim_tokens")
+        .select("used_at")
+        .eq("request_id", claimRequestId ?? "")
+        .single();
+
+      expect(usedToken?.used_at).toBeTruthy();
+
+      await loginAsClient(page, fixture!.users.client, claimToken);
+      await expect(page).toHaveURL(/\/account\?notice=signed-in/);
+    } finally {
+      if (claimRequestId) {
+        await cleanupOrderAttachmentsForRequests(adminClient, [claimRequestId]);
+        await adminClient.from("requests").delete().eq("id", claimRequestId);
+      }
+
+      await adminClient.from("requests").delete().like("source_hash", `${fixture!.prefix}-claim%`);
+    }
+  });
+
+  test("client uploads private order material and manager sees it", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+    expect(fixture!.requestId).toBeTruthy();
+    const adminClient = fixture!.adminClient;
+    const fileName = `brief-${fixture!.prefix}.txt`;
+    const attachmentIds: string[] = [];
+    const storagePaths: string[] = [];
+
+    try {
+      await loginAsClient(page, fixture!.users.client);
+      await page.goto(`/account/requests/${fixture!.requestId}`);
+
+      const attachmentForm = page.locator('form:has(input[name="attachments"])');
+      await expect(attachmentForm).toBeVisible();
+      await attachmentForm.locator('input[name="attachments"]').setInputFiles({
+        name: fileName,
+        mimeType: "text/plain",
+        buffer: Buffer.from(`Temporary order material ${fixture!.prefix}`, "utf8")
+      });
+      await attachmentForm.locator('button[type="submit"]').click();
+      await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}.*notice=attachment-uploaded`));
+      await expect(page.getByRole("link", { name: fileName })).toBeVisible();
+
+      await expect
+        .poll(async () => {
+          const { data } = await adminClient
+            .from("order_attachments")
+            .select("id, storage_path")
+            .eq("request_id", fixture!.requestId ?? "")
+            .eq("file_name", fileName);
+
+          attachmentIds.splice(0, attachmentIds.length, ...(data?.map((attachment) => attachment.id) ?? []));
+          storagePaths.splice(
+            0,
+            storagePaths.length,
+            ...(data?.map((attachment) => attachment.storage_path).filter(Boolean) ?? [])
+          );
+
+          return data?.length ?? 0;
+        })
+        .toBe(1);
+
+      await loginAs(page, fixture!.users.manager);
+      await page.goto(`/admin/requests/${fixture!.requestId}`);
+      await expect(page.getByRole("link", { name: fileName })).toBeVisible();
+    } finally {
+      if (storagePaths.length > 0) {
+        await adminClient.storage.from("order-attachments").remove(storagePaths);
+      }
+
+      if (attachmentIds.length > 0) {
+        await adminClient.from("order_attachments").delete().in("id", attachmentIds);
+      }
+    }
+  });
+
   test("admin page block QA restores the original page snapshot", async ({ page }) => {
     expect(fixture).not.toBeNull();
     const adminClient = fixture!.adminClient;
@@ -698,18 +874,13 @@ test.describe("real Supabase admin smoke", () => {
     await expect(page).toHaveURL(new RegExp(`/admin/requests/${fixture!.requestId}`));
     await expect(page.getByText("Договор: Отправлен клиенту")).toBeVisible();
 
-    await resetBrowserSession(page);
-    await page.goto("/account/login");
-    await page.locator('input[name="email"]').fill(fixture!.users.client.email);
-    await page.locator('input[name="password"]').fill(fixture!.users.client.password);
-    await page.getByRole("button", { name: "Войти" }).click();
-    await expect(page).toHaveURL(/\/account(?:\?|$)/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Мои заказы" })).toBeVisible();
+    await loginAsClient(page, fixture!.users.client);
+    await page.goto(`/account/requests/${fixture!.requestId}`);
     await expect(page.getByRole("heading", { name: "Договор-заказ" })).toBeVisible();
     await expect(page.getByText("На согласовании")).toBeVisible();
 
     await page.getByRole("button", { name: "Принять договор-заказ" }).click();
-    await expect(page).toHaveURL(/\/account\?notice=order-contract-accepted/);
+    await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}\\?notice=order-contract-accepted`));
     await expect(page.getByText("Принят", { exact: true })).toBeVisible();
   });
 

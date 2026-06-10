@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { acceptOrderContractAction, clientSignOutAction } from "@/app/account/actions";
+import { clientSignOutAction } from "@/app/account/actions";
 import { RouteFlashToast } from "@/components/route-flash-toast";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -88,6 +88,14 @@ export default async function AccountPage() {
                   <p className="mt-4 text-sm leading-6 text-muted">
                     {request.resultDescription || request.comment}
                   </p>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Link
+                      className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                      href={`/account/requests/${request.id}`}
+                    >
+                      Открыть заказ
+                    </Link>
+                  </div>
                   {request.contract && ["sent", "accepted"].includes(request.contract.status) ? (
                     <div className="mt-5 border border-cobalt/25 bg-cobalt/10 p-4">
                       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
@@ -109,13 +117,12 @@ export default async function AccountPage() {
                         </p>
                       ) : null}
                       {request.contract.status === "sent" ? (
-                        <form action={acceptOrderContractAction} className="mt-4">
-                          <input name="requestId" type="hidden" value={request.id} />
-                          <input name="contractId" type="hidden" value={request.contract.id} />
-                          <button className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px">
-                            Принять договор-заказ
-                          </button>
-                        </form>
+                        <Link
+                          className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                          href={`/account/requests/${request.id}`}
+                        >
+                          Перейти к согласованию
+                        </Link>
                       ) : null}
                     </div>
                   ) : null}

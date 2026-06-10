@@ -8,6 +8,12 @@ import { getAdminEmail, requireClientSession, resolveUserProfile } from "@/lib/a
 import { getRegistrationErrorMessage } from "@/lib/auth-errors";
 import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
+import { MAX_ORDER_ATTACHMENT_COUNT } from "@/lib/order-attachments";
+import {
+  getOrderAttachmentFiles,
+  uploadOrderAttachmentFiles
+} from "@/lib/order-attachment-storage";
+import { hashClaimToken, isClaimTokenExpired } from "@/lib/request-claim";
 import {
   createSupabaseServerClient,
   getSupabaseAdminOrThrow,
@@ -30,6 +36,66 @@ const registerSchema = accountAuthSchema.extend({
   fullName: z.string().trim().min(2, "Укажите имя").max(120)
 });
 
+async function claimRequestForUser(token: string, userId: string): Promise<string | null> {
+  if (!token) {
+    return null;
+  }
+
+  const client = getSupabaseAdminOrThrow();
+  const tokenHash = hashClaimToken(token);
+  const { data: claim, error } = await client
+    .from("request_claim_tokens")
+    .select("id, request_id, expires_at, used_at")
+    .eq("token_hash", tokenHash)
+    .maybeSingle();
+
+  if (error || !claim || claim.used_at || isClaimTokenExpired(claim.expires_at)) {
+    return null;
+  }
+
+  const { data: request } = await client
+    .from("requests")
+    .select("id, client_user_id")
+    .eq("id", claim.request_id)
+    .maybeSingle();
+
+  if (!request || request.client_user_id) {
+    return null;
+  }
+
+  const { data: updatedRequest, error: updateError } = await client
+    .from("requests")
+    .update({ client_user_id: userId })
+    .eq("id", claim.request_id)
+    .is("client_user_id", null)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError || !updatedRequest) {
+    return null;
+  }
+
+  await client
+    .from("order_attachments")
+    .update({ client_user_id: userId })
+    .eq("request_id", updatedRequest.id);
+  await client
+    .from("request_claim_tokens")
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", claim.id);
+
+  revalidatePath("/account");
+  revalidatePath(`/account/requests/${updatedRequest.id}`);
+
+  return updatedRequest.id;
+}
+
+function accountRedirectPath(notice: string, claimedRequestId: string | null): string {
+  return claimedRequestId
+    ? `/account/requests/${claimedRequestId}?notice=request-claimed`
+    : `/account?notice=${notice}`;
+}
+
 export async function clientLoginAction(
   _previousState: AccountFormState,
   formData: FormData
@@ -42,6 +108,7 @@ export async function clientLoginAction(
     email: formString(formData, "email"),
     password: formString(formData, "password")
   });
+  const claimToken = formString(formData, "claimToken");
 
   if (!parsed.success) {
     return { message: parsed.error.issues[0]?.message ?? "Проверьте данные входа." };
@@ -53,13 +120,15 @@ export async function clientLoginAction(
     return { message: "Вход временно недоступен. Попробуйте позже." };
   }
 
-  const { error } = await client.auth.signInWithPassword(parsed.data);
+  const { data, error } = await client.auth.signInWithPassword(parsed.data);
 
-  if (error) {
+  if (error || !data.user) {
     return { message: "Не удалось войти. Проверьте email и пароль." };
   }
 
-  redirect("/account?notice=signed-in");
+  const claimedRequestId = await claimRequestForUser(claimToken, data.user.id);
+
+  redirect(accountRedirectPath("signed-in", claimedRequestId));
 }
 
 export async function clientRegisterAction(
@@ -75,6 +144,7 @@ export async function clientRegisterAction(
     password: formString(formData, "password"),
     fullName: formString(formData, "fullName")
   });
+  const claimToken = formString(formData, "claimToken");
 
   if (!parsed.success) {
     return { message: parsed.error.issues[0]?.message ?? "Проверьте данные регистрации." };
@@ -118,7 +188,9 @@ export async function clientRegisterAction(
     return { message: "Регистрация создана. Проверьте почту, если включено подтверждение email." };
   }
 
-  redirect("/account?notice=registered");
+  const claimedRequestId = data.user ? await claimRequestForUser(claimToken, data.user.id) : null;
+
+  redirect(accountRedirectPath("registered", claimedRequestId));
 }
 
 export async function clientSignOutAction(): Promise<void> {
@@ -170,5 +242,57 @@ export async function acceptOrderContractAction(formData: FormData): Promise<voi
   }
 
   revalidatePath("/account");
-  redirect("/account?notice=order-contract-accepted");
+  revalidatePath(`/account/requests/${requestId}`);
+  redirect(`/account/requests/${requestId}?notice=order-contract-accepted`);
+}
+
+export async function uploadClientOrderAttachmentAction(formData: FormData): Promise<void> {
+  const session = await requireClientSession();
+  const requestId = formString(formData, "requestId").trim();
+
+  if (!requestId) {
+    redirect("/account");
+  }
+
+  const client = getSupabaseAdminOrThrow();
+  const { data: request } = await client
+    .from("requests")
+    .select("id, client_user_id, status, order_attachments(id)")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!request || request.client_user_id !== session.id) {
+    redirect("/account");
+  }
+
+  if (request.status === "completed" || request.status === "rejected") {
+    redirect(`/account/requests/${requestId}?notice=attachments-closed`);
+  }
+
+  const files = getOrderAttachmentFiles(formData);
+  const existingAttachments = Array.isArray(request.order_attachments)
+    ? request.order_attachments.length
+    : 0;
+
+  if (!files.length) {
+    redirect(`/account/requests/${requestId}?notice=attachment-empty`);
+  }
+
+  if (existingAttachments + files.length > MAX_ORDER_ATTACHMENT_COUNT) {
+    redirect(`/account/requests/${requestId}?notice=attachment-limit`);
+  }
+
+  const upload = await uploadOrderAttachmentFiles(client, {
+    clientUserId: session.id,
+    files,
+    requestId
+  });
+
+  if (!upload.ok) {
+    redirect(`/account/requests/${requestId}?notice=attachment-failed`);
+  }
+
+  revalidatePath("/account");
+  revalidatePath(`/account/requests/${requestId}`);
+  redirect(`/account/requests/${requestId}?notice=attachment-uploaded`);
 }
