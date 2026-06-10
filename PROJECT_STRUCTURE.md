@@ -1,6 +1,6 @@
 # Project Structure
 
-Этот файл - навигационная карта проекта для быстрых правок и проверок. Его нужно обновлять после каждого изменения, которое добавляет или переносит маршруты, server actions, data-layer, Supabase schema/seed, тесты, крупные компоненты или важные правила работы.
+Этот файл - навигационная карта проекта для быстрых правок и проверок. Его нужно обновлять после каждого изменения, которое добавляет или переносит маршруты, server actions, data-layer, Supabase schema/migrations, тесты, крупные компоненты или важные правила работы.
 
 ## Stack
 
@@ -12,10 +12,10 @@
 
 ## Root Files
 
-- `README.md` - запуск, Supabase setup, SMTP, Vercel и команды проверок.
+- `README.md` - запуск, Supabase setup, SMTP и команды проверок.
 - `PROJECT_STRUCTURE.md` - карта проекта; обновлять вместе со структурными изменениями.
+- `VKR_PROJECT_OVERVIEW.md` - расширенное описание реализованной системы для ВКР.
 - `supabase/schema.sql` - текущая схема БД, RLS, grants, Storage bucket.
-- `supabase/seed.sql` - демо-контент для страниц, услуг, проектов, пакетов и доплат.
 - `supabase/migrations/20260605000000_analytics_events.sql` - ручная migration для событий `page_view` и `cta_click`.
 - `supabase/migrations/20260606000000_order_attachments_and_claim_tokens.sql` - migration для private order attachments, bucket `order-attachments` и guest claim tokens.
 - `package.json` - npm scripts: `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e`.
@@ -116,6 +116,5 @@ Admin routes:
 - Do not add `VKR_text/` or `VKR_presentation/` to Git.
 - Do not add `EXECPLAN-*` files without explicit confirmation.
 - Do not push without separate confirmation.
-- Do not describe online payment as implemented; it is only a future possibility.
 - For admin QA, avoid mutating actions such as saving page changes or changing roles unless explicitly allowed.
 - When structure changes, update this file in the same work item.

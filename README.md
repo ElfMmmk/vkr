@@ -7,7 +7,6 @@ Full-stack VKR demo application for a graphic designer portfolio, content manage
 - Next.js App Router + TypeScript
 - Tailwind CSS
 - Supabase Postgres, Auth, and Storage
-- Vercel deployment
 
 ## Local start
 
@@ -36,7 +35,7 @@ The public site works with built-in demo content even before Supabase is configu
 
 ## Order workflow
 
-Clients move through a step-by-step `/order` wizard: service, package, add-ons/reference, brief, contacts, and review. The form keeps a sticky estimate summary, saves a versioned local draft in `localStorage`, supports quick brief chips, can recommend a starting service/package through a local no-AI quiz, and stores a safe success-page snapshot in browser storage. Managers and admins process orders in `/admin/requests`, prepare an in-system contract-order with final price, scope, and deadline, and clients accept that contract-order from `/account/requests/[id]`. Online payment and legal e-signature are not implemented.
+Clients move through a step-by-step `/order` wizard: service, package, add-ons/reference, brief, contacts, and review. The form keeps a sticky estimate summary, saves a versioned local draft in `localStorage`, supports quick brief chips, can recommend a starting service/package through a local no-AI quiz, and stores a safe success-page snapshot in browser storage. Managers and admins process orders in `/admin/requests`, prepare an in-system contract-order with final price, scope, and deadline, and clients accept that contract-order from `/account/requests/[id]`.
 
 Private client materials use the `order-attachments` Supabase Storage bucket plus `public.order_attachments` metadata rows. Uploads are limited to 5 files per request, 10 MB each, and PDF/JPEG/PNG/WebP/DOC/DOCX/TXT. The public `portfolio-images` bucket is not used for client materials. Guest orders receive a 24-hour one-time claim token on the success page; after login or registration, the token links the request to the client account without matching by email or phone.
 
@@ -46,12 +45,12 @@ Real order persistence is server-only: the public form posts to a Next.js server
 
 The target demo setup uses Supabase Free plan: 500 MB database, 1 GB file storage, 5 GB egress, and up to 2 active free projects. Free projects can pause after 1 week of inactivity, so open the Supabase dashboard before a demo if the project has been idle.
 
-1. Create a Supabase project named `vkr-portfolio` on Free plan in `Europe / Central EU (Frankfurt)`.
-2. Run `supabase/schema.sql`.
-3. Run `supabase/seed.sql`; it creates demo pages, services, portfolio projects, service packages, and add-ons.
+1. Create a Supabase project on Free plan in `Europe / Central EU (Frankfurt)`.
+2. Run `supabase/schema.sql` for the base database structure.
+3. Run the SQL files in `supabase/migrations/` in chronological order when applying incremental changes.
 4. Verify that the public Storage bucket `portfolio-images` and private Storage bucket `order-attachments` exist. `schema.sql` creates or updates both with 10 MB file limits.
 5. Create one Auth user for `ADMIN_EMAIL` and set this user's row in `public.profiles` to `role = 'admin'`.
-6. Copy the project URL, publishable key, and secret key into `.env.local` and later into Vercel environment variables.
+6. Copy the project URL, publishable key, and secret key into `.env.local`.
 
 ### Auth email and live registration demo
 
@@ -72,35 +71,11 @@ If the mailbox domain has strict DMARC and SMTP2GO refuses single sender verific
 
 Before the defense, register a fresh client email through `/account/register`, confirm that the email arrives, follow the confirmation link if email confirmation is enabled, sign in through `/account/login`, and place one test order. Keep a fallback client demo email and password outside Git, for example in a local password manager or private demo notes. Do not commit demo passwords to `.env.local`, README, seed files, or tests.
 
-## Vercel deployment
-
-Deploy only after live registration works through Custom SMTP. A `*.vercel.app` URL is used as the public site URL and Supabase redirect URL, not as an email sender domain.
-
-For a production Vercel deployment, set these environment variables in Vercel Project Settings -> Environment Variables:
-
-```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SECRET_KEY
-ADMIN_EMAIL
-```
-
-After deployment, update Supabase Authentication -> URL Configuration:
-
-```text
-Site URL: https://your-vercel-project.vercel.app
-Redirect URLs:
-https://your-vercel-project.vercel.app/**
-http://localhost:3000/**
-```
-
-Then repeat the live flow on the Vercel URL: registration, email confirmation, login, order placement, manager contract-order, and client acceptance.
-
 For uploaded portfolio images, the app keeps a server-side 10 MB limit and accepts JPEG, PNG, WebP, GIF, and AVIF. Do not enable paid Storage Image Transformations for the Free plan demo.
 
 Legacy Supabase key names are still supported as fallback: `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Prefer the newer `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`.
 
-The hosted `vkr-portfolio` Supabase project was updated with the media/security audit changes on 2026-05-12 and the technical audit upload/RLS fixes on 2026-05-14. New projects should use the current `supabase/schema.sql` plus `supabase/seed.sql`; the schema contains order snapshots, contract-orders, private order attachments, guest claim tokens, RLS, grants, and Storage settings, while the seed file contains demo service packages and add-ons. For an existing hosted project that already has the earlier schema, also run `supabase/migrations/20260606000000_order_attachments_and_claim_tokens.sql` before testing private materials or guest claim flow.
+New projects should use the current `supabase/schema.sql` plus the incremental SQL files in `supabase/migrations/`. Demo content is available from the local fallback data in `src/lib/demo-data.ts` and can be replaced through the admin interface.
 
 The application keeps generated-style Supabase Database types in `src/lib/supabase/database.types.ts`. Update this file when `supabase/schema.sql` changes.
 
@@ -133,5 +108,3 @@ order attachments are visible to managers, and that guest claim tokens are singl
 temporary smoke rows and private Storage objects during cleanup.
 
 They require `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`.
-
-File cleanup notes are tracked in `FILE-CLEANUP-AUDIT.md`.

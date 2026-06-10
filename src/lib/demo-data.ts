@@ -258,7 +258,7 @@ export const demoPages: PageContent[] = [
     body: "Для запроса проекта заполните форму заявки или напишите напрямую. Ответ обычно занимает один рабочий день.",
     blocks: {
       email: "designer@example.com",
-      telegram: "@design_portfolio"
+      telegram: "@portfolio_contact"
     }
   }
 ];

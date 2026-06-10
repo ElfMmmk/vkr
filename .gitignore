@@ -28,9 +28,14 @@ pnpm-debug.log*
 AGENTS.md
 PLANS.md
 EXECPLAN*.md
+FILE-CLEANUP-AUDIT.md
+audit/
 .agent/
 .agents/
 .codex/
+
+# Local Supabase data snapshots or personal demo seeds
+/supabase/seed.sql
 
 # VKR draft materials and references
 /VKR_text/

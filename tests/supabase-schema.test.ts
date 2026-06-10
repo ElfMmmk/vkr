@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const schemaSql = readFileSync(join(process.cwd(), "supabase", "schema.sql"), "utf8");
-const seedSql = readFileSync(join(process.cwd(), "supabase", "seed.sql"), "utf8");
 const orderAttachmentsMigrationSql = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260606000000_order_attachments_and_claim_tokens.sql"),
   "utf8"
@@ -126,16 +125,5 @@ describe("supabase security schema", () => {
     expect(servicePackageMarketingMigrationSql).toContain("add column if not exists outcome");
     expect(servicePackageMarketingMigrationSql).toContain("add column if not exists included_items");
     expect(servicePackageMarketingMigrationSql).toContain("add column if not exists is_recommended");
-  });
-
-  it("seeds package and add-on prices after demo services are created", () => {
-    expect(seedSql).toContain("with package_seed");
-    expect(seedSql).toContain("public.service_packages");
-    expect(seedSql).toContain("'brand-identity', 'Старт'");
-    expect(seedSql).toContain("'presentation-design', 'До 20 слайдов'");
-    expect(seedSql).toContain("with addon_seed");
-    expect(seedSql).toContain("public.service_addons");
-    expect(seedSql).toContain("'packaging-print', 'Допечатная проверка'");
-    expect(seedSql).toContain("where not exists");
   });
 });

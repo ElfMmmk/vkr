@@ -83,7 +83,7 @@ test("contacts page wraps contact values at narrow widths", async ({ page }) => 
   await page.goto("/contacts");
 
   const email = page.getByText("designer@example.com");
-  const telegram = page.getByText("@design_portfolio");
+  const telegram = page.getByText("@portfolio_contact");
 
   await expect(email).toBeVisible();
   await expect(telegram).toBeVisible();

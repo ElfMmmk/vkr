@@ -24,7 +24,7 @@ export default async function ContactsPage() {
             <div className="min-w-0 border border-line bg-white p-6">
               <p className="text-sm uppercase tracking-[0.18em] text-muted">Telegram</p>
               <p className="mt-4 max-w-full break-words text-xl font-semibold leading-tight [overflow-wrap:anywhere] lg:text-2xl">
-                {page.blocks.telegram ?? "@design_portfolio"}
+                {page.blocks.telegram ?? "@portfolio_contact"}
               </p>
             </div>
             <div className="border border-line bg-ink p-6 text-white">
