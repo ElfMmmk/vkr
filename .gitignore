@@ -38,6 +38,8 @@ audit/
 /supabase/seed.sql
 
 # VKR draft materials and references
+/vkr/
+/VKR_PROJECT_OVERVIEW.md
 /VKR_text/
 /vkr_text/
 /VKR_presentation/

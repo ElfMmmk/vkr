@@ -14,7 +14,6 @@
 
 - `README.md` - запуск, Supabase setup, SMTP и команды проверок.
 - `PROJECT_STRUCTURE.md` - карта проекта; обновлять вместе со структурными изменениями.
-- `VKR_PROJECT_OVERVIEW.md` - расширенное описание реализованной системы для ВКР.
 - `supabase/schema.sql` - текущая схема БД, RLS, grants, Storage bucket.
 - `supabase/migrations/20260605000000_analytics_events.sql` - ручная migration для событий `page_view` и `cta_click`.
 - `supabase/migrations/20260606000000_order_attachments_and_claim_tokens.sql` - migration для private order attachments, bucket `order-attachments` и guest claim tokens.
