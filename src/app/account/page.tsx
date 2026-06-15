@@ -29,9 +29,6 @@ export default async function AccountPage() {
               {session.fullName || session.email}
             </h1>
             <p className="mt-3 text-muted">{session.email}</p>
-            <p className="mt-3 inline-flex border border-cobalt/25 bg-cobalt/10 px-3 py-1.5 text-sm font-semibold text-cobalt">
-              Вы вошли как {session.fullName || session.email}
-            </p>
           </div>
           <form action={clientSignOutAction}>
             <button className="focus-ring inline-flex min-h-11 items-center justify-center border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px">

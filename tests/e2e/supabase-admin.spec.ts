@@ -591,6 +591,111 @@ test.describe("real Supabase admin smoke", () => {
     );
   });
 
+  test("admin saves package and add-on order after reload", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+    const adminClient = fixture!.adminClient;
+    const { data: existingService, error: serviceError } = await adminClient
+      .from("services")
+      .select("id, title")
+      .eq("slug", fixture!.serviceSlug)
+      .maybeSingle();
+
+    if (serviceError) {
+      throw new Error(`Failed to load smoke service: ${serviceError.message}`);
+    }
+    const createdService = !existingService;
+    const service = existingService ?? (
+      await adminClient
+        .from("services")
+        .insert({
+          slug: fixture!.serviceSlug,
+          title: `Smoke service ${fixture!.prefix}`,
+          description: "Temporary service for order sorting smoke.",
+          display_order: 999,
+          is_active: true
+        })
+        .select("id, title")
+        .single()
+    ).data;
+
+    if (!service) {
+      throw new Error("Failed to create smoke service for order sorting");
+    }
+
+    const packageTitles = [`Package A ${fixture!.prefix}`, `Package B ${fixture!.prefix}`];
+    const addonTitles = [`Addon A ${fixture!.prefix}`, `Addon B ${fixture!.prefix}`];
+
+    try {
+      const { error: packageError } = await adminClient.from("service_packages").insert(
+        packageTitles.map((title, index) => ({
+          service_id: service.id,
+          title,
+          price_from: 10000,
+          price_to: 20000,
+          duration_from_days: 5,
+          duration_to_days: 10,
+          display_order: (index + 1) * 10,
+          is_active: true
+        }))
+      );
+      const { error: addonError } = await adminClient.from("service_addons").insert(
+        addonTitles.map((title, index) => ({
+          service_id: service.id,
+          title,
+          price: 5000,
+          duration_days: 1,
+          display_order: (index + 1) * 10,
+          is_active: true
+        }))
+      );
+
+      if (packageError || addonError) {
+        throw new Error(`Failed to seed order items: ${packageError?.message ?? addonError?.message}`);
+      }
+
+      await loginAs(page, fixture!.users.admin);
+      await page.goto("/admin/services");
+      const serviceCard = page.getByRole("heading", { name: service.title }).locator("xpath=ancestor::section[1]");
+
+      await serviceCard.getByRole("button", { name: `Опустить ${packageTitles[0]}` }).click();
+      await serviceCard.getByRole("button", { name: "Сохранить порядок пакетов" }).click();
+      await page.goto("/admin/services");
+
+      await expect
+        .poll(async () => {
+          const { data } = await adminClient
+            .from("service_packages")
+            .select("title")
+            .eq("service_id", service.id)
+            .order("display_order");
+          return data?.map((item) => item.title);
+        })
+        .toEqual([...packageTitles].reverse());
+
+      const refreshedCard = page.getByRole("heading", { name: service.title }).locator("xpath=ancestor::section[1]");
+      await refreshedCard.getByRole("button", { name: `Опустить ${addonTitles[0]}` }).click();
+      await refreshedCard.getByRole("button", { name: "Сохранить порядок дополнительных услуг" }).click();
+      await page.goto("/admin/services");
+
+      await expect
+        .poll(async () => {
+          const { data } = await adminClient
+            .from("service_addons")
+            .select("title")
+            .eq("service_id", service.id)
+            .order("display_order");
+          return data?.map((item) => item.title);
+        })
+        .toEqual([...addonTitles].reverse());
+    } finally {
+      await adminClient.from("service_packages").delete().eq("service_id", service.id);
+      await adminClient.from("service_addons").delete().eq("service_id", service.id);
+      if (createdService) {
+        await adminClient.from("services").delete().eq("id", service.id);
+      }
+    }
+  });
+
   test("guest claim token links a request to the signed-in client once", async ({ page }) => {
     expect(fixture).not.toBeNull();
     const adminClient = fixture!.adminClient;
@@ -751,9 +856,10 @@ test.describe("real Supabase admin smoke", () => {
       await page.goto("/admin/pages");
 
       const form = page.locator(`form:has(input[name="pageKey"][value="${pageKey}"])`);
+      await form.locator("xpath=ancestor::details[1]").locator("summary").click();
       await expect(form).toBeVisible();
 
-      await form.locator('button[type="button"]').last().click();
+      await form.getByRole("button", { name: "Добавить текстовый раздел" }).click();
       await form.locator('input[placeholder="Название блока"]').last().fill(qaKey);
       await form.locator('textarea[placeholder="Текст блока"]').last().fill(qaValue);
       await form.locator('button[type="submit"]').click();
@@ -850,7 +956,47 @@ test.describe("real Supabase admin smoke", () => {
     }
   });
 
-  test("manager can send a contract-order and client can accept it", async ({ page }) => {
+  test("registration creates an Auth user and profile", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+    const email = `${fixture!.prefix}-registration@example.test`;
+    const password = `${randomUUID()}Aa1!`;
+    let userId = "";
+
+    try {
+      await resetBrowserSession(page);
+      await page.goto("/account/register");
+      await page.locator('input[name="fullName"]').fill("Мария Тестовая");
+      await page.locator('input[name="email"]').fill(email);
+      await page.locator('input[name="password"]').fill(password);
+      await page.getByRole("button", { name: "Создать кабинет" }).click();
+
+      await expect
+        .poll(async () => {
+          const users = await fixture!.adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+          const user = users.data.users.find((item) => item.email === email);
+          userId = user?.id ?? "";
+          return Boolean(userId);
+        })
+        .toBe(true);
+
+      await expect
+        .poll(async () => {
+          const { data } = await fixture!.adminClient
+            .from("profiles")
+            .select("full_name, role")
+            .eq("id", userId)
+            .maybeSingle();
+          return data;
+        })
+        .toEqual({ full_name: "Мария Тестовая", role: "client" });
+    } finally {
+      if (userId) {
+        await fixture!.adminClient.auth.admin.deleteUser(userId);
+      }
+    }
+  });
+
+  test("contract supports revision request, resend and acceptance", async ({ page }) => {
     expect(fixture).not.toBeNull();
     expect(fixture!.requestId).toBeTruthy();
 
@@ -877,11 +1023,36 @@ test.describe("real Supabase admin smoke", () => {
     await loginAsClient(page, fixture!.users.client);
     await page.goto(`/account/requests/${fixture!.requestId}`);
     await expect(page.getByRole("heading", { name: "Договор-заказ" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "История" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Таймлайн" })).toHaveCount(0);
     await expect(page.getByText("На согласовании")).toBeVisible();
 
-    await page.getByRole("button", { name: "Принять договор-заказ" }).click();
+    await page.getByText("Запросить изменения").click();
+    await page.locator('textarea[name="feedback"]').fill("Уточните, пожалуйста, состав финальных файлов и этапы передачи.");
+    await page.getByRole("button", { name: "Отправить комментарий" }).click();
+    await expect(page).toHaveURL(new RegExp(`notice=order-contract-revision-requested`));
+    await expect(page.getByText("На доработке")).toBeVisible();
+
+    await loginAs(page, fixture!.users.manager);
+    await page.goto(`/admin/requests/${fixture!.requestId}`);
+    await expect(page.getByText("Уточните, пожалуйста, состав финальных файлов и этапы передачи.")).toBeVisible();
+    const revisedContractForm = page.locator('form:has(input[name="finalPrice"])');
+    await revisedContractForm
+      .locator('textarea[name="materials"]')
+      .fill("Макет, исходные материалы, экспортированные файлы и инструкция по передаче.");
+    await revisedContractForm.locator('select[name="status"]').selectOption("sent");
+    await revisedContractForm.getByRole("button", { name: "Сохранить договор-заказ" }).click();
+
+    await loginAsClient(page, fixture!.users.client);
+    await page.goto(`/account/requests/${fixture!.requestId}`);
+    await expect(page.getByText("На согласовании")).toBeVisible();
+    await page.getByRole("button", { name: "Принять условия" }).click();
     await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}\\?notice=order-contract-accepted`));
     await expect(page.getByText("Принят", { exact: true })).toBeVisible();
+
+    await loginAs(page, fixture!.users.manager);
+    await page.goto(`/admin/requests/${fixture!.requestId}`);
+    await expect(page.getByText(/Редактирование недоступно. Клиент принял договор-заказ./)).toBeVisible();
   });
 
   test("admin can upload and remove a small portfolio image", async ({ page }) => {

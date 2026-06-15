@@ -1,7 +1,8 @@
-export const ORDER_DRAFT_VERSION = 1;
-export const ORDER_DRAFT_STORAGE_KEY = "vkr-order-draft-v1";
+export const ORDER_DRAFT_VERSION = 2;
+export const ORDER_DRAFT_STORAGE_KEY = "vkr-order-draft-v2";
+export const LEGACY_ORDER_DRAFT_STORAGE_KEY = "vkr-order-draft-v1";
 
-export const orderStepIds = ["service", "package", "extras", "brief", "contact", "review"] as const;
+export const orderStepIds = ["service", "extras", "brief", "contact", "review"] as const;
 
 export type OrderStepId = typeof orderStepIds[number];
 
@@ -88,12 +89,24 @@ export function parseOrderDraft(raw: string | null | undefined): OrderDraft | nu
   try {
     const parsed: unknown = JSON.parse(raw);
 
-    if (!isRecord(parsed) || parsed.version !== ORDER_DRAFT_VERSION || !isRecord(parsed.values)) {
+    if (
+      !isRecord(parsed)
+      || (parsed.version !== ORDER_DRAFT_VERSION && parsed.version !== 1)
+      || !isRecord(parsed.values)
+    ) {
       return null;
     }
 
-    const stepId = typeof parsed.stepId === "string" && orderStepIds.includes(parsed.stepId as OrderStepId)
-      ? parsed.stepId as OrderStepId
+    const legacyStepMap: Record<string, OrderStepId> = {
+      service: "service",
+      package: "service",
+      extras: "extras",
+      brief: "brief",
+      contact: "contact",
+      review: "review"
+    };
+    const stepId = typeof parsed.stepId === "string"
+      ? legacyStepMap[parsed.stepId] ?? "service"
       : "service";
 
     return {

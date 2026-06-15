@@ -20,6 +20,7 @@ export function ProjectCard({ project, priority = false }: ProjectCardProps) {
               fill
               loading={priority ? undefined : "lazy"}
               priority={priority}
+              quality={90}
               sizes="(min-width: 900px) 33vw, 100vw"
               src={project.coverImageUrl}
             />

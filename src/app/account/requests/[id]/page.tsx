@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import {
   acceptOrderContractAction,
+  requestOrderContractRevisionAction,
   uploadClientOrderAttachmentAction
 } from "@/app/account/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -128,7 +129,7 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
               </div>
             </section>
 
-            {request.contract && ["sent", "accepted"].includes(request.contract.status) ? (
+            {request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status) ? (
               <section className="border border-cobalt/25 bg-cobalt/10 p-5">
                 <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                   <div>
@@ -139,23 +140,71 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
                     </p>
                   </div>
                   <span className="border border-cobalt/25 bg-white px-3 py-1.5 text-sm font-semibold text-cobalt">
-                    {request.contract.status === "accepted" ? "Принят" : "На согласовании"}
+                    {request.contract.status === "accepted"
+                      ? "Принят"
+                      : request.contract.status === "revision_requested"
+                        ? "На доработке"
+                        : "На согласовании"}
                   </span>
                 </div>
                 <p className="mt-4 text-sm leading-6">{request.contract.workScope}</p>
                 {request.contract.managerComment ? (
                   <p className="mt-3 text-sm leading-6 text-muted">{request.contract.managerComment}</p>
                 ) : null}
+                {request.contract.feedback.length ? (
+                  <div className="mt-5 border-t border-cobalt/20 pt-5">
+                    <h3 className="font-semibold">История комментариев</h3>
+                    <ol className="mt-3 grid gap-3">
+                      {request.contract.feedback.map((item) => (
+                        <li className="border border-cobalt/20 bg-white p-3 text-sm leading-6" key={item.id}>
+                          <p>{item.message}</p>
+                          <time className="mt-2 block text-xs text-muted" dateTime={item.createdAt}>
+                            {new Date(item.createdAt).toLocaleString("ru-RU")}
+                          </time>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
                 {request.contract.status === "sent" ? (
-                  <form action={acceptOrderContractAction} className="mt-5">
-                    <input name="requestId" type="hidden" value={request.id} />
-                    <input name="contractId" type="hidden" value={request.contract.id} />
-                    <FormSubmitButton
-                      className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
-                      idleLabel="Принять договор-заказ"
-                      pendingLabel="Принятие..."
-                    />
-                  </form>
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <form action={acceptOrderContractAction}>
+                      <input name="requestId" type="hidden" value={request.id} />
+                      <input name="contractId" type="hidden" value={request.contract.id} />
+                      <FormSubmitButton
+                        className="focus-ring inline-flex min-h-11 w-full items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                        idleLabel="Принять условия"
+                        pendingLabel="Принятие..."
+                      />
+                    </form>
+                    <details className="border border-line bg-white md:col-span-2">
+                      <summary className="focus-ring cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+                        Запросить изменения
+                      </summary>
+                      <form action={requestOrderContractRevisionAction} className="grid gap-3 border-t border-line p-4">
+                        <input name="requestId" type="hidden" value={request.id} />
+                        <input name="contractId" type="hidden" value={request.contract.id} />
+                        <label className="text-sm font-semibold" htmlFor="contract-feedback">
+                          Что нужно изменить
+                        </label>
+                        <textarea
+                          className="min-h-32 w-full border border-line bg-white px-3 py-2 text-sm leading-6"
+                          id="contract-feedback"
+                          maxLength={1000}
+                          minLength={10}
+                          name="feedback"
+                          placeholder="Опишите, какие условия требуется уточнить или изменить"
+                          required
+                        />
+                        <p className="text-xs text-muted">От 10 до 1000 символов.</p>
+                        <FormSubmitButton
+                          className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
+                          idleLabel="Отправить комментарий"
+                          pendingLabel="Отправка..."
+                        />
+                      </form>
+                    </details>
+                  </div>
                 ) : null}
               </section>
             ) : null}
@@ -214,7 +263,7 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
             </section>
 
             <section className="border border-line bg-paper p-5">
-              <h2 className="text-xl font-semibold">Таймлайн</h2>
+              <h2 className="text-xl font-semibold">История</h2>
               <ol className="mt-4 grid gap-3 text-sm leading-6">
                 {timeline.map((event) => (
                   <li className="border-l-2 border-cobalt/30 pl-3" key={event.id}>

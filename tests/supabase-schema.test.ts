@@ -11,6 +11,10 @@ const servicePackageMarketingMigrationSql = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260607000000_service_package_marketing.sql"),
   "utf8"
 );
+const orderContractRevisionMigrationSql = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260615000000_order_contract_revision.sql"),
+  "utf8"
+);
 
 describe("supabase security schema", () => {
   it("keeps order inserts server-only for public Supabase clients", () => {
@@ -86,8 +90,20 @@ describe("supabase security schema", () => {
 
   it("keeps clients limited to their own visible contract orders", () => {
     expect(schemaSql).toContain('create policy "Clients can read own order contracts"');
-    expect(schemaSql).toContain("status in ('sent', 'accepted')");
+    expect(schemaSql).toContain("status in ('sent', 'revision_requested', 'accepted')");
     expect(schemaSql).toContain("request.client_user_id = auth.uid()");
+  });
+
+  it("adds atomic contract revision requests with protected feedback history", () => {
+    for (const sql of [schemaSql, orderContractRevisionMigrationSql]) {
+      expect(sql).toContain("revision_requested");
+      expect(sql).toContain("create table if not exists public.order_contract_feedback");
+      expect(sql).toContain("create or replace function public.request_order_contract_revision");
+      expect(sql).toContain("security definer");
+      expect(sql).toContain("char_length(trim(feedback_message)) not between 10 and 1000");
+      expect(sql).toContain('create policy "Clients can read own contract feedback"');
+      expect(sql).toContain("grant execute on function public.request_order_contract_revision(uuid, text) to authenticated");
+    }
   });
 
   it("adds private order attachments and guest claim tokens", () => {

@@ -10,7 +10,6 @@ async function reachOrderReview(page: Page, options: { email?: string; name?: st
   await page.goto("/order?service=brand-identity");
   await goToNextOrderStep(page);
   await goToNextOrderStep(page);
-  await goToNextOrderStep(page);
   await page.locator('textarea[name="resultDescription"]').fill("QA wizard order brief for a visual identity.");
   await page.locator('textarea[name="stylePreferences"]').fill("Clean, premium, restrained.");
   await goToNextOrderStep(page);
@@ -34,7 +33,7 @@ test("public visitor can browse portfolio and open an order form", async ({ page
 
   await page.getByRole("link", { name: "Заказать похожий проект" }).click();
   await expect(page).toHaveURL(/\/order/);
-  await expect(page.getByText("Шаг 1 из 6").first()).toBeVisible();
+  await expect(page.getByText("Шаг 1 из 5")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Сводка заказа" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Далее" })).toBeVisible();
 });
@@ -83,12 +82,10 @@ test("contacts page wraps contact values at narrow widths", async ({ page }) => 
   await page.goto("/contacts");
 
   const email = page.getByText("designer@example.com");
-  const telegram = page.getByText("@portfolio_contact");
 
   await expect(email).toBeVisible();
-  await expect(telegram).toBeVisible();
 
-  for (const locator of [email, telegram]) {
+  for (const locator of [email]) {
     const childBox = await locator.boundingBox();
     const parentBox = await locator.locator("..").boundingBox();
 
@@ -194,7 +191,7 @@ test("project page has breadcrumbs and gallery slider", async ({ page }) => {
 
   if (await nextButton.isVisible()) {
     await nextButton.click();
-    await expect(page.getByText("2 / 2")).toBeVisible();
+    await expect(page.getByText(/2 \/ \d+/)).toBeVisible();
   } else {
     await expect(
       page.getByText("1 / 1").or(page.getByText("Изображения для галереи пока не добавлены."))
@@ -205,7 +202,6 @@ test("project page has breadcrumbs and gallery slider", async ({ page }) => {
 test("order wizard blocks advancing from an incomplete brief", async ({ page }) => {
   await page.goto("/order");
 
-  await goToNextOrderStep(page);
   await goToNextOrderStep(page);
   await goToNextOrderStep(page);
   await expect(page.getByRole("heading", { name: "Бриф" })).toBeVisible();
@@ -226,19 +222,19 @@ test("order form briefly delays submit availability", async ({ page }) => {
 test("order form recalculates package and add-ons", async ({ page }) => {
   await page.goto("/order?service=brand-identity");
   await goToNextOrderStep(page);
-  await goToNextOrderStep(page);
 
   await expect(page.getByRole("heading", { name: "Сводка заказа" })).toBeVisible();
-  await expect(page.getByText(/Стоимость/)).toBeVisible();
+  const summary = page.getByRole("complementary");
+  await expect(summary.getByText("Стоимость", { exact: true })).toBeVisible();
 
   const addon = page.locator('input[name="addonIds"]').first();
 
   if (await addon.count()) {
-    const before = await page.getByRole("heading", { name: "Сводка заказа" }).locator("..").innerText();
+    const before = await summary.innerText();
 
     await addon.check();
-    await expect(page.getByRole("heading", { name: "Доплаты", exact: true })).toBeVisible();
-    const after = await page.getByRole("heading", { name: "Сводка заказа" }).locator("..").innerText();
+    await expect(page.getByRole("heading", { name: "Дополнительные услуги", exact: true })).toBeVisible();
+    const after = await summary.innerText();
 
     expect(after).not.toBe(before);
   }
@@ -246,12 +242,11 @@ test("order form recalculates package and add-ons", async ({ page }) => {
 
 test("order package cards show marketing fields and recommended state", async ({ page }) => {
   await page.goto("/order?service=brand-identity");
-  await goToNextOrderStep(page);
 
   await expect(page.getByRole("heading", { name: "Пакет" })).toBeVisible();
   await expect(page.getByText("Оптимальный выбор").first()).toBeVisible();
-  await expect(page.getByText("Популярный").first()).toBeVisible();
-  await expect(page.getByText("Для запуска или обновления малого бренда")).toBeVisible();
+  await expect(page.getByText("Рекомендуем").first()).toBeVisible();
+  await expect(page.getByText("Для запуска или обновления визуального образа компании")).toBeVisible();
   await expect(page.getByText("Логотип").first()).toBeVisible();
 });
 
@@ -259,10 +254,9 @@ test("mobile order form keeps visual examples inside viewport", async ({ page })
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/order?service=brand-identity");
   await goToNextOrderStep(page);
-  await goToNextOrderStep(page);
 
   await expect(page.getByRole("heading", { name: "Оформить заказ" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Пример работы для ориентира" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Проект из портфолио" })).toBeVisible();
   await expect(page.getByRole("img").first()).toBeVisible();
 
   const hasHorizontalOverflow = await page.evaluate(
@@ -270,6 +264,40 @@ test("mobile order form keeps visual examples inside viewport", async ({ page })
   );
 
   expect(hasHorizontalOverflow).toBe(false);
+});
+
+test("order wizard stays inside viewport and summary does not overlap controls", async ({ page }) => {
+  for (const width of [390, 768, 1024, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/order?service=brand-identity");
+    await goToNextOrderStep(page);
+
+    const layout = await page.evaluate(() => {
+      const next = Array.from(document.querySelectorAll("button")).find((button) =>
+        button.textContent?.trim() === "Далее"
+      );
+      const summary = Array.from(document.querySelectorAll("aside, details")).find((element) =>
+        element.textContent?.includes("Сводка заказа")
+      );
+      const nextBox = next?.getBoundingClientRect();
+      const summaryBox = summary?.getBoundingClientRect();
+
+      return {
+        hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+        overlaps: Boolean(
+          nextBox
+          && summaryBox
+          && nextBox.left < summaryBox.right
+          && nextBox.right > summaryBox.left
+          && nextBox.top < summaryBox.bottom
+          && nextBox.bottom > summaryBox.top
+        )
+      };
+    });
+
+    expect(layout.hasHorizontalOverflow).toBe(false);
+    expect(layout.overlaps).toBe(false);
+  }
 });
 
 test("order form preserves contact fields after fast-submit guard", async ({ page }) => {
@@ -294,7 +322,6 @@ test("order brief chips preserve manual text and avoid duplicates", async ({ pag
   await page.goto("/order?service=brand-identity");
   await goToNextOrderStep(page);
   await goToNextOrderStep(page);
-  await goToNextOrderStep(page);
 
   const brief = page.locator('textarea[name="resultDescription"]');
   await brief.fill("Нужен фирменный стиль");
@@ -306,7 +333,6 @@ test("order brief chips preserve manual text and avoid duplicates", async ({ pag
 
 test("order draft restores wizard fields after reload", async ({ page }) => {
   await page.goto("/order?service=brand-identity");
-  await goToNextOrderStep(page);
   await goToNextOrderStep(page);
   await goToNextOrderStep(page);
   await page.locator('textarea[name="resultDescription"]').fill("Черновик заявки для проверки восстановления.");
@@ -334,7 +360,6 @@ test("order quiz recommends an existing service", async ({ page }) => {
   await page.getByRole("button", { name: "Подобрать услугу" }).click();
 
   await expect(page.locator('select[name="serviceId"]')).toHaveValue(/.+/);
-  await goToNextOrderStep(page);
   await expect(page.getByRole("heading", { name: "Пакет" })).toBeVisible();
 });
 

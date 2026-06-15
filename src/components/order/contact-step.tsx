@@ -9,6 +9,7 @@ import {
   invalidClass
 } from "@/components/order/form-parts";
 import { contactPlaceholders } from "@/components/order/order-form-config";
+import { formatContactInput } from "@/lib/contact";
 import { fieldLimits } from "@/lib/field-limits";
 import {
   MAX_ORDER_ATTACHMENT_COUNT,
@@ -82,17 +83,33 @@ export function ContactStep({
       </div>
 
       <Field label="Контакт" required>
-        <LimitedInput
-          aria-invalid={Boolean(fieldErrors?.contactValue) || undefined}
-          className={`${inputClass}${invalidClass(Boolean(fieldErrors?.contactValue))}`}
-          maxLength={fieldLimits.order.contactValue.max}
-          name="contactValue"
-          onChange={(event) => setContactValue(event.target.value)}
-          placeholder={contactPlaceholders[contactMethod]}
-          required
-          type={contactMethod === "Email" ? "email" : "text"}
-          value={contactValue}
-        />
+        {contactMethod === "Телефон" ? (
+          <input
+            aria-invalid={Boolean(fieldErrors?.contactValue) || undefined}
+            autoComplete="tel"
+            className={`${inputClass}${invalidClass(Boolean(fieldErrors?.contactValue))}`}
+            inputMode="tel"
+            name="contactValue"
+            onChange={(event) => setContactValue(formatContactInput(contactMethod, event.target.value))}
+            placeholder={contactPlaceholders[contactMethod]}
+            required
+            type="tel"
+            value={contactValue}
+          />
+        ) : (
+          <LimitedInput
+            aria-invalid={Boolean(fieldErrors?.contactValue) || undefined}
+            autoComplete={contactMethod === "Email" ? "email" : undefined}
+            className={`${inputClass}${invalidClass(Boolean(fieldErrors?.contactValue))}`}
+            maxLength={fieldLimits.order.contactValue.max}
+            name="contactValue"
+            onChange={(event) => setContactValue(event.target.value)}
+            placeholder={contactPlaceholders[contactMethod]}
+            required
+            type={contactMethod === "Email" ? "email" : "text"}
+            value={contactValue}
+          />
+        )}
         <FieldError errors={fieldErrors?.contactValue} />
       </Field>
 

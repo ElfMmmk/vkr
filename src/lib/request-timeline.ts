@@ -4,6 +4,7 @@ import type { OrderAttachment, OrderContract, OrderRequest, RequestStatusHistory
 export type RequestTimelineEventType =
   | "attachment"
   | "contract"
+  | "contract_feedback"
   | "created"
   | "status";
 
@@ -16,7 +17,7 @@ export type RequestTimelineEvent = {
 };
 
 function contractIsVisible(contract: OrderContract): boolean {
-  return contract.status === "sent" || contract.status === "accepted";
+  return contract.status === "sent" || contract.status === "revision_requested" || contract.status === "accepted";
 }
 
 function buildStatusEvent(history: RequestStatusHistory): RequestTimelineEvent {
@@ -59,6 +60,32 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
       createdAt: contract.createdAt
     }
   ];
+
+  for (const feedback of contract.feedback) {
+    events.push({
+      id: `contract-feedback-${feedback.id}`,
+      type: "contract_feedback",
+      title: "Запрошены изменения договора-заказа",
+      description: feedback.message,
+      createdAt: feedback.createdAt
+    });
+  }
+
+  const latestFeedback = contract.feedback.at(-1);
+  if (
+    latestFeedback
+    && contract.updatedAt
+    && contract.status !== "revision_requested"
+    && new Date(contract.updatedAt).getTime() > new Date(latestFeedback.createdAt).getTime()
+  ) {
+    events.push({
+      id: `contract-resent-${contract.id}-${contract.updatedAt}`,
+      type: "contract",
+      title: "Договор-заказ отправлен повторно",
+      description: "Исправленные условия отправлены клиенту на повторное согласование.",
+      createdAt: contract.updatedAt
+    });
+  }
 
   if (contract.acceptedAt) {
     events.push({

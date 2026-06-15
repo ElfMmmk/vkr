@@ -53,6 +53,7 @@ export function FeaturedProjectRotator({ projects }: FeaturedProjectRotatorProps
           className="object-cover transition duration-700"
           fill
           priority={activeIndex === 0}
+          quality={90}
           sizes="(min-width: 900px) 52vw, 100vw"
           src={activeProject.coverImageUrl}
         />

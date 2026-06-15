@@ -101,6 +101,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                   className="object-cover"
                   fill
                   loading="eager"
+                  quality={90}
                   sizes="(min-width: 900px) 54vw, 100vw"
                   src={project.coverImageUrl}
                 />

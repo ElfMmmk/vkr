@@ -19,13 +19,17 @@ import {
   pageKeySchema,
   servicePackageSchema
 } from "@/lib/validation";
+import {
+  formatContactInput,
+  normalizeAndValidateContact
+} from "@/lib/contact";
 
 describe("validation helpers", () => {
   it("accepts a valid order request", () => {
     const result = orderRequestSchema.safeParse({
       clientName: "Анна",
       contactMethod: "Telegram",
-      contactValue: "@anna",
+      contactValue: "@anna_design",
       serviceId: "svc-brand",
       packageId: "pkg-brand-start",
       addonIds: ["addon-brand-guide"],
@@ -51,6 +55,26 @@ describe("validation helpers", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("normalizes and validates contacts according to the selected method", () => {
+    expect(normalizeAndValidateContact("Email", "  MARIA@Example.COM ")).toEqual({
+      ok: true,
+      value: "maria@example.com"
+    });
+    expect(normalizeAndValidateContact("Telegram", "maria_design")).toEqual({
+      ok: true,
+      value: "@maria_design"
+    });
+    expect(normalizeAndValidateContact("Телефон", "89991234567")).toEqual({
+      ok: true,
+      value: "+7 999 123-45-67"
+    });
+    expect(normalizeAndValidateContact("Телефон", "123")).toEqual({
+      ok: false,
+      error: "Укажите корректный номер телефона"
+    });
+    expect(formatContactInput("Телефон", "89991234567")).toBe("+7 999 123-45-67");
   });
 
   it("calculates package and add-on estimates", () => {
@@ -147,7 +171,16 @@ describe("validation helpers", () => {
     });
     const oldestProjects = filterProjects(demoProjects, { sort: "oldest" });
 
-    expect(filteredProjects.map((project) => project.slug)).toEqual(["urban-forum-deck"]);
+    expect(filteredProjects.map((project) => project.slug)).toContain("urban-forum-deck");
+    expect(
+      filteredProjects.every(
+        (project) =>
+          project.tags.some((tag) => tag.slug === "digital")
+          && project.services.some((service) =>
+            ["brand-identity", "presentation-design"].includes(service.slug)
+          )
+      )
+    ).toBe(true);
     expect(oldestProjects[0]?.slug).toBe("studio-frame");
   });
 

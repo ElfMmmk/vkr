@@ -215,7 +215,8 @@ describe("admin analytics helpers", () => {
             managerComment: "",
             status: "accepted",
             acceptedAt: "2026-06-01T10:00:00.000Z",
-            createdAt: "2026-05-31T10:00:00.000Z"
+            createdAt: "2026-05-31T10:00:00.000Z",
+            feedback: []
           }
         }),
         request({
@@ -234,7 +235,8 @@ describe("admin analytics helpers", () => {
             managerComment: "",
             status: "sent",
             acceptedAt: null,
-            createdAt: "2026-05-26T10:00:00.000Z"
+            createdAt: "2026-05-26T10:00:00.000Z",
+            feedback: []
           }
         }),
         request({

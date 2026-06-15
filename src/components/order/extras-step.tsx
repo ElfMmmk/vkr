@@ -30,11 +30,11 @@ export function ExtrasStep({
     <div className="grid gap-6">
       {serviceAddons.length ? (
         <section className="border border-line bg-white p-5">
-          <h3 className="text-xl font-semibold">Доплаты</h3>
+          <h3 className="text-xl font-semibold">Дополнительные услуги</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {serviceAddons.map((addon) => (
               <label
-                className={`flex cursor-pointer gap-3 border p-4 transition hover:border-ink ${
+                className={`flex min-w-0 cursor-pointer gap-3 overflow-hidden border p-4 transition hover:border-ink ${
                   selectedAddonIds.includes(addon.id)
                     ? "border-cobalt bg-cobalt/10"
                     : "border-line bg-white"
@@ -49,8 +49,8 @@ export function ExtrasStep({
                   type="checkbox"
                   value={addon.id}
                 />
-                <span>
-                  <span className="block font-semibold">{addon.title}</span>
+                <span className="min-w-0 break-words">
+                  <span className="block break-words font-semibold">{addon.title}</span>
                   <span className="mt-1 block text-sm leading-6 text-muted">
                     {addon.description}
                   </span>
@@ -72,11 +72,15 @@ export function ExtrasStep({
 
       {serviceExamples.length ? (
         <section className="border border-line bg-paper p-5">
-          <h3 className="text-xl font-semibold">Пример работы для ориентира</h3>
+          <h3 className="text-xl font-semibold">Проект из портфолио</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Если вам близка подача одного из проектов, отметьте его как визуальный ориентир.
+            Он поможет понять желаемое направление, но не предполагает точного повторения работы.
+          </p>
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             {serviceExamples.map((project) => (
               <article
-                className={`border bg-white transition ${
+                className={`min-w-0 overflow-hidden border bg-white transition ${
                   referenceProjectId === project.id ? "border-cobalt" : "border-line"
                 }`}
                 key={project.id}
@@ -131,7 +135,7 @@ export function ExtrasStep({
                 type="radio"
                 value=""
               />
-              <span className="text-sm font-semibold text-muted">Без конкретного примера</span>
+              <span className="text-sm font-semibold text-muted">Не выбирать проект</span>
             </label>
           </div>
           <FieldError errors={fieldErrors?.referenceProjectId} />

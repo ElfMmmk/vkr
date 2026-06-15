@@ -19,7 +19,7 @@ export function PackageStep({
     packages.find((item) => item.isRecommended)?.id ?? packages[0]?.id ?? "";
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4 xl:grid-cols-3">
       {packages.map((item) => {
         const isSelected = selectedPackageId === item.id;
         const isRecommended = recommendedPackageId === item.id;
@@ -27,7 +27,7 @@ export function PackageStep({
 
         return (
           <label
-            className={`flex cursor-pointer gap-3 border p-4 transition hover:border-ink ${
+            className={`flex min-w-0 cursor-pointer gap-3 overflow-hidden border p-4 transition hover:border-ink ${
               isSelected ? "border-cobalt bg-cobalt/10" : "border-line bg-white"
             }`}
             key={item.id}
@@ -41,7 +41,7 @@ export function PackageStep({
               type="radio"
               value={item.id}
             />
-            <span className="min-w-0">
+            <span className="min-w-0 break-words">
               <span className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-ink">{item.title}</span>
                 {item.badge ? (
@@ -55,7 +55,9 @@ export function PackageStep({
                   </span>
                 ) : null}
               </span>
-              <span className="mt-1 block text-sm leading-6 text-muted">{item.description}</span>
+              <span className={`mt-1 block text-sm leading-6 ${isSelected ? "text-ink" : "text-muted"}`}>
+                {item.description}
+              </span>
               {hasMarketing ? (
                 <span className="mt-3 grid gap-2 text-sm leading-6 text-ink">
                   {item.bestFor ? <span>Подойдёт: {item.bestFor}</span> : null}
@@ -90,12 +92,14 @@ export function PackageStep({
         );
       })}
       {!packages.length ? (
-        <p className="border border-line bg-white p-4 text-sm leading-6 text-muted">
+        <p className="border border-line bg-white p-4 text-sm leading-6 text-muted xl:col-span-3">
           По этой услуге пока нельзя оформить заказ: дизайнер уточняет состав работ и ориентиры по стоимости.
           Выберите другую услугу или вернитесь к заказу позже.
         </p>
       ) : null}
-      <FieldError errors={errors} />
+      <div className="xl:col-span-3">
+        <FieldError errors={errors} />
+      </div>
     </div>
   );
 }

@@ -26,24 +26,6 @@ const initialState: AdminFormState = {
   message: ""
 };
 
-const blockTemplates = [
-  {
-    label: "Текстовый раздел",
-    key: "section",
-    value: "Новый раздел страницы"
-  },
-  {
-    label: "CTA-текст",
-    key: "cta",
-    value: "Оставить заявку"
-  },
-  {
-    label: "Факт",
-    key: "fact",
-    value: "Короткий показатель или важная деталь"
-  }
-] as const;
-
 function humanizeBlockTitle(key: string) {
   return key
     .replace(/[-_]+/g, " ")
@@ -94,10 +76,10 @@ export function AdminPageForm({
       current.map((block) => (block.id === id ? { ...block, ...values } : block))
     );
   };
-  const addBlock = (template: (typeof blockTemplates)[number]) => {
+  const addBlock = () => {
     setBlocks((current) => [
       ...current,
-      createPageBlockRow(getUniqueBlockKey(current, template.key), template.value)
+      createPageBlockRow(getUniqueBlockKey(current, "section"), "Новый текстовый раздел")
     ]);
   };
 
@@ -143,19 +125,14 @@ export function AdminPageForm({
               Добавляйте небольшие текстовые блоки для конкретной страницы. Название блока нужно для связи с местом вывода на сайте
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {blockTemplates.map((template) => (
-              <button
-                className="focus-ring inline-flex min-h-10 items-center justify-center gap-2 border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
-                key={template.key}
-                onClick={() => addBlock(template)}
-                type="button"
-              >
-                <Plus aria-hidden="true" size={16} />
-                {template.label}
-              </button>
-            ))}
-          </div>
+          <button
+            className="focus-ring inline-flex min-h-10 w-fit items-center justify-center gap-2 border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
+            onClick={addBlock}
+            type="button"
+          >
+            <Plus aria-hidden="true" size={16} />
+            Добавить текстовый раздел
+          </button>
           {blocks.map((block, index) => (
             <div
               className="grid gap-3 border border-line bg-paper p-3 transition hover:border-ink md:grid-cols-[auto_220px_minmax(0,1fr)_auto]"
@@ -232,21 +209,13 @@ export function AdminPageForm({
               Дополнительные разделы слишком длинные. Сократите текст перед сохранением.
             </p>
           ) : null}
-          <button
-            className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 border border-line bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-paper active:translate-y-px"
-            onClick={() => setBlocks((current) => [...current, createPageBlockRow()])}
-            type="button"
-          >
-            <Plus aria-hidden="true" size={17} />
-            Добавить раздел
-          </button>
         </div>
-        <section className="border border-line bg-white p-4">
-          <div className="mb-4 flex items-center gap-2 border-b border-line pb-3">
+        <details className="border border-line bg-white">
+          <summary className="focus-ring flex cursor-pointer list-none items-center gap-2 p-4 [&::-webkit-details-marker]:hidden">
             <Eye aria-hidden="true" className="text-muted" size={18} />
             <h3 className="text-sm font-semibold text-ink">Предпросмотр страницы</h3>
-          </div>
-          <div className="grid gap-5">
+          </summary>
+          <div className="grid gap-5 border-t border-line p-4">
             <div>
               <p className="text-xs uppercase tracking-[0.16em] text-muted">Основной экран</p>
               <h2 className="mt-2 text-3xl font-semibold">{title || "Без заголовка"}</h2>
@@ -269,7 +238,7 @@ export function AdminPageForm({
               </p>
             )}
           </div>
-        </section>
+        </details>
         {state.message ? (
           <ToastMessage
             key={`${state.ok}-${state.message}`}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AccountAuthForm } from "@/components/account-auth-form";
+import { RouteFlashToast } from "@/components/route-flash-toast";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
@@ -15,6 +16,7 @@ export default async function AccountLoginPage({
   return (
     <>
       <SiteHeader />
+      <RouteFlashToast />
       <main id="main-content" className="container-shell grid gap-8 py-16 md:grid-cols-[minmax(0,0.8fr)_minmax(320px,0.6fr)] md:py-24">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">

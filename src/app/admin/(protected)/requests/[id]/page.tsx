@@ -22,6 +22,7 @@ type AdminRequestDetailPageProps = {
 const contractStatusLabels = {
   draft: "Черновик",
   sent: "Отправлен клиенту",
+  revision_requested: "Клиент запросил изменения",
   accepted: "Принят клиентом",
   cancelled: "Отменён"
 } as const;
@@ -195,6 +196,7 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                     >
                       <option value="draft">Черновик</option>
                       <option value="sent">Отправить клиенту</option>
+                      <option disabled value="revision_requested">Клиент запросил изменения</option>
                       <option disabled value="accepted">Принят клиентом</option>
                       <option value="cancelled">Отменён</option>
                     </select>
@@ -233,9 +235,8 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                 </Field>
                 {contractIsAccepted ? (
                   <p className="border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
-                    Клиент уже принял договор-заказ
-                    {contract.acceptedAt ? `: ${new Date(contract.acceptedAt).toLocaleString("ru-RU")}` : ""}.
-                    Условия заблокированы от редактирования.
+                    Редактирование недоступно. Клиент принял договор-заказ.
+                    {contract.acceptedAt ? ` Время согласования: ${new Date(contract.acceptedAt).toLocaleString("ru-RU")}.` : ""}
                   </p>
                 ) : null}
                 <FormSubmitButton
@@ -245,6 +246,21 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                 />
               </AdminFormFieldset>
             </form>
+            {contract?.feedback.length ? (
+              <section className="mt-6 border-t border-line pt-5">
+                <h3 className="text-lg font-semibold">История комментариев клиента</h3>
+                <ol className="mt-3 grid gap-3">
+                  {contract.feedback.map((item) => (
+                    <li className="border border-line bg-paper p-3 text-sm leading-6" key={item.id}>
+                      <p>{item.message}</p>
+                      <time className="mt-2 block text-xs text-muted" dateTime={item.createdAt}>
+                        {new Date(item.createdAt).toLocaleString("ru-RU")}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
           </AdminCard>
         </div>
 

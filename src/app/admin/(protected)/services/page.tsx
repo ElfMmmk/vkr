@@ -1,6 +1,7 @@
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminServiceOrderForm } from "@/components/admin-service-order-form";
+import { AdminServiceItemOrderForm } from "@/components/admin-service-item-order-form";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
@@ -105,29 +106,18 @@ function PackageForm({
       <AdminFormFieldset canWrite={canWrite}>
         <input name="id" type="hidden" value={packageItem?.id ?? ""} />
         <input name="serviceId" type="hidden" value={serviceId} />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название пакета" required>
-            <LimitedInput
-              className={inputClass}
-              defaultValue={packageItem?.title}
-              maxLength={fieldLimits.servicePackage.title.max}
-              minLength={fieldLimits.servicePackage.title.min}
-              name="title"
-              placeholder="Базовый пакет"
-              required
-            />
-          </Field>
-          <Field label="Порядок">
-            <input
-              className={inputClass}
-              defaultValue={packageItem?.displayOrder ?? 100}
-              max={fieldLimits.servicePackage.displayOrder.max}
-              min={fieldLimits.servicePackage.displayOrder.min}
-              name="displayOrder"
-              type="number"
-            />
-          </Field>
-        </div>
+        <input name="displayOrder" type="hidden" value={packageItem?.displayOrder ?? ""} />
+        <Field label="Название пакета" required>
+          <LimitedInput
+            className={inputClass}
+            defaultValue={packageItem?.title}
+            maxLength={fieldLimits.servicePackage.title.max}
+            minLength={fieldLimits.servicePackage.title.min}
+            name="title"
+            placeholder="Базовый пакет"
+            required
+          />
+        </Field>
         <Field label="Описание пакета">
           <LimitedTextarea
             className={textareaClass}
@@ -253,29 +243,18 @@ function AddonForm({
       <AdminFormFieldset canWrite={canWrite}>
         <input name="id" type="hidden" value={addon?.id ?? ""} />
         <input name="serviceId" type="hidden" value={serviceId} />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название доплаты" required>
-            <LimitedInput
-              className={inputClass}
-              defaultValue={addon?.title}
-              maxLength={fieldLimits.serviceAddon.title.max}
-              minLength={fieldLimits.serviceAddon.title.min}
-              name="title"
-              placeholder="Срочное выполнение"
-              required
-            />
-          </Field>
-          <Field label="Порядок">
-            <input
-              className={inputClass}
-              defaultValue={addon?.displayOrder ?? 100}
-              max={fieldLimits.serviceAddon.displayOrder.max}
-              min={fieldLimits.serviceAddon.displayOrder.min}
-              name="displayOrder"
-              type="number"
-            />
-          </Field>
-        </div>
+        <input name="displayOrder" type="hidden" value={addon?.displayOrder ?? ""} />
+        <Field label="Название дополнительной услуги" required>
+          <LimitedInput
+            className={inputClass}
+            defaultValue={addon?.title}
+            maxLength={fieldLimits.serviceAddon.title.max}
+            minLength={fieldLimits.serviceAddon.title.min}
+            name="title"
+            placeholder="Дополнительная услуга"
+            required
+          />
+        </Field>
         <Field label="Описание доплаты">
           <LimitedTextarea
             className={textareaClass}
@@ -348,7 +327,7 @@ export default async function AdminServicesPage() {
                   <div>
                     <h3 className="text-lg font-semibold">Пакеты</h3>
                     <p className="mt-1 text-sm leading-6 text-muted">
-                      Видны клиенту при оформлении заказа.
+                      Видны клиенту при оформлении заказа. Порядок меняется ниже.
                     </p>
                   </div>
                   <details>
@@ -360,6 +339,12 @@ export default async function AdminServicesPage() {
                     </div>
                   </details>
                 </div>
+                <AdminServiceItemOrderForm
+                  canWrite={admin.canWrite}
+                  items={service.packages}
+                  kind="package"
+                  serviceId={service.id}
+                />
                 <div className="mt-4 grid gap-3">
                   {service.packages.map((packageItem) => (
                     <details className="border border-line bg-white p-4" key={packageItem.id}>
@@ -393,7 +378,7 @@ export default async function AdminServicesPage() {
               <section className="border border-line bg-paper p-4">
                 <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
                   <div>
-                    <h3 className="text-lg font-semibold">Доплаты</h3>
+                    <h3 className="text-lg font-semibold">Дополнительные услуги</h3>
                     <p className="mt-1 text-sm leading-6 text-muted">
                       Клиент может добавить их к выбранному пакету.
                     </p>
@@ -407,6 +392,12 @@ export default async function AdminServicesPage() {
                     </div>
                   </details>
                 </div>
+                <AdminServiceItemOrderForm
+                  canWrite={admin.canWrite}
+                  items={service.addons}
+                  kind="addon"
+                  serviceId={service.id}
+                />
                 <div className="mt-4 grid gap-3">
                   {service.addons.map((addon) => (
                     <details className="border border-line bg-white p-4" key={addon.id}>

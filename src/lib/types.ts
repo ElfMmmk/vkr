@@ -5,7 +5,7 @@ export type RequestStatus =
   | "completed"
   | "rejected";
 
-export type ContractStatus = "draft" | "sent" | "accepted" | "cancelled";
+export type ContractStatus = "draft" | "sent" | "revision_requested" | "accepted" | "cancelled";
 
 export type UserRole = "admin" | "manager" | "client";
 
@@ -168,6 +168,17 @@ export type OrderContract = {
   acceptedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
+  feedback: OrderContractFeedback[];
+};
+
+export type OrderContractFeedback = {
+  id: string;
+  contractId: string;
+  requestId: string;
+  clientUserId?: string | null;
+  authorRole: "client" | "manager" | "admin";
+  message: string;
+  createdAt: string;
 };
 
 export type OrderAttachment = {
@@ -219,7 +230,7 @@ export type AdminUserListResult = {
 
 export type AdminNotification = {
   id: string;
-  type: "request_created" | "request_status_changed" | "system";
+  type: "request_created" | "request_status_changed" | "contract_revision_requested" | "system";
   title: string;
   body: string;
   entityType: string;

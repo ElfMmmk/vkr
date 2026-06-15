@@ -6,75 +6,64 @@ type OrderSummaryProps = {
   estimate: OrderEstimate | null;
   packageTitle: string;
   serviceTitle: string;
-  onOpenReview?: () => void;
 };
 
-export function OrderSummaryAside({
+function SummaryContent({
   addonTitles,
   estimate,
   packageTitle,
   serviceTitle
 }: OrderSummaryProps) {
   return (
-    <aside className="hidden lg:block">
-      <div className="sticky top-24 border border-cobalt/25 bg-cobalt/10 p-5">
+    <dl className="grid gap-3 break-words text-sm leading-6">
+      <div>
+        <dt className="font-semibold text-ink">Услуга</dt>
+        <dd>{serviceTitle || "Не выбрана"}</dd>
+      </div>
+      <div>
+        <dt className="font-semibold text-ink">Пакет</dt>
+        <dd>{packageTitle || "Не выбран"}</dd>
+      </div>
+      <div>
+        <dt className="font-semibold text-ink">Дополнения</dt>
+        <dd>{addonTitles.length ? addonTitles.join(", ") : "Без дополнений"}</dd>
+      </div>
+      <div>
+        <dt className="font-semibold text-ink">Стоимость</dt>
+        <dd>{estimate ? formatPriceRange(estimate.priceFrom, estimate.priceTo) : "Уточняется"}</dd>
+      </div>
+      <div>
+        <dt className="font-semibold text-ink">Срок</dt>
+        <dd>
+          {estimate ? formatDurationRange(estimate.durationFromDays, estimate.durationToDays) : "Уточняется"}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+export function OrderSummaryAside(props: OrderSummaryProps) {
+  return (
+    <aside className="hidden min-w-0 lg:block">
+      <div className="sticky top-24 overflow-hidden border border-cobalt/25 bg-cobalt/10 p-5">
         <h2 className="text-xl font-semibold text-ink">Сводка заказа</h2>
-        <dl className="mt-4 grid gap-3 text-sm leading-6">
-          <div>
-            <dt className="font-semibold text-ink">Услуга</dt>
-            <dd>{serviceTitle || "Не выбрана"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink">Пакет</dt>
-            <dd>{packageTitle || "Не выбран"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink">Доплаты</dt>
-            <dd>{addonTitles.length ? addonTitles.join(", ") : "Без доплат"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink">Стоимость</dt>
-            <dd>{estimate ? formatPriceRange(estimate.priceFrom, estimate.priceTo) : "Уточняется"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink">Срок</dt>
-            <dd>
-              {estimate ? formatDurationRange(estimate.durationFromDays, estimate.durationToDays) : "Уточняется"}
-            </dd>
-          </div>
-        </dl>
+        <div className="mt-4">
+          <SummaryContent {...props} />
+        </div>
       </div>
     </aside>
   );
 }
 
-export function MobileOrderSummary({
-  estimate,
-  onOpenReview,
-  serviceTitle
-}: OrderSummaryProps) {
+export function MobileOrderSummary(props: OrderSummaryProps) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-cobalt/20 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(17,24,39,0.08)] backdrop-blur lg:hidden">
-      <div className="mx-auto flex max-w-screen-sm items-center justify-between gap-3">
-        <div className="min-w-0 text-sm">
-          <p className="truncate font-semibold text-ink">{serviceTitle || "Услуга не выбрана"}</p>
-          <p className="truncate text-muted">
-            {estimate
-              ? `${formatPriceRange(estimate.priceFrom, estimate.priceTo)} · ${formatDurationRange(
-                  estimate.durationFromDays,
-                  estimate.durationToDays
-                )}`
-              : "Расчёт уточняется"}
-          </p>
-        </div>
-        <button
-          className="focus-ring shrink-0 border border-line bg-white px-3 py-2 text-sm font-semibold text-ink"
-          onClick={onOpenReview}
-          type="button"
-        >
-          Сводка
-        </button>
+    <details className="border border-cobalt/25 bg-cobalt/10 lg:hidden">
+      <summary className="focus-ring cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+        Сводка заказа
+      </summary>
+      <div className="border-t border-cobalt/20 px-4 py-4">
+        <SummaryContent {...props} />
       </div>
-    </div>
+    </details>
   );
 }

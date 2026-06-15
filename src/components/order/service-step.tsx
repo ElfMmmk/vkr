@@ -1,8 +1,9 @@
 import { Field, selectClass } from "@/components/form-controls";
 import { FieldError, invalidClass } from "@/components/order/form-parts";
 import { quizQuestionOptions } from "@/components/order/order-form-config";
+import { PackageStep } from "@/components/order/package-step";
 import type { OrderQuizAnswers } from "@/lib/order-quiz";
-import type { Service } from "@/lib/types";
+import type { Service, ServicePackage } from "@/lib/types";
 
 type FieldErrors = Record<string, string[]> | undefined;
 
@@ -22,8 +23,11 @@ type ServiceStepProps = {
     key: keyof OrderQuizAnswers,
     value: OrderQuizAnswers[keyof OrderQuizAnswers]
   ) => void;
+  onSelectPackage: (packageId: string) => void;
   onSelectService: (serviceId: string) => void;
   onToggleQuiz: () => void;
+  packages: ServicePackage[];
+  selectedPackageId: string;
 };
 
 const quizQuestionLabels: Record<keyof OrderQuizAnswers, string> = {
@@ -42,10 +46,13 @@ export function ServiceStep({
   fieldErrors,
   isQuizOpen,
   onApplyQuizRecommendation,
+  onSelectPackage,
   onSelectQuizAnswer,
   onSelectService,
   onToggleQuiz,
+  packages,
   quizAnswers,
+  selectedPackageId,
   selectedServiceId,
   services
 }: ServiceStepProps) {
@@ -118,6 +125,21 @@ export function ServiceStep({
         </select>
         <FieldError errors={fieldErrors?.serviceId} />
       </Field>
+
+      <section>
+        <div className="mb-3">
+          <h3 className="text-xl font-semibold text-ink">Пакет</h3>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            Сравните состав, предварительную стоимость и срок.
+          </p>
+        </div>
+        <PackageStep
+          errors={fieldErrors?.packageId}
+          onSelectPackage={onSelectPackage}
+          packages={packages}
+          selectedPackageId={selectedPackageId}
+        />
+      </section>
     </div>
   );
 }

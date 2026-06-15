@@ -33,7 +33,8 @@ export const fieldLimits = {
     finalDurationDays: { min: 1, max: 365 },
     workScope: { min: 10, max: 3000 },
     materials: { max: 2000 },
-    managerComment: { max: 2000 }
+    managerComment: { max: 2000 },
+    feedback: { min: 10, max: 1000 }
   },
   service: {
     title: { min: 2, max: 160 },

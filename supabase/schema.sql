@@ -178,10 +178,26 @@ create table if not exists public.order_contracts (
   work_scope text not null default '',
   materials text not null default '',
   manager_comment text not null default '',
-  status text not null default 'draft' check (status in ('draft', 'sent', 'accepted', 'cancelled')),
+  status text not null default 'draft' check (status in ('draft', 'sent', 'revision_requested', 'accepted', 'cancelled')),
   accepted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+alter table public.order_contracts
+drop constraint if exists order_contracts_status_check;
+alter table public.order_contracts
+add constraint order_contracts_status_check
+check (status in ('draft', 'sent', 'revision_requested', 'accepted', 'cancelled'));
+
+create table if not exists public.order_contract_feedback (
+  id uuid primary key default gen_random_uuid(),
+  contract_id uuid not null references public.order_contracts(id) on delete cascade,
+  request_id uuid not null references public.requests(id) on delete cascade,
+  client_user_id uuid references auth.users(id) on delete set null,
+  author_role text not null default 'client' check (author_role in ('client', 'manager', 'admin')),
+  message text not null check (char_length(message) between 10 and 1000),
+  created_at timestamptz not null default now()
 );
 
 create table if not exists public.order_attachments (
@@ -307,6 +323,7 @@ create index if not exists requests_contact_search_idx on public.requests using 
 );
 create index if not exists order_contracts_request_idx on public.order_contracts (request_id);
 create index if not exists order_contracts_status_created_idx on public.order_contracts (status, created_at desc);
+create index if not exists order_contract_feedback_contract_created_idx on public.order_contract_feedback (contract_id, created_at);
 create index if not exists order_attachments_request_created_idx on public.order_attachments (request_id, created_at desc);
 create index if not exists order_attachments_client_created_idx on public.order_attachments (client_user_id, created_at desc);
 create index if not exists request_claim_tokens_hash_idx on public.request_claim_tokens (token_hash);
@@ -385,6 +402,7 @@ alter table public.analytics_events enable row level security;
 alter table public.project_images enable row level security;
 alter table public.requests enable row level security;
 alter table public.order_contracts enable row level security;
+alter table public.order_contract_feedback enable row level security;
 alter table public.order_attachments enable row level security;
 alter table public.request_claim_tokens enable row level security;
 
@@ -625,7 +643,7 @@ drop policy if exists "Clients can read own order contracts" on public.order_con
 create policy "Clients can read own order contracts" on public.order_contracts
 for select to authenticated
 using (
-  status in ('sent', 'accepted')
+  status in ('sent', 'revision_requested', 'accepted')
   and exists (
     select 1
     from public.requests request
@@ -633,6 +651,70 @@ using (
       and request.client_user_id = auth.uid()
   )
 );
+
+alter table public.notifications
+drop constraint if exists notifications_type_check;
+alter table public.notifications
+add constraint notifications_type_check
+check (type in ('request_created', 'request_status_changed', 'contract_revision_requested', 'system'));
+
+drop policy if exists "Clients can read own contract feedback" on public.order_contract_feedback;
+create policy "Clients can read own contract feedback" on public.order_contract_feedback
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.requests request
+    where request.id = order_contract_feedback.request_id
+      and request.client_user_id = auth.uid()
+  )
+);
+
+create or replace function public.request_order_contract_revision(
+  target_contract_id uuid,
+  feedback_message text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_request_id uuid;
+  feedback_id uuid;
+begin
+  if char_length(trim(feedback_message)) not between 10 and 1000 then
+    raise exception 'Feedback must contain between 10 and 1000 characters';
+  end if;
+
+  select request.id into target_request_id
+  from public.order_contracts contract
+  join public.requests request on request.id = contract.request_id
+  where contract.id = target_contract_id
+    and contract.status = 'sent'
+    and request.client_user_id = auth.uid()
+  for update of contract;
+
+  if target_request_id is null then
+    raise exception 'Contract is unavailable for revision';
+  end if;
+
+  insert into public.order_contract_feedback (contract_id, request_id, client_user_id, author_role, message)
+  values (target_contract_id, target_request_id, auth.uid(), 'client', trim(feedback_message))
+  returning id into feedback_id;
+
+  update public.order_contracts set status = 'revision_requested', accepted_at = null
+  where id = target_contract_id;
+
+  insert into public.notifications (type, title, body, entity_type, entity_id, audience_role)
+  values ('contract_revision_requested', 'Клиент запросил изменения', trim(feedback_message), 'request', target_request_id, 'manager');
+
+  return feedback_id;
+end;
+$$;
+
+revoke all on function public.request_order_contract_revision(uuid, text) from public, anon;
+grant execute on function public.request_order_contract_revision(uuid, text) to authenticated;
 
 drop policy if exists "Clients can read own order attachments" on public.order_attachments;
 create policy "Clients can read own order attachments" on public.order_attachments
@@ -656,6 +738,7 @@ grant select on public.entity_translations to anon, authenticated;
 grant select on public.requests to authenticated;
 revoke insert on public.requests from anon, authenticated;
 grant select on public.order_contracts to authenticated;
+grant select on public.order_contract_feedback to authenticated;
 revoke all on public.order_attachments from anon, authenticated;
 grant select on public.order_attachments to authenticated;
 revoke all on public.request_claim_tokens from anon, authenticated;
@@ -666,6 +749,7 @@ grant all privileges on public.notifications to service_role;
 grant all privileges on public.notification_reads to service_role;
 grant all privileges on public.entity_translations to service_role;
 grant all privileges on public.order_attachments to service_role;
+grant all privileges on public.order_contract_feedback to service_role;
 grant all privileges on public.request_claim_tokens to service_role;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

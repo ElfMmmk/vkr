@@ -185,7 +185,8 @@ export async function clientRegisterAction(
   }
 
   if (!data.session) {
-    return { message: "Регистрация создана. Проверьте почту, если включено подтверждение email." };
+    const claimQuery = claimToken ? `&claim=${encodeURIComponent(claimToken)}` : "";
+    redirect(`/account/login?notice=registration-confirm-email${claimQuery}`);
   }
 
   const claimedRequestId = data.user ? await claimRequestForUser(claimToken, data.user.id) : null;
@@ -244,6 +245,54 @@ export async function acceptOrderContractAction(formData: FormData): Promise<voi
   revalidatePath("/account");
   revalidatePath(`/account/requests/${requestId}`);
   redirect(`/account/requests/${requestId}?notice=order-contract-accepted`);
+}
+
+export async function requestOrderContractRevisionAction(formData: FormData): Promise<void> {
+  const session = await requireClientSession();
+  const requestId = formString(formData, "requestId").trim();
+  const contractId = formString(formData, "contractId").trim();
+  const feedback = formString(formData, "feedback").trim();
+
+  if (!requestId || !contractId || feedback.length < 10 || feedback.length > 1000) {
+    redirect(`/account/requests/${requestId}?notice=order-contract-revision-invalid`);
+  }
+
+  const client = await createSupabaseServerClient();
+
+  if (!client) {
+    redirect(`/account/requests/${requestId}?notice=order-contract-revision-failed`);
+  }
+
+  const { data: request } = await client
+    .from("requests")
+    .select("id, client_user_id, order_contracts(id, status)")
+    .eq("id", requestId)
+    .eq("client_user_id", session.id)
+    .maybeSingle();
+  const contracts = Array.isArray(request?.order_contracts)
+    ? request.order_contracts
+    : request?.order_contracts
+      ? [request.order_contracts]
+      : [];
+
+  if (!request || !contracts.some((contract) => contract.id === contractId && contract.status === "sent")) {
+    redirect(`/account/requests/${requestId}?notice=order-contract-revision-failed`);
+  }
+
+  const { error } = await client.rpc("request_order_contract_revision", {
+    target_contract_id: contractId,
+    feedback_message: feedback
+  });
+
+  if (error) {
+    redirect(`/account/requests/${requestId}?notice=order-contract-revision-failed`);
+  }
+
+  revalidatePath("/account");
+  revalidatePath(`/account/requests/${requestId}`);
+  revalidatePath(`/admin/requests/${requestId}`);
+  revalidatePath("/admin/notifications");
+  redirect(`/account/requests/${requestId}?notice=order-contract-revision-requested`);
 }
 
 export async function uploadClientOrderAttachmentAction(formData: FormData): Promise<void> {

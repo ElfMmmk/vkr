@@ -1,0 +1,451 @@
+{
+  "services": [
+    {
+      "id": "svc-brand",
+      "title": "Айдентика бренда",
+      "slug": "brand-identity",
+      "description": "Логотип, фирменный стиль и правила визуальной коммуникации бренда.",
+      "details": "От базового знака до целостной системы носителей и руководства по применению.",
+      "packages": [
+        {
+          "id": "pkg-brand-logo",
+          "title": "Логотип",
+          "description": "Знак, цветовая палитра и базовые варианты использования.",
+          "badge": "Старт",
+          "bestFor": "Для нового проекта, которому нужен узнаваемый визуальный знак",
+          "outcome": "Логотип и базовый набор файлов для запуска",
+          "includedItems": ["Логотип", "Палитра", "Файлы для печати и экрана"],
+          "priceFrom": 25000,
+          "priceTo": 45000,
+          "durationFromDays": 10,
+          "durationToDays": 18
+        },
+        {
+          "id": "pkg-brand-style",
+          "title": "Фирменный стиль",
+          "description": "Логотип, типографика, палитра и набор основных носителей.",
+          "badge": "Рекомендуем",
+          "bestFor": "Для запуска или обновления визуального образа компании",
+          "outcome": "Готовый стиль для основных точек контакта",
+          "includedItems": ["Логотип", "Типографика", "Носители", "Краткий гайд"],
+          "priceFrom": 60000,
+          "priceTo": 100000,
+          "durationFromDays": 18,
+          "durationToDays": 30,
+          "isRecommended": true
+        },
+        {
+          "id": "pkg-brand-system",
+          "title": "Бренд-система",
+          "description": "Расширенная система айдентики с правилами и комплектом макетов.",
+          "badge": "Комплекс",
+          "bestFor": "Для бренда с несколькими продуктами и каналами коммуникации",
+          "outcome": "Масштабируемая визуальная система",
+          "includedItems": ["Айдентика", "Бренд-гайд", "Шаблоны", "Система носителей"],
+          "priceFrom": 110000,
+          "priceTo": 180000,
+          "durationFromDays": 30,
+          "durationToDays": 45
+        }
+      ],
+      "addons": [
+        {
+          "id": "addon-brand-naming",
+          "title": "Подбор названия",
+          "description": "Варианты названия и проверка пригодности для визуальной системы.",
+          "price": 18000,
+          "durationDays": 5
+        },
+        {
+          "id": "addon-brand-template",
+          "title": "Шаблоны для команды",
+          "description": "Редактируемые шаблоны документов и публикаций.",
+          "price": 15000,
+          "durationDays": 4
+        }
+      ]
+    },
+    {
+      "id": "svc-social",
+      "title": "Дизайн социальных сетей",
+      "slug": "social-media",
+      "description": "Визуальная система публикаций, обложек и рекламных материалов.",
+      "details": "Шаблоны помогают выпускать контент регулярно и сохранять единый стиль.",
+      "packages": [
+        {
+          "id": "pkg-social-start",
+          "title": "Старт",
+          "description": "Базовое оформление профиля и комплект стартовых публикаций.",
+          "badge": "Базовый",
+          "bestFor": "Для запуска или аккуратного обновления профиля",
+          "outcome": "Оформленный профиль и готовые первые публикации",
+          "includedItems": ["Аватар", "Обложки", "6 шаблонов публикаций"],
+          "priceFrom": 18000,
+          "priceTo": 30000,
+          "durationFromDays": 7,
+          "durationToDays": 12
+        },
+        {
+          "id": "pkg-social-system",
+          "title": "Контент-система",
+          "description": "Модульная сетка и комплект шаблонов для разных рубрик.",
+          "badge": "Рекомендуем",
+          "bestFor": "Для регулярного контента с несколькими форматами",
+          "outcome": "Гибкая система самостоятельной подготовки публикаций",
+          "includedItems": ["Сетка", "12 шаблонов", "Обложки", "Инструкция"],
+          "priceFrom": 35000,
+          "priceTo": 60000,
+          "durationFromDays": 12,
+          "durationToDays": 20,
+          "isRecommended": true
+        },
+        {
+          "id": "pkg-social-month",
+          "title": "Сопровождение на месяц",
+          "description": "Дизайн публикаций и адаптация материалов в течение месяца.",
+          "badge": "Сопровождение",
+          "bestFor": "Для команды, которой нужна регулярная помощь дизайнера",
+          "outcome": "Готовый визуальный контент на месяц",
+          "includedItems": ["До 20 публикаций", "Истории", "Обложки", "Адаптации"],
+          "priceFrom": 65000,
+          "priceTo": 95000,
+          "durationFromDays": 20,
+          "durationToDays": 30
+        }
+      ],
+      "addons": [
+        {
+          "id": "addon-social-ads",
+          "title": "Рекламные креативы",
+          "description": "Дополнительные форматы для рекламных кампаний.",
+          "price": 12000,
+          "durationDays": 3
+        },
+        {
+          "id": "addon-social-animation",
+          "title": "Анимация публикаций",
+          "description": "Простая анимация выбранных макетов для социальных сетей.",
+          "price": 16000,
+          "durationDays": 4
+        }
+      ]
+    },
+    {
+      "id": "svc-packaging",
+      "title": "Упаковка и полиграфия",
+      "slug": "packaging-print",
+      "description": "Упаковка, этикетки и печатные материалы с подготовкой к производству.",
+      "details": "Макеты учитывают технические требования выбранной типографии или производства.",
+      "packages": [
+        {
+          "id": "pkg-packaging-item",
+          "title": "Один носитель",
+          "description": "Дизайн одной упаковки, этикетки или печатного материала.",
+          "badge": "Одна задача",
+          "bestFor": "Для отдельного продукта или промоматериала",
+          "outcome": "Готовый к производству макет",
+          "includedItems": ["Концепция", "Макет", "Подготовка к печати"],
+          "priceFrom": 22000,
+          "priceTo": 40000,
+          "durationFromDays": 10,
+          "durationToDays": 18
+        },
+        {
+          "id": "pkg-packaging-line",
+          "title": "Линейка",
+          "description": "Система упаковки для нескольких вкусов или вариантов продукта.",
+          "badge": "Рекомендуем",
+          "bestFor": "Для линейки из нескольких связанных товаров",
+          "outcome": "Единая система и комплект производственных макетов",
+          "includedItems": ["Система упаковки", "До 4 вариантов", "Файлы для производства"],
+          "priceFrom": 45000,
+          "priceTo": 80000,
+          "durationFromDays": 18,
+          "durationToDays": 28,
+          "isRecommended": true
+        },
+        {
+          "id": "pkg-packaging-complex",
+          "title": "Комплекс",
+          "description": "Упаковка, этикетки и сопутствующие печатные материалы.",
+          "badge": "Комплекс",
+          "bestFor": "Для запуска продукта с несколькими точками контакта",
+          "outcome": "Полный комплект упаковочных и печатных материалов",
+          "includedItems": ["Упаковка", "Этикетки", "Вкладыши", "POS-материалы"],
+          "priceFrom": 85000,
+          "priceTo": 140000,
+          "durationFromDays": 28,
+          "durationToDays": 42
+        }
+      ],
+      "addons": [
+        {
+          "id": "addon-packaging-prepress",
+          "title": "Допечатная проверка",
+          "description": "Проверка развёрток, вылетов и технических требований.",
+          "price": 8000,
+          "durationDays": 2
+        },
+        {
+          "id": "addon-packaging-mockup",
+          "title": "Презентационные mockup",
+          "description": "Фотореалистичные изображения упаковки для сайта и презентаций.",
+          "price": 12000,
+          "durationDays": 3
+        }
+      ]
+    },
+    {
+      "id": "svc-presentation",
+      "title": "Презентации",
+      "slug": "presentation-design",
+      "description": "Структура и визуальное оформление коммерческих и экспертных презентаций.",
+      "details": "Работа включает выстраивание визуальной логики, ритма и акцентов.",
+      "packages": [
+        {
+          "id": "pkg-presentation-10",
+          "title": "До 10 слайдов",
+          "description": "Компактная презентация для выступления или предложения.",
+          "badge": "Короткий формат",
+          "bestFor": "Для питча, встречи или короткого выступления",
+          "outcome": "Готовая презентация до 10 слайдов",
+          "includedItems": ["Структура", "Дизайн", "Финальный файл"],
+          "priceFrom": 15000,
+          "priceTo": 28000,
+          "durationFromDays": 5,
+          "durationToDays": 9
+        },
+        {
+          "id": "pkg-presentation-20",
+          "title": "До 20 слайдов",
+          "description": "Развёрнутая презентация с диаграммами и визуальными акцентами.",
+          "badge": "Рекомендуем",
+          "bestFor": "Для продаж, отчёта или экспертного выступления",
+          "outcome": "Связная презентация до 20 слайдов",
+          "includedItems": ["Структура", "Дизайн", "Диаграммы", "Финальный файл"],
+          "priceFrom": 28000,
+          "priceTo": 48000,
+          "durationFromDays": 8,
+          "durationToDays": 14,
+          "isRecommended": true
+        },
+        {
+          "id": "pkg-presentation-system",
+          "title": "Шаблон и система",
+          "description": "Презентация и редактируемая система мастер-слайдов для команды.",
+          "badge": "Для команды",
+          "bestFor": "Для регулярного создания презентаций внутри компании",
+          "outcome": "Шаблон, библиотека слайдов и правила использования",
+          "includedItems": ["Мастер-слайды", "Библиотека блоков", "Пример презентации", "Инструкция"],
+          "priceFrom": 45000,
+          "priceTo": 75000,
+          "durationFromDays": 14,
+          "durationToDays": 22
+        }
+      ],
+      "addons": [
+        {
+          "id": "addon-presentation-copy",
+          "title": "Редактура структуры",
+          "description": "Помощь с сокращением и логикой исходного текста.",
+          "price": 10000,
+          "durationDays": 3
+        },
+        {
+          "id": "addon-presentation-animation",
+          "title": "Анимация слайдов",
+          "description": "Настройка аккуратных переходов и последовательного появления элементов.",
+          "price": 12000,
+          "durationDays": 3
+        }
+      ]
+    },
+    {
+      "id": "svc-web",
+      "title": "Дизайн сайта",
+      "slug": "web-design",
+      "description": "Прототип и визуальный дизайн сайта или цифрового продукта.",
+      "details": "Макеты создаются для передачи в разработку и включают основные состояния интерфейса.",
+      "packages": [
+        {
+          "id": "pkg-web-landing",
+          "title": "Лендинг",
+          "description": "Одностраничный сайт с ключевыми блоками и адаптивными состояниями.",
+          "badge": "Быстрый запуск",
+          "bestFor": "Для услуги, продукта или события с одной основной целью",
+          "outcome": "Готовый макет лендинга для разработки",
+          "includedItems": ["Прототип", "Дизайн", "Мобильная версия", "UI-kit"],
+          "priceFrom": 45000,
+          "priceTo": 75000,
+          "durationFromDays": 14,
+          "durationToDays": 22
+        },
+        {
+          "id": "pkg-web-corporate",
+          "title": "Корпоративный сайт",
+          "description": "Многостраничный сайт компании с общей системой компонентов.",
+          "badge": "Рекомендуем",
+          "bestFor": "Для компании с несколькими услугами и разделами",
+          "outcome": "Система макетов основных страниц и адаптивов",
+          "includedItems": ["Прототип", "До 8 страниц", "Адаптивы", "UI-kit"],
+          "priceFrom": 80000,
+          "priceTo": 140000,
+          "durationFromDays": 24,
+          "durationToDays": 38,
+          "isRecommended": true
+        },
+        {
+          "id": "pkg-web-product",
+          "title": "Интерфейс продукта",
+          "description": "Пользовательские сценарии и интерфейс веб-сервиса или кабинета.",
+          "badge": "Продукт",
+          "bestFor": "Для цифрового сервиса с личным кабинетом и сложными сценариями",
+          "outcome": "Прототип и дизайн ключевых продуктовых сценариев",
+          "includedItems": ["Сценарии", "Прототип", "Интерфейс", "Компоненты"],
+          "priceFrom": 120000,
+          "priceTo": 220000,
+          "durationFromDays": 35,
+          "durationToDays": 60
+        }
+      ],
+      "addons": [
+        {
+          "id": "addon-web-copy",
+          "title": "Структура текстов",
+          "description": "Редактура заголовков и помощь с содержанием ключевых блоков.",
+          "price": 18000,
+          "durationDays": 5
+        },
+        {
+          "id": "addon-web-prototype",
+          "title": "Кликабельный прототип",
+          "description": "Связанный интерактивный сценарий для демонстрации и тестирования.",
+          "price": 22000,
+          "durationDays": 6
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "project-north-coffee",
+      "title": "North Coffee Roasters",
+      "slug": "north-coffee-roasters",
+      "shortDescription": "Система упаковки и печатных материалов для кофейной обжарки.",
+      "fullDescription": "Для линейки кофе создана система упаковки с цветовой навигацией по вкусам и комплектом материалов для точки продаж.",
+      "cover": "north-coffee-cover-v2.png",
+      "gallery": ["north-coffee-gallery-1-v2.png"],
+      "serviceSlugs": ["brand-identity", "packaging-print"],
+      "tagSlugs": ["branding", "print"],
+      "featured": true
+    },
+    {
+      "id": "project-botanica",
+      "title": "Botanica Lab",
+      "slug": "botanica-lab",
+      "shortDescription": "Айдентика и упаковка для линии натуральной косметики.",
+      "fullDescription": "Визуальная система соединяет лабораторную точность и мягкую природную эстетику в упаковке и коммуникационных материалах.",
+      "cover": "botanica-cover-v2.png",
+      "gallery": ["botanica-gallery-1-v2.png"],
+      "serviceSlugs": ["brand-identity", "packaging-print"],
+      "tagSlugs": ["branding", "print", "minimal"],
+      "featured": true
+    },
+    {
+      "id": "project-studio-frame",
+      "title": "Studio Frame",
+      "slug": "studio-frame",
+      "shortDescription": "Digital-система для анонсов и социальных сетей фотостудии.",
+      "fullDescription": "Модульная сетка и шаблоны позволяют команде регулярно публиковать материалы без потери визуальной целостности.",
+      "cover": "studio-frame-cover-v2.png",
+      "gallery": ["studio-frame-gallery-1-v2.png"],
+      "serviceSlugs": ["social-media"],
+      "tagSlugs": ["digital", "minimal"],
+      "featured": false
+    },
+    {
+      "id": "project-urban-forum",
+      "title": "Urban Forum Deck",
+      "slug": "urban-forum-deck",
+      "shortDescription": "Презентация для городского образовательного форума.",
+      "fullDescription": "Слайды выстроены вокруг ясного сценария выступления и сочетают крупную типографику, карты и информационные блоки.",
+      "cover": "urban-forum-cover-v2.png",
+      "gallery": ["urban-forum-gallery-1-v2.png"],
+      "serviceSlugs": ["presentation-design"],
+      "tagSlugs": ["digital"],
+      "featured": true
+    },
+    {
+      "id": "project-atelier-nord",
+      "title": "Atelier Nord",
+      "slug": "atelier-nord",
+      "shortDescription": "Сдержанная айдентика архитектурной студии.",
+      "fullDescription": "Знак, типографика и деловые носители создают спокойный профессиональный образ архитектурного бюро.",
+      "cover": "atelier-nord-cover-v2.png",
+      "gallery": ["atelier-nord-gallery-1-v2.png"],
+      "serviceSlugs": ["brand-identity"],
+      "tagSlugs": ["branding", "minimal"],
+      "featured": true
+    },
+    {
+      "id": "project-lumen-skincare",
+      "title": "Lumen Skincare",
+      "slug": "lumen-skincare",
+      "shortDescription": "Упаковка и лендинг для уходовой косметики.",
+      "fullDescription": "Проект объединяет тактильную упаковку, спокойную палитру и цифровую презентацию продуктовой линейки.",
+      "cover": "lumen-skincare-cover-v2.png",
+      "gallery": ["lumen-skincare-gallery-1-v2.png"],
+      "serviceSlugs": ["packaging-print", "web-design"],
+      "tagSlugs": ["print", "digital", "minimal"],
+      "featured": true
+    },
+    {
+      "id": "project-mellow-bakery",
+      "title": "Mellow Bakery",
+      "slug": "mellow-bakery",
+      "shortDescription": "Тёплая упаковка и социальные сети городской пекарни.",
+      "fullDescription": "Система включает упаковку выпечки, сезонные материалы и шаблоны публикаций в единой дружелюбной стилистике.",
+      "cover": "mellow-bakery-cover-v2.png",
+      "gallery": ["mellow-bakery-gallery-1-v2.png"],
+      "serviceSlugs": ["packaging-print", "social-media"],
+      "tagSlugs": ["print", "digital"],
+      "featured": false
+    },
+    {
+      "id": "project-vector-summit",
+      "title": "Vector Summit",
+      "slug": "vector-summit",
+      "shortDescription": "Айдентика и презентационная система технологической конференции.",
+      "fullDescription": "Контрастная графика связывает афиши, цифровые анонсы и презентационные шаблоны для спикеров.",
+      "cover": "vector-summit-cover-v2.png",
+      "gallery": ["vector-summit-gallery-1-v2.png"],
+      "serviceSlugs": ["brand-identity", "presentation-design", "social-media"],
+      "tagSlugs": ["branding", "digital"],
+      "featured": true
+    },
+    {
+      "id": "project-arc-habitat",
+      "title": "Arc Habitat",
+      "slug": "arc-habitat",
+      "shortDescription": "Корпоративный сайт и материалы жилого проекта.",
+      "fullDescription": "Веб-система показывает архитектуру, планировки и преимущества проекта через крупные изображения и ясную навигацию.",
+      "cover": "arc-habitat-cover-v2.png",
+      "gallery": ["arc-habitat-gallery-1-v2.png"],
+      "serviceSlugs": ["web-design", "presentation-design"],
+      "tagSlugs": ["digital", "minimal"],
+      "featured": false
+    },
+    {
+      "id": "project-terra-market",
+      "title": "Terra Market",
+      "slug": "terra-market",
+      "shortDescription": "Айдентика и упаковка локального продуктового магазина.",
+      "fullDescription": "Гибкая система этикеток и печатных материалов помогает объединить товары разных производителей под общей маркой.",
+      "cover": "terra-market-cover-v2.png",
+      "gallery": ["terra-market-gallery-1-v2.png"],
+      "serviceSlugs": ["brand-identity", "packaging-print"],
+      "tagSlugs": ["branding", "print"],
+      "featured": false
+    }
+  ]
+}

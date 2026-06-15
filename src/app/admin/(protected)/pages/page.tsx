@@ -31,6 +31,7 @@ export default async function AdminPagesPage() {
       <div className="space-y-4">
         {pages.map((page) => (
           <AdminCard
+            collapsible
             key={page.pageKey}
             title={pageLabels[page.pageKey] ?? page.title}
             description={pageDescriptions[page.pageKey]}

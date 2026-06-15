@@ -9,12 +9,13 @@ import { ExtrasStep } from "@/components/order/extras-step";
 import { StepPanel } from "@/components/order/form-parts";
 import { orderSteps as steps, submitUnlockDelayMs } from "@/components/order/order-form-config";
 import { MobileOrderSummary, OrderSummaryAside } from "@/components/order/order-summary";
-import { PackageStep } from "@/components/order/package-step";
 import { ReviewStep } from "@/components/order/review-step";
 import { ServiceStep } from "@/components/order/service-step";
 import { StepNavigation } from "@/components/order/step-navigation";
 import { fieldLimits } from "@/lib/field-limits";
+import { normalizeAndValidateContact } from "@/lib/contact";
 import {
+  LEGACY_ORDER_DRAFT_STORAGE_KEY,
   ORDER_DRAFT_STORAGE_KEY,
   ORDER_DRAFT_VERSION,
   appendBriefChip,
@@ -135,7 +136,9 @@ export function OrderForm({
   }, []);
 
   useEffect(() => {
-    const draft = parseOrderDraft(window.localStorage.getItem(ORDER_DRAFT_STORAGE_KEY));
+    const currentDraft = window.localStorage.getItem(ORDER_DRAFT_STORAGE_KEY);
+    const legacyDraft = window.localStorage.getItem(LEGACY_ORDER_DRAFT_STORAGE_KEY);
+    const draft = parseOrderDraft(currentDraft ?? legacyDraft);
 
     const timeoutId = window.setTimeout(() => {
       if (!draft) {
@@ -157,6 +160,9 @@ export function OrderForm({
       setDesiredDeadline(draft.values.desiredDeadline);
       setComment(draft.values.comment);
       setQuizAnswers((draft.quizAnswers ?? {}) as Partial<OrderQuizAnswers>);
+      if (!currentDraft && legacyDraft) {
+        window.localStorage.removeItem(LEGACY_ORDER_DRAFT_STORAGE_KEY);
+      }
       setIsHydrated(true);
     }, 0);
 
@@ -246,7 +252,7 @@ export function OrderForm({
       return false;
     }
 
-    if (activeStepId === "package" && !selectedPackageId) {
+    if (activeStepId === "service" && !selectedPackageId) {
       setLocalStepError("Выберите пакет работ.");
       return false;
     }
@@ -268,6 +274,14 @@ export function OrderForm({
         setLocalStepError("Укажите имя и контакт для связи.");
         return false;
       }
+
+      const contactResult = normalizeAndValidateContact(contactMethod, contactValue);
+      if (!contactResult.ok) {
+        setLocalStepError(contactResult.error);
+        return false;
+      }
+
+      setContactValue(contactResult.value);
 
       if (attachmentError) {
         setLocalStepError(attachmentError);
@@ -360,7 +374,7 @@ export function OrderForm({
   return (
     <form
       action={formAction}
-      className="space-y-6 pb-24 lg:pb-0"
+      className="space-y-6"
       onKeyDown={(event) => {
         if (event.key === "Enter" && event.target instanceof HTMLElement && event.target.tagName !== "TEXTAREA") {
           event.preventDefault();
@@ -375,7 +389,16 @@ export function OrderForm({
         <input aria-hidden="true" autoComplete="off" name="website" tabIndex={-1} type="text" />
       </label>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      {activeStepId !== "review" ? (
+        <MobileOrderSummary
+          addonTitles={selectedAddons.map((addon) => addon.title)}
+          estimate={estimate}
+          packageTitle={selectedPackage?.title ?? ""}
+          serviceTitle={selectedService?.title ?? ""}
+        />
+      ) : null}
+
+      <div className={`grid gap-6 ${activeStepId === "review" ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}>
         <div className="min-w-0 space-y-6">
           <StepNavigation
             activeStepId={activeStepId}
@@ -414,20 +437,14 @@ export function OrderForm({
                   [key]: value
                 }));
               }}
+              onSelectPackage={setSelectedPackageId}
               onSelectService={applyService}
               onToggleQuiz={() => setIsQuizOpen((current) => !current)}
+              packages={servicePackages}
               quizAnswers={quizAnswers}
+              selectedPackageId={selectedPackageId}
               selectedServiceId={selectedServiceId}
               services={services}
-            />
-          </StepPanel>
-
-          <StepPanel active={activeStepId === "package"} id="package">
-            <PackageStep
-              errors={state.fieldErrors?.packageId}
-              onSelectPackage={setSelectedPackageId}
-              packages={servicePackages}
-              selectedPackageId={selectedPackageId}
             />
           </StepPanel>
 
@@ -520,21 +537,15 @@ export function OrderForm({
           </div>
         </div>
 
-        <OrderSummaryAside
-          addonTitles={selectedAddons.map((addon) => addon.title)}
-          estimate={estimate}
-          packageTitle={selectedPackage?.title ?? ""}
-          serviceTitle={selectedService?.title ?? ""}
-        />
+        {activeStepId !== "review" ? (
+          <OrderSummaryAside
+            addonTitles={selectedAddons.map((addon) => addon.title)}
+            estimate={estimate}
+            packageTitle={selectedPackage?.title ?? ""}
+            serviceTitle={selectedService?.title ?? ""}
+          />
+        ) : null}
       </div>
-
-      <MobileOrderSummary
-        addonTitles={selectedAddons.map((addon) => addon.title)}
-        estimate={estimate}
-        onOpenReview={() => setActiveStepId("review")}
-        packageTitle={selectedPackage?.title ?? ""}
-        serviceTitle={selectedService?.title ?? ""}
-      />
     </form>
   );
 }

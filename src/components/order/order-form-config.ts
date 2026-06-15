@@ -10,9 +10,8 @@ export const contactPlaceholders: Record<string, string> = {
 export const submitUnlockDelayMs = 2500;
 
 export const orderSteps: Array<{ id: OrderStepId; title: string; description: string }> = [
-  { id: "service", title: "Услуга", description: "Выберите направление или пройдите короткий подбор." },
-  { id: "package", title: "Пакет", description: "Сравните состав, стоимость и срок." },
-  { id: "extras", title: "Доплаты и пример", description: "Добавьте опции и визуальный ориентир." },
+  { id: "service", title: "Услуга", description: "Выберите направление и подходящий пакет работ." },
+  { id: "extras", title: "Дополнения", description: "Добавьте услуги и проект из портфолио как ориентир." },
   { id: "brief", title: "Бриф", description: "Опишите результат, стиль и материалы." },
   { id: "contact", title: "Контакты", description: "Оставьте способ связи и приложите файлы." },
   { id: "review", title: "Проверка", description: "Проверьте сводку перед отправкой." }

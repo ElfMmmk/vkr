@@ -207,8 +207,22 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
+  const serviceId = cleanId(formString(formData, "serviceId")) ?? "";
+  let displayOrder = formString(formData, "displayOrder");
+
+  if (!displayOrder) {
+    const { data: lastItem } = await client
+      .from("service_packages")
+      .select("display_order")
+      .eq("service_id", serviceId)
+      .order("display_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    displayOrder = String((lastItem?.display_order ?? 0) + 10);
+  }
+
   const parsed = servicePackageSchema.parse({
-    serviceId: cleanId(formString(formData, "serviceId")) ?? "",
+    serviceId,
     title: formString(formData, "title"),
     description: formString(formData, "description"),
     badge: formString(formData, "badge"),
@@ -219,7 +233,7 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
     priceTo: formString(formData, "priceTo"),
     durationFromDays: formString(formData, "durationFromDays"),
     durationToDays: formString(formData, "durationToDays"),
-    displayOrder: formString(formData, "displayOrder") || "100",
+    displayOrder,
     isActive: formBoolean(formData, "isActive"),
     isRecommended: formBoolean(formData, "isRecommended")
   });
@@ -277,13 +291,27 @@ export async function saveServiceAddonAction(formData: FormData): Promise<void> 
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
+  const serviceId = cleanId(formString(formData, "serviceId")) ?? "";
+  let displayOrder = formString(formData, "displayOrder");
+
+  if (!displayOrder) {
+    const { data: lastItem } = await client
+      .from("service_addons")
+      .select("display_order")
+      .eq("service_id", serviceId)
+      .order("display_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    displayOrder = String((lastItem?.display_order ?? 0) + 10);
+  }
+
   const parsed = serviceAddonSchema.parse({
-    serviceId: cleanId(formString(formData, "serviceId")) ?? "",
+    serviceId,
     title: formString(formData, "title"),
     description: formString(formData, "description"),
     price: formString(formData, "price"),
     durationDays: formString(formData, "durationDays"),
-    displayOrder: formString(formData, "displayOrder") || "100",
+    displayOrder,
     isActive: formBoolean(formData, "isActive")
   });
   const payload = {
@@ -357,6 +385,69 @@ export async function reorderServicesAction(formData: FormData): Promise<void> {
   revalidatePath("/services");
   revalidatePath("/portfolio");
   redirectWithNotice("/admin/services", "services-reordered");
+}
+
+export async function reorderServicePackagesAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const serviceId = cleanId(formString(formData, "serviceId"));
+  const itemIds = Array.from(new Set(formStringArray(formData, "itemIds").map(cleanId)))
+    .filter((itemId): itemId is string => Boolean(itemId));
+
+  if (!serviceId || !itemIds.length) {
+    return;
+  }
+
+  const updates = await Promise.all(
+    itemIds.map((itemId, index) =>
+      client
+        .from("service_packages")
+        .update({ display_order: (index + 1) * 10 })
+        .eq("id", itemId)
+        .eq("service_id", serviceId)
+    )
+  );
+  const failed = updates.find((result) => result.error);
+
+  if (failed?.error) {
+    mutationError(failed.error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/services");
+  revalidatePath("/order");
+  redirectWithNotice("/admin/services", "service-packages-reordered");
+}
+
+export async function reorderServiceAddonsAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const serviceId = cleanId(formString(formData, "serviceId"));
+  const itemIds = Array.from(new Set(formStringArray(formData, "itemIds").map(cleanId)))
+    .filter((itemId): itemId is string => Boolean(itemId));
+
+  if (!serviceId || !itemIds.length) {
+    return;
+  }
+
+  const updates = await Promise.all(
+    itemIds.map((itemId, index) =>
+      client
+        .from("service_addons")
+        .update({ display_order: (index + 1) * 10 })
+        .eq("id", itemId)
+        .eq("service_id", serviceId)
+    )
+  );
+  const failed = updates.find((result) => result.error);
+
+  if (failed?.error) {
+    mutationError(failed.error);
+  }
+
+  revalidatePath("/admin/services");
+  revalidatePath("/order");
+  redirectWithNotice("/admin/services", "service-addons-reordered");
 }
 
 export async function reorderProjectsAction(formData: FormData): Promise<void> {
@@ -753,6 +844,8 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
     status: formString(formData, "status")
   });
 
+  let previousStatus: string | null = null;
+
   if (id) {
     const { data: existingContract, error: existingContractError } = await client
       .from("order_contracts")
@@ -770,6 +863,8 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
         "order-contract-locked"
       );
     }
+
+    previousStatus = existingContract?.status ?? null;
   }
 
   const payload = {
@@ -788,6 +883,17 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
 
   if (result.error) {
     mutationError(result.error);
+  }
+
+  if (previousStatus === "revision_requested" && parsed.status === "sent") {
+    await client.from("notifications").insert({
+      type: "system",
+      title: "Договор-заказ отправлен повторно",
+      body: "Исправленные условия отправлены клиенту на повторное согласование.",
+      entity_type: "request",
+      entity_id: parsed.requestId,
+      audience_role: "manager"
+    });
   }
 
   revalidatePath("/admin/requests");

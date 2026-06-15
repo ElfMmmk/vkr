@@ -44,6 +44,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
             className="object-contain"
             fill
             priority={activeIndex === 0}
+            quality={90}
             sizes="(min-width: 900px) 980px, 100vw"
             src={activeSlide.src}
           />
@@ -91,7 +92,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
               onClick={() => setActiveIndex(index)}
               type="button"
             >
-              <Image alt="" className="object-cover" fill sizes="96px" src={slide.src} />
+              <Image alt="" className="object-cover" fill quality={90} sizes="96px" src={slide.src} />
             </button>
           ))}
         </div>

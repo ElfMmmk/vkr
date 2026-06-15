@@ -3,6 +3,7 @@ import type {
   OrderAddonSnapshot,
   OrderAttachment,
   OrderContract,
+  OrderContractFeedback,
   AnalyticsEvent,
   PageContent,
   PageKey,
@@ -26,6 +27,7 @@ export type ServiceRow = Tables<"services"> & {
 export type TagRow = Tables<"tags">;
 export type ImageRow = Tables<"images">;
 export type OrderContractRow = Tables<"order_contracts">;
+export type OrderContractFeedbackRow = Tables<"order_contract_feedback">;
 export type OrderAttachmentRow = Tables<"order_attachments">;
 export type RequestStatusHistoryRow = Tables<"request_status_history">;
 
@@ -49,7 +51,11 @@ export type ProjectRow = Tables<"projects"> & {
 };
 
 export type RequestRow = Tables<"requests"> & {
-  order_contracts?: OrderContractRow | OrderContractRow[] | null;
+  order_contracts?: (OrderContractRow & {
+    order_contract_feedback?: OrderContractFeedbackRow[] | null;
+  }) | Array<OrderContractRow & {
+    order_contract_feedback?: OrderContractFeedbackRow[] | null;
+  }> | null;
   order_attachments?: OrderAttachmentRow[] | null;
   request_status_history?: RequestStatusHistoryRow[] | null;
 };
@@ -382,7 +388,11 @@ function mapOrderAddonSnapshots(value: Json): OrderAddonSnapshot[] {
     .filter((item): item is OrderAddonSnapshot => Boolean(item));
 }
 
-export function mapOrderContract(row: OrderContractRow): OrderContract {
+export function mapOrderContract(
+  row: OrderContractRow & { order_contract_feedback?: OrderContractFeedbackRow[] | null }
+): OrderContract {
+  const feedbackRows = row.order_contract_feedback ?? [];
+
   return {
     id: row.id,
     requestId: row.request_id,
@@ -394,6 +404,19 @@ export function mapOrderContract(row: OrderContractRow): OrderContract {
     status: row.status,
     acceptedAt: row.accepted_at ?? null,
     createdAt: row.created_at,
-    updatedAt: row.updated_at ?? undefined
+    updatedAt: row.updated_at ?? undefined,
+    feedback: feedbackRows.map(mapOrderContractFeedback)
+  };
+}
+
+export function mapOrderContractFeedback(row: OrderContractFeedbackRow): OrderContractFeedback {
+  return {
+    id: row.id,
+    contractId: row.contract_id,
+    requestId: row.request_id,
+    clientUserId: row.client_user_id ?? null,
+    authorRole: row.author_role,
+    message: row.message,
+    createdAt: row.created_at
   };
 }

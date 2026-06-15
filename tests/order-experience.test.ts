@@ -144,7 +144,8 @@ describe("order experience helpers", () => {
         managerComment: "",
         status: "accepted",
         acceptedAt: "2026-06-06T12:00:00.000Z",
-        createdAt: "2026-06-06T11:00:00.000Z"
+        createdAt: "2026-06-06T11:00:00.000Z",
+        feedback: []
       },
       statusHistory: [
         {
@@ -212,6 +213,34 @@ describe("order experience helpers", () => {
     expect(draft?.values.clientName).toBe("Анна");
     expect(draft?.values.addonIds).toEqual(["addon-fast"]);
     expect(draft?.quizAnswers?.taskType).toBe("brand");
+  });
+
+  it("migrates six-step version 1 drafts to the combined service step", () => {
+    const draft = parseOrderDraft(
+      JSON.stringify({
+        version: 1,
+        stepId: "package",
+        values: {
+          clientName: "Анна",
+          contactMethod: "Телефон",
+          contactValue: "+7 999 123-45-67",
+          serviceId: "svc-brand",
+          packageId: "pkg-brand-logo",
+          addonIds: [],
+          referenceProjectId: "",
+          resultDescription: "",
+          stylePreferences: "",
+          materials: "",
+          desiredDeadline: "",
+          comment: ""
+        }
+      })
+    );
+
+    expect(ORDER_DRAFT_VERSION).toBe(2);
+    expect(draft?.version).toBe(2);
+    expect(draft?.stepId).toBe("service");
+    expect(draft?.values.packageId).toBe("pkg-brand-logo");
   });
 
   it("appends brief chips without removing custom text or duplicating phrases", () => {

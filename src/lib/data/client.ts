@@ -11,7 +11,7 @@ export async function listClientRequests(clientUserId: string): Promise<OrderReq
 
   const { data, error } = await client
     .from("requests")
-    .select("*, order_contracts(*), order_attachments(*)")
+    .select("*, order_contracts(*, order_contract_feedback(*)), order_attachments(*)")
     .eq("client_user_id", clientUserId)
     .order("created_at", { ascending: false });
 
@@ -34,7 +34,7 @@ export async function getClientRequestById(
 
   const { data, error } = await client
     .from("requests")
-    .select("*, order_contracts(*), order_attachments(*), request_status_history(*)")
+    .select("*, order_contracts(*, order_contract_feedback(*)), order_attachments(*), request_status_history(*)")
     .eq("id", requestId)
     .eq("client_user_id", clientUserId)
     .maybeSingle();

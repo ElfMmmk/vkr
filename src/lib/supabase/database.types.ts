@@ -1,10 +1,10 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type RequestStatus = "new" | "in_progress" | "approved" | "completed" | "rejected";
-export type ContractStatus = "draft" | "sent" | "accepted" | "cancelled";
+export type ContractStatus = "draft" | "sent" | "revision_requested" | "accepted" | "cancelled";
 export type UserRole = "admin" | "manager" | "client";
 export type AnalyticsEventType = "page_view" | "cta_click";
-export type NotificationType = "request_created" | "request_status_changed" | "system";
+export type NotificationType = "request_created" | "request_status_changed" | "contract_revision_requested" | "system";
 export type NotificationAudienceRole = "admin" | "manager";
 export type ImageParentType = "project" | "page" | "service" | "free";
 export type TranslationEntityType = "page" | "service" | "tag" | "project" | "image";
@@ -240,6 +240,36 @@ export type Database = {
             referencedColumns: ["id"];
           }
         ];
+      };
+      order_contract_feedback: {
+        Row: {
+          id: string;
+          contract_id: string;
+          request_id: string;
+          client_user_id: string | null;
+          author_role: "client" | "manager" | "admin";
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contract_id: string;
+          request_id: string;
+          client_user_id?: string | null;
+          author_role?: "client" | "manager" | "admin";
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contract_id?: string;
+          request_id?: string;
+          client_user_id?: string | null;
+          author_role?: "client" | "manager" | "admin";
+          message?: string;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       order_attachments: {
         Row: {
@@ -875,7 +905,15 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      request_order_contract_revision: {
+        Args: {
+          target_contract_id: string;
+          feedback_message: string;
+        };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

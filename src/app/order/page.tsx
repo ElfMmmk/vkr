@@ -20,16 +20,16 @@ export default async function OrderPage({
   return (
     <>
       <SiteHeader />
-      <main id="main-content" className="container-shell grid gap-10 py-16 md:grid-cols-[0.8fr_1fr] md:py-24">
+      <main id="main-content" className="container-shell py-12 md:py-20">
         <SectionHeading
           title={locale === "en" ? "Place an order" : "Оформить заказ"}
           description={
             locale === "en"
               ? "Choose a service package, add-ons and a reference example. The form will show a preliminary price and timing before submission."
-              : "Выберите пакет услуги, доплаты и пример работы. Форма покажет предварительную стоимость и срок до отправки заказа."
+              : "Выберите услугу и пакет, при необходимости добавьте дополнительные работы и проект из портфолио как ориентир."
           }
         />
-        <section className="border border-line bg-white p-6 md:p-8">
+        <section className="mt-8 border border-line bg-white p-4 sm:p-6 md:mt-10 md:p-8">
           <OrderForm projects={projects} selectedServiceSlug={params.service} services={services} />
         </section>
       </main>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { contactMethods, normalizeAndValidateContact } from "@/lib/contact";
 import { fieldLimits } from "@/lib/field-limits";
 import { requestStatuses } from "@/lib/request-status";
 
@@ -7,8 +8,8 @@ export const pageKeySchema = z.enum(["home", "about", "services", "contacts"]);
 
 export const imageParentTypeSchema = z.enum(["project", "page", "service", "free"]);
 
-export const contactMethodSchema = z.enum(["Telegram", "Email", "Телефон", "Другой способ"]);
-export const contractStatusSchema = z.enum(["draft", "sent", "accepted", "cancelled"]);
+export const contactMethodSchema = z.enum(contactMethods);
+export const contractStatusSchema = z.enum(["draft", "sent", "revision_requested", "accepted", "cancelled"]);
 
 export const orderRequestSchema = z.object({
   clientName: z
@@ -52,6 +53,23 @@ export const orderRequestSchema = z.object({
     .trim()
     .max(fieldLimits.order.comment.max, "Комментарий слишком длинный")
     .default("")
+}).superRefine((value, context) => {
+  const result = normalizeAndValidateContact(value.contactMethod, value.contactValue);
+
+  if (!result.ok) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: result.error,
+      path: ["contactValue"]
+    });
+  }
+}).transform((value) => {
+  const result = normalizeAndValidateContact(value.contactMethod, value.contactValue);
+
+  return {
+    ...value,
+    contactValue: result.ok ? result.value : value.contactValue
+  };
 });
 
 export const servicePackageSchema = z
