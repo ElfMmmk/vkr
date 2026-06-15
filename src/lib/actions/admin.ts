@@ -11,6 +11,8 @@ import {
 } from "@/lib/auth";
 import { fieldLimits } from "@/lib/field-limits";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
+import { deleteOrderAttachmentFile } from "@/lib/order-attachment-storage";
+import { formatRequestStatusChangeBody } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
 import { parsePackageIncludedItems } from "@/lib/service-package-marketing";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
@@ -818,7 +820,7 @@ export async function updateRequestStatusAction(formData: FormData): Promise<voi
   await client.from("notifications").insert({
     type: "request_status_changed",
     title: "Статус заявки изменён",
-    body: `Заявка переведена в статус ${status}.`,
+    body: formatRequestStatusChangeBody(status),
     entity_type: "request",
     entity_id: id,
     audience_role: "manager"
@@ -888,7 +890,7 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
   if (previousStatus === "revision_requested" && parsed.status === "sent") {
     await client.from("notifications").insert({
       type: "system",
-      title: "Договор-заказ отправлен повторно",
+      title: "Заказ отправлен повторно",
       body: "Исправленные условия отправлены клиенту на повторное согласование.",
       entity_type: "request",
       entity_id: parsed.requestId,
@@ -900,6 +902,73 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
   revalidatePath(`/admin/requests/${parsed.requestId}`);
   revalidatePath("/account");
   redirectWithNotice(`/admin/requests/${parsed.requestId}`, "order-contract-saved");
+}
+
+export async function saveOrderContractFeedbackAction(formData: FormData): Promise<void> {
+  const admin = await requireRequestManager();
+  const contractId = cleanId(formString(formData, "contractId"));
+  const requestId = cleanId(formString(formData, "requestId"));
+  const message = formString(formData, "message").trim();
+
+  if (!contractId || !requestId || message.length < 10 || message.length > 1000) {
+    redirectWithNotice(
+      requestId ? `/admin/requests/${requestId}` : "/admin/requests",
+      "order-comment-invalid"
+    );
+  }
+
+  const client = getSupabaseAdminOrThrow();
+  const { data: contract, error: contractError } = await client
+    .from("order_contracts")
+    .select("id, request_id")
+    .eq("id", contractId)
+    .eq("request_id", requestId)
+    .maybeSingle();
+
+  if (contractError || !contract) {
+    redirectWithNotice(`/admin/requests/${requestId}`, "order-comment-failed");
+  }
+
+  const { error } = await client.from("order_contract_feedback").insert({
+    contract_id: contractId,
+    request_id: requestId,
+    client_user_id: null,
+    author_role: admin.role === "admin" ? "admin" : "manager",
+    message
+  });
+
+  if (error) {
+    redirectWithNotice(`/admin/requests/${requestId}`, "order-comment-failed");
+  }
+
+  revalidatePath(`/admin/requests/${requestId}`);
+  revalidatePath(`/account/requests/${requestId}`);
+  redirectWithNotice(`/admin/requests/${requestId}`, "order-comment-saved");
+}
+
+export async function deleteOrderAttachmentAction(formData: FormData): Promise<void> {
+  const admin = await requireRequestManager();
+  const attachmentId = cleanId(formString(formData, "attachmentId"));
+  const requestId = cleanId(formString(formData, "requestId"));
+
+  if (!attachmentId || !requestId) {
+    return;
+  }
+
+  const result = await deleteOrderAttachmentFile(getSupabaseAdminOrThrow(), {
+    actorUserId: admin.id,
+    attachmentId,
+    canDeleteAny: true,
+    requestId
+  });
+
+  if (!result.ok) {
+    redirectWithNotice(`/admin/requests/${requestId}`, "attachment-delete-failed");
+  }
+
+  revalidatePath(`/admin/requests/${requestId}`);
+  revalidatePath(`/account/requests/${requestId}`);
+  redirectWithNotice(`/admin/requests/${requestId}`, "attachment-deleted");
 }
 
 export async function deleteRequestAction(formData: FormData): Promise<void> {
@@ -1084,6 +1153,7 @@ export async function deleteImageAction(formData: FormData): Promise<void> {
 export async function markNotificationReadAction(formData: FormData): Promise<void> {
   const admin = await requireRequestManager();
   const id = cleanId(formString(formData, "id"));
+  const redirectTo = getAdminRedirectTo(formData, "/admin/notifications");
 
   if (!id) {
     return;
@@ -1097,7 +1167,7 @@ export async function markNotificationReadAction(formData: FormData): Promise<vo
   });
 
   revalidatePath("/admin/notifications");
-  redirectWithNotice("/admin/notifications", "notification-read");
+  redirectWithNotice(redirectTo, "notification-read");
 }
 
 export async function updateUserRoleAction(formData: FormData): Promise<void> {

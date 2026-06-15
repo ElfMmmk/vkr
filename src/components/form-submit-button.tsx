@@ -9,6 +9,8 @@ type FormSubmitButtonProps = {
   className: string;
   describedBy?: string;
   disabled?: boolean;
+  name?: string;
+  value?: string;
 };
 
 export function FormSubmitButton({
@@ -16,7 +18,9 @@ export function FormSubmitButton({
   pendingLabel,
   className,
   describedBy,
-  disabled = false
+  disabled = false,
+  name,
+  value
 }: FormSubmitButtonProps) {
   const { pending } = useFormStatus();
 
@@ -26,7 +30,9 @@ export function FormSubmitButton({
       aria-describedby={describedBy}
       className={className}
       disabled={disabled || pending}
+      name={name}
       type="submit"
+      value={value}
     >
       {pending ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : null}
       {pending ? pendingLabel : idleLabel}

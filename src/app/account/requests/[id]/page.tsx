@@ -3,10 +3,15 @@ import { notFound } from "next/navigation";
 
 import {
   acceptOrderContractAction,
+  deleteClientOrderAttachmentAction,
   requestOrderContractRevisionAction,
   uploadClientOrderAttachmentAction
 } from "@/app/account/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { ContractFeedbackThread } from "@/components/contract-feedback-thread";
+import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { OrderEstimateBreakdown } from "@/components/order-estimate-breakdown";
 import { RouteFlashToast } from "@/components/route-flash-toast";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -15,7 +20,7 @@ import { requireClientSession } from "@/lib/auth";
 import { getClientRequestById } from "@/lib/data/client";
 import { MAX_ORDER_ATTACHMENT_COUNT } from "@/lib/order-attachments";
 import { createOrderAttachmentSignedUrls } from "@/lib/order-attachment-storage";
-import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
+import { formatRubles } from "@/lib/order-calculator";
 import { buildRequestTimeline } from "@/lib/request-timeline";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
 
@@ -43,10 +48,16 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
   const client = getSupabaseAdminOrThrow();
   const attachments = await createOrderAttachmentSignedUrls(client, request.attachments);
   const timeline = buildRequestTimeline(request);
-  const canUploadAttachments =
+  const canManageAttachments =
     request.status !== "completed" &&
-    request.status !== "rejected" &&
+    request.status !== "rejected";
+  const canUploadAttachments =
+    canManageAttachments &&
     attachments.length < MAX_ORDER_ATTACHMENT_COUNT;
+  const visibleContract =
+    request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status)
+      ? request.contract
+      : null;
 
   return (
     <>
@@ -65,10 +76,13 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
             </h1>
             <p className="mt-3 text-muted">
               {request.packageTitle || "Пакет не выбран"} ·{" "}
-              {formatPriceRange(request.estimatedPriceFrom, request.estimatedPriceTo)}
+              <OrderEstimateBreakdown compact request={request} />
             </p>
           </div>
-          <StatusBadge status={request.status} />
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge status={request.status} />
+            <ContractStatusBadge status={visibleContract?.status} />
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -76,19 +90,6 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
             <section className="border border-line bg-white p-5">
               <h2 className="text-2xl font-semibold">Бриф</h2>
               <dl className="mt-5 grid gap-4 text-sm leading-6 md:grid-cols-2">
-                <div>
-                  <dt className="font-semibold text-muted">Предварительная стоимость</dt>
-                  <dd>{formatPriceRange(request.estimatedPriceFrom, request.estimatedPriceTo)}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold text-muted">Предварительный срок</dt>
-                  <dd>
-                    {formatDurationRange(
-                      request.estimatedDurationFromDays,
-                      request.estimatedDurationToDays
-                    )}
-                  </dd>
-                </div>
                 <div>
                   <dt className="font-semibold text-muted">Способ связи</dt>
                   <dd>
@@ -100,6 +101,9 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
                   <dd>{request.desiredDeadline || "Не указан"}</dd>
                 </div>
               </dl>
+              <div className="mt-5 border border-line bg-paper p-4">
+                <OrderEstimateBreakdown request={request} />
+              </div>
               <div className="mt-6 grid gap-5 text-sm leading-6">
                 <section>
                   <h3 className="font-semibold">Ожидаемый результат</h3>
@@ -129,48 +133,28 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
               </div>
             </section>
 
-            {request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status) ? (
+            {visibleContract ? (
               <section className="border border-cobalt/25 bg-cobalt/10 p-5">
                 <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                   <div>
-                    <h2 className="text-2xl font-semibold">Договор-заказ</h2>
+                    <h2 className="text-2xl font-semibold">Заказ</h2>
                     <p className="mt-2 text-sm leading-6 text-muted">
-                      Итоговая стоимость: {formatRubles(request.contract.finalPrice)} · срок:{" "}
-                      {request.contract.finalDurationDays} раб. дн.
+                      Итоговая стоимость: {formatRubles(visibleContract.finalPrice)} · срок:{" "}
+                      {visibleContract.finalDurationDays} раб. дн.
                     </p>
                   </div>
-                  <span className="border border-cobalt/25 bg-white px-3 py-1.5 text-sm font-semibold text-cobalt">
-                    {request.contract.status === "accepted"
-                      ? "Принят"
-                      : request.contract.status === "revision_requested"
-                        ? "На доработке"
-                        : "На согласовании"}
-                  </span>
+                  <ContractStatusBadge status={visibleContract.status} />
                 </div>
-                <p className="mt-4 text-sm leading-6">{request.contract.workScope}</p>
-                {request.contract.managerComment ? (
-                  <p className="mt-3 text-sm leading-6 text-muted">{request.contract.managerComment}</p>
+                <p className="mt-4 text-sm leading-6">{visibleContract.workScope}</p>
+                {visibleContract.managerComment ? (
+                  <p className="mt-3 text-sm leading-6 text-muted">{visibleContract.managerComment}</p>
                 ) : null}
-                {request.contract.feedback.length ? (
-                  <div className="mt-5 border-t border-cobalt/20 pt-5">
-                    <h3 className="font-semibold">История комментариев</h3>
-                    <ol className="mt-3 grid gap-3">
-                      {request.contract.feedback.map((item) => (
-                        <li className="border border-cobalt/20 bg-white p-3 text-sm leading-6" key={item.id}>
-                          <p>{item.message}</p>
-                          <time className="mt-2 block text-xs text-muted" dateTime={item.createdAt}>
-                            {new Date(item.createdAt).toLocaleString("ru-RU")}
-                          </time>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ) : null}
-                {request.contract.status === "sent" ? (
+                <ContractFeedbackThread feedback={visibleContract.feedback} viewer="client" />
+                {visibleContract.status === "sent" ? (
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
                     <form action={acceptOrderContractAction}>
                       <input name="requestId" type="hidden" value={request.id} />
-                      <input name="contractId" type="hidden" value={request.contract.id} />
+                      <input name="contractId" type="hidden" value={visibleContract.id} />
                       <FormSubmitButton
                         className="focus-ring inline-flex min-h-11 w-full items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
                         idleLabel="Принять условия"
@@ -183,7 +167,7 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
                       </summary>
                       <form action={requestOrderContractRevisionAction} className="grid gap-3 border-t border-line p-4">
                         <input name="requestId" type="hidden" value={request.id} />
-                        <input name="contractId" type="hidden" value={request.contract.id} />
+                        <input name="contractId" type="hidden" value={visibleContract.id} />
                         <label className="text-sm font-semibold" htmlFor="contract-feedback">
                           Что нужно изменить
                         </label>
@@ -217,14 +201,31 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
                 <ul className="mt-4 grid gap-3 text-sm leading-6">
                   {attachments.map((attachment) => (
                     <li className="border border-line bg-paper p-3" key={attachment.id}>
-                      {attachment.signedUrl ? (
-                        <a className="font-semibold text-accent hover:text-ink" href={attachment.signedUrl}>
-                          {attachment.fileName}
-                        </a>
-                      ) : (
-                        <span className="font-semibold">{attachment.fileName}</span>
-                      )}
+                      <p className="font-semibold">{attachment.fileName}</p>
                       <p className="mt-1 text-muted">{formatBytes(attachment.size)}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {attachment.signedUrl ? (
+                          <a
+                            className="focus-ring inline-flex min-h-10 items-center justify-center border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-ink"
+                            download={attachment.fileName}
+                            href={attachment.signedUrl}
+                          >
+                            Скачать
+                          </a>
+                        ) : null}
+                        {canManageAttachments ? (
+                          <form action={deleteClientOrderAttachmentAction}>
+                            <input name="attachmentId" type="hidden" value={attachment.id} />
+                            <input name="requestId" type="hidden" value={request.id} />
+                            <ConfirmSubmitButton
+                              className="focus-ring inline-flex min-h-10 items-center justify-center border border-accent bg-white px-3 py-2 text-sm font-semibold text-accent hover:bg-accent hover:text-white"
+                              message={`Удалить файл «${attachment.fileName}»?`}
+                            >
+                              Удалить
+                            </ConfirmSubmitButton>
+                          </form>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>

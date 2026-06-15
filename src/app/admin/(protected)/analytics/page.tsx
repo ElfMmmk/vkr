@@ -86,19 +86,19 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
       value: formatNumber(analytics.kpis.completedRequests)
     },
     {
-      label: "Принятые договоры",
+      label: "Принятые заказы",
       meta: "клиент согласовал",
       value: formatNumber(analytics.kpis.acceptedContracts)
     },
     {
-      label: "Сумма договоров",
-      meta: "по принятым договорам",
+      label: "Сумма заказов",
+      meta: "по принятым заказам",
       value: formatCurrency(analytics.kpis.acceptedContractValue)
     },
     {
-      label: "Средняя оценка",
-      meta: "по предварительной стоимости",
-      value: formatCurrency(analytics.kpis.averageEstimate)
+      label: "Средний чек",
+      meta: "по принятым заказам",
+      value: formatCurrency(analytics.kpis.averageAcceptedOrderValue)
     },
     {
       label: "Проектов опубликовано",
@@ -121,13 +121,13 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
       value: formatNumber(analytics.traffic.uniqueVisitors)
     },
     {
-      label: "Клики по CTA",
+      label: "Клики по кнопкам",
       meta: analytics.periodLabel,
       value: formatNumber(analytics.traffic.ctaClicks)
     },
     {
-      label: "CTR CTA",
-      meta: "клики относительно просмотров",
+      label: "Конверсия кнопок",
+      meta: "доля кликов от просмотров",
       value: formatPercent(analytics.traffic.ctaClickRate)
     }
   ];
@@ -137,9 +137,9 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
           <p className="text-sm uppercase tracking-[0.18em] text-muted">Аналитика</p>
-          <h1 className="mt-2 text-4xl font-semibold">Заявки, договоры и контент</h1>
+          <h1 className="mt-2 text-4xl font-semibold">Заявки, заказы и контент</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-            Панель показывает управленческие показатели по текущим заявкам, договор-заказам,
+            Панель показывает показатели по текущим заявкам, заказам,
             контенту и публичному трафику сайта.
           </p>
         </div>
@@ -191,7 +191,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
           )}
         </AdminCard>
 
-        <AdminCard title="Топ CTA" description={`Период: ${analytics.periodLabel}`}>
+        <AdminCard title="Популярные кнопки" description={`Период: ${analytics.periodLabel}`}>
           {analytics.traffic.topCtas.length ? (
             <div className="grid gap-3">
               {analytics.traffic.topCtas.map((item) => (
@@ -208,7 +208,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted">За выбранный период кликов по CTA пока нет.</p>
+            <p className="text-sm text-muted">За выбранный период кликов по кнопкам пока нет.</p>
           )}
         </AdminCard>
       </div>
@@ -265,7 +265,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
           <div className="border border-dashed border-line bg-paper p-8 text-center">
             <h2 className="text-xl font-semibold">Нет срочных задач</h2>
             <p className="mt-2 text-sm text-muted">
-              За выбранный период нет новых заявок, отправленных договоров без принятия и старых
+              За выбранный период нет новых заявок, отправленных заказов без принятия и старых
               заявок в обработке.
             </p>
           </div>

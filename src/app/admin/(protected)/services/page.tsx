@@ -311,124 +311,137 @@ export default async function AdminServicesPage() {
         <p className="text-sm uppercase tracking-[0.18em] text-muted">Контент</p>
         <h1 className="mt-2 text-4xl font-semibold">Услуги</h1>
       </div>
-      <AdminCard title="Новая услуга" description="Услуги видны на публичной странице и используются в фильтре портфолио">
+      <AdminCard
+        collapsible
+        title="Новая услуга"
+        description="Услуги видны на публичной странице и используются в фильтре портфолио"
+      >
         <ServiceForm canWrite={admin.canWrite} />
       </AdminCard>
-      <AdminCard title="Порядок на сайте" description="Перетащите услуги в нужной последовательности и сохраните порядок">
+      <AdminCard
+        collapsible
+        title="Порядок на сайте"
+        description="Перетащите услуги в нужной последовательности и сохраните порядок"
+      >
         <AdminServiceOrderForm canWrite={admin.canWrite} services={services} />
       </AdminCard>
       <div className="space-y-4">
         {services.map((service) => (
-          <AdminCard key={service.id} title={service.title} description={service.slug}>
+          <AdminCard
+            collapsible
+            key={service.id}
+            title={service.title}
+            description={`${service.slug} · ${service.description}`}
+          >
             <p className="text-sm leading-6 text-muted">{service.description}</p>
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <section className="border border-line bg-paper p-4">
-                <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm font-semibold text-accent">Редактировать</summary>
+              <div className="mt-5">
+                <ServiceForm canWrite={admin.canWrite} service={service} />
+              </div>
+            </details>
+            <details className="mt-5 border border-line bg-paper">
+              <summary className="focus-ring cursor-pointer px-4 py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden">Пакеты и дополнительные услуги</summary>
+              <div className="grid gap-5 border-t border-line p-4">
+                <section className="border border-line bg-white p-4">
                   <div>
                     <h3 className="text-lg font-semibold">Пакеты</h3>
                     <p className="mt-1 text-sm leading-6 text-muted">
                       Видны клиенту при оформлении заказа. Порядок меняется ниже.
                     </p>
                   </div>
-                  <details>
-                    <summary className="focus-ring cursor-pointer border border-ink bg-ink px-3 py-2 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
-                      Добавить
+                  <details className="mt-4 border border-line bg-paper">
+                    <summary className="focus-ring cursor-pointer px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                      Добавить пакет
                     </summary>
-                    <div className="mt-4">
+                    <div className="border-t border-line p-4">
                       <PackageForm canWrite={admin.canWrite} serviceId={service.id} />
                     </div>
                   </details>
-                </div>
-                <AdminServiceItemOrderForm
-                  canWrite={admin.canWrite}
-                  items={service.packages}
-                  kind="package"
-                  serviceId={service.id}
-                />
-                <div className="mt-4 grid gap-3">
-                  {service.packages.map((packageItem) => (
-                    <details className="border border-line bg-white p-4" key={packageItem.id}>
-                      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                        <span className="block font-semibold">{packageItem.title}</span>
-                        <span className="mt-1 block text-sm text-muted">
-                          {formatPriceRange(packageItem.priceFrom, packageItem.priceTo)} ·{" "}
-                          {formatDurationRange(packageItem.durationFromDays, packageItem.durationToDays)}
-                        </span>
-                      </summary>
-                      <div className="mt-4 border-t border-line pt-4">
-                        <PackageForm
-                          canWrite={admin.canWrite}
-                          packageItem={packageItem}
-                          serviceId={service.id}
-                        />
-                        <form action={deleteServicePackageAction} className="mt-3">
-                          <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
-                            <input name="id" type="hidden" value={packageItem.id} />
-                            <button className={adminDangerButtonClass}>Удалить пакет</button>
-                          </AdminFormFieldset>
-                        </form>
-                      </div>
-                    </details>
-                  ))}
-                  {!service.packages.length ? (
-                    <p className="text-sm leading-6 text-muted">Пакеты пока не настроены.</p>
-                  ) : null}
-                </div>
-              </section>
-              <section className="border border-line bg-paper p-4">
-                <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                  <AdminServiceItemOrderForm
+                    canWrite={admin.canWrite}
+                    items={service.packages}
+                    kind="package"
+                    serviceId={service.id}
+                  />
+                  <div className="mt-4 grid gap-3">
+                    {service.packages.map((packageItem) => (
+                      <details className="border border-line bg-white p-4" key={packageItem.id}>
+                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                          <span className="block font-semibold">{packageItem.title}</span>
+                          <span className="mt-1 block text-sm text-muted">
+                            {formatPriceRange(packageItem.priceFrom, packageItem.priceTo)} ·{" "}
+                            {formatDurationRange(packageItem.durationFromDays, packageItem.durationToDays)}
+                          </span>
+                        </summary>
+                        <div className="mt-4 border-t border-line pt-4">
+                          <PackageForm
+                            canWrite={admin.canWrite}
+                            packageItem={packageItem}
+                            serviceId={service.id}
+                          />
+                          <form action={deleteServicePackageAction} className="mt-3">
+                            <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
+                              <input name="id" type="hidden" value={packageItem.id} />
+                              <button className={adminDangerButtonClass}>Удалить пакет</button>
+                            </AdminFormFieldset>
+                          </form>
+                        </div>
+                      </details>
+                    ))}
+                    {!service.packages.length ? (
+                      <p className="text-sm leading-6 text-muted">Пакеты пока не настроены.</p>
+                    ) : null}
+                  </div>
+                </section>
+
+                <section className="border border-line bg-white p-4">
                   <div>
                     <h3 className="text-lg font-semibold">Дополнительные услуги</h3>
                     <p className="mt-1 text-sm leading-6 text-muted">
                       Клиент может добавить их к выбранному пакету.
                     </p>
                   </div>
-                  <details>
-                    <summary className="focus-ring cursor-pointer border border-ink bg-ink px-3 py-2 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
-                      Добавить
+                  <details className="mt-4 border border-line bg-paper">
+                    <summary className="focus-ring cursor-pointer px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                      Добавить дополнительную услугу
                     </summary>
-                    <div className="mt-4">
+                    <div className="border-t border-line p-4">
                       <AddonForm canWrite={admin.canWrite} serviceId={service.id} />
                     </div>
                   </details>
-                </div>
-                <AdminServiceItemOrderForm
-                  canWrite={admin.canWrite}
-                  items={service.addons}
-                  kind="addon"
-                  serviceId={service.id}
-                />
-                <div className="mt-4 grid gap-3">
-                  {service.addons.map((addon) => (
-                    <details className="border border-line bg-white p-4" key={addon.id}>
-                      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                        <span className="block font-semibold">{addon.title}</span>
-                        <span className="mt-1 block text-sm text-muted">
-                          +{formatRubles(addon.price)}
-                          {addon.durationDays ? ` · +${addon.durationDays} раб. дн.` : ""}
-                        </span>
-                      </summary>
-                      <div className="mt-4 border-t border-line pt-4">
-                        <AddonForm addon={addon} canWrite={admin.canWrite} serviceId={service.id} />
-                        <form action={deleteServiceAddonAction} className="mt-3">
-                          <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
-                            <input name="id" type="hidden" value={addon.id} />
-                            <button className={adminDangerButtonClass}>Удалить доплату</button>
-                          </AdminFormFieldset>
-                        </form>
-                      </div>
-                    </details>
-                  ))}
-                  {!service.addons.length ? (
-                    <p className="text-sm leading-6 text-muted">Доплаты пока не настроены.</p>
-                  ) : null}
-                </div>
-              </section>
-            </div>
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-semibold text-accent">Редактировать</summary>
-              <div className="mt-5">
-                <ServiceForm canWrite={admin.canWrite} service={service} />
+                  <AdminServiceItemOrderForm
+                    canWrite={admin.canWrite}
+                    items={service.addons}
+                    kind="addon"
+                    serviceId={service.id}
+                  />
+                  <div className="mt-4 grid gap-3">
+                    {service.addons.map((addon) => (
+                      <details className="border border-line bg-white p-4" key={addon.id}>
+                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                          <span className="block font-semibold">{addon.title}</span>
+                          <span className="mt-1 block text-sm text-muted">
+                            +{formatRubles(addon.price)}
+                            {addon.durationDays ? ` · +${addon.durationDays} раб. дн.` : ""}
+                          </span>
+                        </summary>
+                        <div className="mt-4 border-t border-line pt-4">
+                          <AddonForm addon={addon} canWrite={admin.canWrite} serviceId={service.id} />
+                          <form action={deleteServiceAddonAction} className="mt-3">
+                            <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
+                              <input name="id" type="hidden" value={addon.id} />
+                              <button className={adminDangerButtonClass}>Удалить доплату</button>
+                            </AdminFormFieldset>
+                          </form>
+                        </div>
+                      </details>
+                    ))}
+                    {!service.addons.length ? (
+                      <p className="text-sm leading-6 text-muted">Доплаты пока не настроены.</p>
+                    ) : null}
+                  </div>
+                </section>
               </div>
             </details>
             <form action={deleteServiceAction} className="mt-4">

@@ -52,7 +52,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     {
       id: `contract-created-${contract.id}`,
       type: "contract",
-      title: "Договор-заказ подготовлен",
+      title: "Заказ подготовлен",
       description:
         contract.status === "accepted"
           ? "Финальные условия были отправлены на согласование."
@@ -65,7 +65,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     events.push({
       id: `contract-feedback-${feedback.id}`,
       type: "contract_feedback",
-      title: "Запрошены изменения договора-заказа",
+      title: "Запрошены изменения заказа",
       description: feedback.message,
       createdAt: feedback.createdAt
     });
@@ -81,7 +81,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     events.push({
       id: `contract-resent-${contract.id}-${contract.updatedAt}`,
       type: "contract",
-      title: "Договор-заказ отправлен повторно",
+      title: "Заказ отправлен повторно",
       description: "Исправленные условия отправлены клиенту на повторное согласование.",
       createdAt: contract.updatedAt
     });
@@ -91,7 +91,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     events.push({
       id: `contract-accepted-${contract.id}`,
       type: "contract",
-      title: "Договор-заказ принят",
+      title: "Заказ принят",
       description: "Условия заказа согласованы клиентом.",
       createdAt: contract.acceptedAt
     });

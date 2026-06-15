@@ -10,6 +10,7 @@ import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
 import { MAX_ORDER_ATTACHMENT_COUNT } from "@/lib/order-attachments";
 import {
+  deleteOrderAttachmentFile,
   getOrderAttachmentFiles,
   uploadOrderAttachmentFiles
 } from "@/lib/order-attachment-storage";
@@ -344,4 +345,52 @@ export async function uploadClientOrderAttachmentAction(formData: FormData): Pro
   revalidatePath("/account");
   revalidatePath(`/account/requests/${requestId}`);
   redirect(`/account/requests/${requestId}?notice=attachment-uploaded`);
+}
+
+export async function deleteClientOrderAttachmentAction(formData: FormData): Promise<void> {
+  const session = await requireClientSession();
+  const attachmentId = formString(formData, "attachmentId").trim();
+  const requestId = formString(formData, "requestId").trim();
+
+  if (!attachmentId || !requestId) {
+    redirect("/account");
+  }
+
+  const client = getSupabaseAdminOrThrow();
+  const { data: request } = await client
+    .from("requests")
+    .select("id, client_user_id, status, order_attachments(id)")
+    .eq("id", requestId)
+    .maybeSingle();
+  const attachmentRows = Array.isArray(request?.order_attachments)
+    ? request.order_attachments
+    : [];
+
+  if (
+    !request
+    || request.client_user_id !== session.id
+    || !attachmentRows.some((attachment) => attachment.id === attachmentId)
+  ) {
+    redirect("/account");
+  }
+
+  if (request.status === "completed" || request.status === "rejected") {
+    redirect(`/account/requests/${requestId}?notice=attachments-closed`);
+  }
+
+  const result = await deleteOrderAttachmentFile(client, {
+    actorUserId: session.id,
+    attachmentId,
+    canDeleteAny: true,
+    requestId
+  });
+
+  if (!result.ok) {
+    redirect(`/account/requests/${requestId}?notice=attachment-delete-failed`);
+  }
+
+  revalidatePath("/account");
+  revalidatePath(`/account/requests/${requestId}`);
+  revalidatePath(`/admin/requests/${requestId}`);
+  redirect(`/account/requests/${requestId}?notice=attachment-deleted`);
 }

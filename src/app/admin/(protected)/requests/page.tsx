@@ -4,12 +4,13 @@ import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass } from "@/components/admin-form-lock";
 import { AdminRequestStatusForm } from "@/components/admin-request-status-form";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { Field, inputClass, selectClass } from "@/components/form-controls";
+import { OrderEstimateBreakdown } from "@/components/order-estimate-breakdown";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteRequestAction } from "@/lib/actions/admin";
 import { requireRequestManager } from "@/lib/auth";
 import { listAdminRequests, listAdminServices } from "@/lib/data/admin";
-import { formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
 import { requestStatusLabels, requestStatuses } from "@/lib/request-status";
 
 type AdminRequestsPageProps = {
@@ -133,7 +134,10 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
           <AdminCard key={request.id} title={request.clientName} description={new Date(request.createdAt).toLocaleString("ru-RU")}>
             <div className="grid gap-5 md:grid-cols-[1fr_280px]">
               <div className="space-y-3 text-sm leading-6">
-                <StatusBadge status={request.status} />
+                <div className="flex flex-wrap gap-2">
+                  <StatusBadge status={request.status} />
+                  <ContractStatusBadge status={request.contract?.status} />
+                </div>
                 <p>
                   <span className="font-semibold">Контакт:</span> {request.contactMethod}, {request.contactValue}
                 </p>
@@ -143,11 +147,7 @@ export default async function AdminRequestsPage({ searchParams }: AdminRequestsP
                 {request.packageTitle ? (
                   <p>
                     <span className="font-semibold">Пакет:</span> {request.packageTitle},{" "}
-                    {formatPriceRange(request.estimatedPriceFrom, request.estimatedPriceTo)} ·{" "}
-                    {formatDurationRange(
-                      request.estimatedDurationFromDays,
-                      request.estimatedDurationToDays
-                    )}
+                    <OrderEstimateBreakdown compact request={request} />
                   </p>
                 ) : null}
                 <p className="text-muted">{request.resultDescription || request.comment}</p>

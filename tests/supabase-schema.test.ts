@@ -15,6 +15,14 @@ const orderContractRevisionMigrationSql = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260615000000_order_contract_revision.sql"),
   "utf8"
 );
+const requestInWorkMigrationSql = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260615001000_request_in_work_status.sql"),
+  "utf8"
+);
+const requestInWorkPatchSql = readFileSync(
+  join(process.cwd(), "supabase", "update_request_status_in_work.sql"),
+  "utf8"
+);
 
 describe("supabase security schema", () => {
   it("keeps order inserts server-only for public Supabase clients", () => {
@@ -92,6 +100,14 @@ describe("supabase security schema", () => {
     expect(schemaSql).toContain('create policy "Clients can read own order contracts"');
     expect(schemaSql).toContain("status in ('sent', 'revision_requested', 'accepted')");
     expect(schemaSql).toContain("request.client_user_id = auth.uid()");
+  });
+
+  it("keeps the separate in-work request status reproducible", () => {
+    for (const sql of [schemaSql, requestInWorkMigrationSql, requestInWorkPatchSql]) {
+      expect(sql).toContain("'new', 'in_progress', 'approved', 'in_work', 'completed', 'rejected'");
+      expect(sql).toContain("requests_status_check");
+      expect(sql).toContain("request_status_history_to_status_check");
+    }
   });
 
   it("adds atomic contract revision requests with protected feedback history", () => {

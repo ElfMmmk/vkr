@@ -1,6 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type RequestStatus = "new" | "in_progress" | "approved" | "completed" | "rejected";
+export type RequestStatus = "new" | "in_progress" | "approved" | "in_work" | "completed" | "rejected";
 export type ContractStatus = "draft" | "sent" | "revision_requested" | "accepted" | "cancelled";
 export type UserRole = "admin" | "manager" | "client";
 export type AnalyticsEventType = "page_view" | "cta_click";

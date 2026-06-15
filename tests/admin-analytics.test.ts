@@ -254,7 +254,7 @@ describe("admin analytics helpers", () => {
     expect(analytics.kpis.newRequests).toBe(1);
     expect(analytics.kpis.acceptedContracts).toBe(1);
     expect(analytics.kpis.acceptedContractValue).toBe(75000);
-    expect(analytics.kpis.averageEstimate).toBe(35000);
+    expect(analytics.kpis.averageAcceptedOrderValue).toBe(75000);
     expect(analytics.kpis.publishedProjects).toBe(1);
     expect(analytics.kpis.mediaFiles).toBe(1);
     expect(analytics.traffic.totalPageViews).toBe(3);

@@ -2,30 +2,34 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminCard } from "@/components/admin-card";
-import { AdminFormFieldset, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import {
+  AdminFormFieldset,
+  adminDangerButtonClass,
+  adminPrimaryButtonClass
+} from "@/components/admin-form-lock";
 import { AdminRequestStatusForm } from "@/components/admin-request-status-form";
-import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { ContractFeedbackThread } from "@/components/contract-feedback-thread";
+import { ContractStatusBadge } from "@/components/contract-status-badge";
+import { Field, inputClass, textareaClass } from "@/components/form-controls";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { saveOrderContractAction } from "@/lib/actions/admin";
+import { OrderEstimateBreakdown } from "@/components/order-estimate-breakdown";
+import {
+  deleteOrderAttachmentAction,
+  saveOrderContractAction,
+  saveOrderContractFeedbackAction
+} from "@/lib/actions/admin";
 import { requireRequestManager } from "@/lib/auth";
 import { getAdminRequestById } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import { createOrderAttachmentSignedUrls } from "@/lib/order-attachment-storage";
-import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
+import { formatRubles } from "@/lib/order-calculator";
 import { requestStatusLabels } from "@/lib/request-status";
 import { getSupabaseAdminOrThrow } from "@/lib/supabase/server";
 
 type AdminRequestDetailPageProps = {
   params: Promise<{ id: string }>;
 };
-
-const contractStatusLabels = {
-  draft: "Черновик",
-  sent: "Отправлен клиенту",
-  revision_requested: "Клиент запросил изменения",
-  accepted: "Принят клиентом",
-  cancelled: "Отменён"
-} as const;
 
 export default async function AdminRequestDetailPage({ params }: AdminRequestDetailPageProps) {
   const admin = await requireRequestManager();
@@ -82,20 +86,10 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                 <dt className="font-semibold text-muted">Пакет</dt>
                 <dd>{request.packageTitle || "Не выбран"}</dd>
               </div>
-              <div>
-                <dt className="font-semibold text-muted">Предварительная стоимость</dt>
-                <dd>{formatPriceRange(request.estimatedPriceFrom, request.estimatedPriceTo)}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-muted">Предварительный срок</dt>
-                <dd>
-                  {formatDurationRange(
-                    request.estimatedDurationFromDays,
-                    request.estimatedDurationToDays
-                  )}
-                </dd>
-              </div>
             </dl>
+            <div className="mt-5 border border-line bg-paper p-4">
+              <OrderEstimateBreakdown request={request} />
+            </div>
             <div className="mt-6 grid gap-5 text-sm leading-6">
               <section>
                 <h2 className="font-semibold">Ожидаемый результат</h2>
@@ -124,7 +118,7 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
               ) : null}
               {request.selectedAddons.length ? (
                 <section>
-                  <h2 className="font-semibold">Доплаты</h2>
+                  <h2 className="font-semibold">Выбранные доплаты</h2>
                   <ul className="mt-2 grid gap-2 text-muted">
                     {request.selectedAddons.map((addon) => (
                       <li key={addon.id}>
@@ -140,15 +134,35 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                   <h2 className="font-semibold">Материалы клиента</h2>
                   <ul className="mt-2 grid gap-2 text-muted">
                     {attachments.map((attachment) => (
-                      <li key={attachment.id}>
-                        {attachment.signedUrl ? (
-                          <a className="font-semibold text-accent hover:text-ink" href={attachment.signedUrl}>
-                            {attachment.fileName}
-                          </a>
-                        ) : (
-                          <span className="font-semibold">{attachment.fileName}</span>
-                        )}
-                        <span> · {Math.max(1, Math.round(attachment.size / 1024))} КБ</span>
+                      <li
+                        className="flex flex-col gap-3 border border-line bg-paper p-3 sm:flex-row sm:items-center sm:justify-between"
+                        key={attachment.id}
+                      >
+                        <span>
+                          <span className="font-semibold text-ink">{attachment.fileName}</span>
+                          <span> · {Math.max(1, Math.round(attachment.size / 1024))} КБ</span>
+                        </span>
+                        <span className="flex flex-wrap gap-2">
+                          {attachment.signedUrl ? (
+                            <a
+                              className="focus-ring inline-flex min-h-10 items-center justify-center border border-ink bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-ink hover:text-white"
+                              download={attachment.fileName}
+                              href={attachment.signedUrl}
+                            >
+                              Скачать
+                            </a>
+                          ) : null}
+                          <form action={deleteOrderAttachmentAction}>
+                            <input name="attachmentId" type="hidden" value={attachment.id} />
+                            <input name="requestId" type="hidden" value={request.id} />
+                            <ConfirmSubmitButton
+                              className={adminDangerButtonClass}
+                              message={`Удалить файл «${attachment.fileName}»?`}
+                            >
+                              Удалить
+                            </ConfirmSubmitButton>
+                          </form>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -158,14 +172,17 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
           </AdminCard>
 
           <AdminCard
-            title="Договор-заказ"
+            title="Заказ"
             description="Финальные условия, которые клиент увидит в личном кабинете."
           >
+            <div className="mb-5">
+              <ContractStatusBadge status={contract?.status} />
+            </div>
             <form action={saveOrderContractAction} className="grid gap-4">
               <AdminFormFieldset canWrite={canEditContract}>
                 <input name="id" type="hidden" value={contract?.id ?? ""} />
                 <input name="requestId" type="hidden" value={request.id} />
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Финальная цена" required>
                     <input
                       className={inputClass}
@@ -187,19 +204,6 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                       required
                       type="number"
                     />
-                  </Field>
-                  <Field label="Статус договора">
-                    <select
-                      className={selectClass}
-                      defaultValue={contract?.status ?? "draft"}
-                      name="status"
-                    >
-                      <option value="draft">Черновик</option>
-                      <option value="sent">Отправить клиенту</option>
-                      <option disabled value="revision_requested">Клиент запросил изменения</option>
-                      <option disabled value="accepted">Принят клиентом</option>
-                      <option value="cancelled">Отменён</option>
-                    </select>
                   </Field>
                 </div>
                 <Field label="Состав работ" required>
@@ -225,7 +229,7 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                     name="materials"
                   />
                 </Field>
-                <Field label="Комментарий менеджера">
+                <Field label="Пояснение для клиента">
                   <textarea
                     className={textareaClass}
                     defaultValue={contract?.managerComment ?? ""}
@@ -235,32 +239,64 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                 </Field>
                 {contractIsAccepted ? (
                   <p className="border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
-                    Редактирование недоступно. Клиент принял договор-заказ.
+                    Редактирование недоступно. Клиент принял заказ.
                     {contract.acceptedAt ? ` Время согласования: ${new Date(contract.acceptedAt).toLocaleString("ru-RU")}.` : ""}
                   </p>
                 ) : null}
-                <FormSubmitButton
-                  className={adminPrimaryButtonClass}
-                  idleLabel="Сохранить договор-заказ"
-                  pendingLabel="Сохранение..."
-                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormSubmitButton
+                    className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-paper"
+                    idleLabel="Сохранить черновик"
+                    name="status"
+                    pendingLabel="Сохранение..."
+                    value="draft"
+                  />
+                  <FormSubmitButton
+                    className={adminPrimaryButtonClass}
+                    idleLabel="Отправить на согласование"
+                    name="status"
+                    pendingLabel="Отправка..."
+                    value="sent"
+                  />
+                </div>
               </AdminFormFieldset>
             </form>
-            {contract?.feedback.length ? (
-              <section className="mt-6 border-t border-line pt-5">
-                <h3 className="text-lg font-semibold">История комментариев клиента</h3>
-                <ol className="mt-3 grid gap-3">
-                  {contract.feedback.map((item) => (
-                    <li className="border border-line bg-paper p-3 text-sm leading-6" key={item.id}>
-                      <p>{item.message}</p>
-                      <time className="mt-2 block text-xs text-muted" dateTime={item.createdAt}>
-                        {new Date(item.createdAt).toLocaleString("ru-RU")}
-                      </time>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
+            {contract ? (
+              <>
+                <ContractFeedbackThread feedback={contract.feedback} viewer="staff" />
+                <form
+                  action={saveOrderContractFeedbackAction}
+                  className="mt-5 grid gap-3 border border-line bg-paper p-4"
+                >
+                  <AdminFormFieldset canWrite={admin.canManageRequests}>
+                    <input name="contractId" type="hidden" value={contract.id} />
+                    <input name="requestId" type="hidden" value={request.id} />
+                    <Field
+                      label={admin.role === "admin" ? "Комментарий администратора" : "Комментарий дизайнера"}
+                      hint="Комментарий появится в диалоге с клиентом"
+                      required
+                    >
+                      <textarea
+                        className={textareaClass}
+                        maxLength={1000}
+                        minLength={10}
+                        name="message"
+                        required
+                      />
+                    </Field>
+                    <FormSubmitButton
+                      className={adminPrimaryButtonClass}
+                      idleLabel="Отправить комментарий"
+                      pendingLabel="Отправка..."
+                    />
+                  </AdminFormFieldset>
+                </form>
+              </>
+            ) : (
+              <p className="mt-5 text-sm text-muted">
+                Сначала сохраните заказ, затем можно будет вести диалог с клиентом.
+              </p>
+            )}
           </AdminCard>
         </div>
 
@@ -271,11 +307,6 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
             redirectTo={`/admin/requests/${request.id}`}
             status={request.status}
           />
-          {contract ? (
-            <p className="mt-4 border border-line bg-paper p-3 text-sm leading-6 text-muted">
-              Договор: {contractStatusLabels[contract.status]}
-            </p>
-          ) : null}
         </AdminCard>
       </div>
     </div>

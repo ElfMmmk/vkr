@@ -165,7 +165,7 @@ create table if not exists public.requests (
   comment text not null default '',
   client_user_id uuid references auth.users(id) on delete set null,
   source_hash text not null default '',
-  status text not null default 'new' check (status in ('new', 'in_progress', 'approved', 'completed', 'rejected')),
+  status text not null default 'new' check (status in ('new', 'in_progress', 'approved', 'in_work', 'completed', 'rejected')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -281,6 +281,12 @@ add column if not exists estimated_duration_from_days integer;
 
 alter table public.requests
 add column if not exists estimated_duration_to_days integer;
+
+alter table public.requests
+drop constraint if exists requests_status_check;
+alter table public.requests
+add constraint requests_status_check
+check (status in ('new', 'in_progress', 'approved', 'in_work', 'completed', 'rejected'));
 
 alter table public.service_packages
 add column if not exists badge text not null default '';
@@ -565,7 +571,7 @@ create table if not exists public.request_status_history (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null references public.requests(id) on delete cascade,
   from_status text,
-  to_status text not null check (to_status in ('new', 'in_progress', 'approved', 'completed', 'rejected')),
+  to_status text not null check (to_status in ('new', 'in_progress', 'approved', 'in_work', 'completed', 'rejected')),
   changed_by_user_id uuid references auth.users(id) on delete set null,
   changed_by_role text not null default 'admin',
   created_at timestamptz not null default now()
@@ -651,6 +657,12 @@ using (
       and request.client_user_id = auth.uid()
   )
 );
+
+alter table public.request_status_history
+drop constraint if exists request_status_history_to_status_check;
+alter table public.request_status_history
+add constraint request_status_history_to_status_check
+check (to_status in ('new', 'in_progress', 'approved', 'in_work', 'completed', 'rejected'));
 
 alter table public.notifications
 drop constraint if exists notifications_type_check;

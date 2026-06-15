@@ -1002,7 +1002,7 @@ test.describe("real Supabase admin smoke", () => {
 
     await loginAs(page, fixture!.users.manager);
     await page.goto(`/admin/requests/${fixture!.requestId}`);
-    await expect(page.getByRole("heading", { name: "Договор-заказ" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Заказ" })).toBeVisible();
     const contractForm = page.locator('form:has(input[name="finalPrice"])');
 
     await contractForm.locator('input[name="finalPrice"]').fill("42000");
@@ -1014,15 +1014,14 @@ test.describe("real Supabase admin smoke", () => {
       .locator('textarea[name="materials"]')
       .fill("Макет, исходные материалы и подготовленные файлы результата.");
     await contractForm.locator('textarea[name="managerComment"]').fill("Срок и стоимость согласованы.");
-    await contractForm.locator('select[name="status"]').selectOption("sent");
-    await contractForm.getByRole("button", { name: "Сохранить договор-заказ" }).click();
+    await contractForm.getByRole("button", { name: "Отправить на согласование" }).click();
 
     await expect(page).toHaveURL(new RegExp(`/admin/requests/${fixture!.requestId}`));
-    await expect(page.getByText("Договор: Отправлен клиенту")).toBeVisible();
+    await expect(page.getByText("Заказ: На согласовании")).toBeVisible();
 
     await loginAsClient(page, fixture!.users.client);
     await page.goto(`/account/requests/${fixture!.requestId}`);
-    await expect(page.getByRole("heading", { name: "Договор-заказ" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Заказ" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "История" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Таймлайн" })).toHaveCount(0);
     await expect(page.getByText("На согласовании")).toBeVisible();
@@ -1040,8 +1039,7 @@ test.describe("real Supabase admin smoke", () => {
     await revisedContractForm
       .locator('textarea[name="materials"]')
       .fill("Макет, исходные материалы, экспортированные файлы и инструкция по передаче.");
-    await revisedContractForm.locator('select[name="status"]').selectOption("sent");
-    await revisedContractForm.getByRole("button", { name: "Сохранить договор-заказ" }).click();
+    await revisedContractForm.getByRole("button", { name: "Отправить на согласование" }).click();
 
     await loginAsClient(page, fixture!.users.client);
     await page.goto(`/account/requests/${fixture!.requestId}`);
@@ -1052,7 +1050,7 @@ test.describe("real Supabase admin smoke", () => {
 
     await loginAs(page, fixture!.users.manager);
     await page.goto(`/admin/requests/${fixture!.requestId}`);
-    await expect(page.getByText(/Редактирование недоступно. Клиент принял договор-заказ./)).toBeVisible();
+    await expect(page.getByText(/Редактирование недоступно. Клиент принял заказ./)).toBeVisible();
   });
 
   test("admin can upload and remove a small portfolio image", async ({ page }) => {

@@ -2,8 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import { filterProjects } from "@/lib/data/public";
 import { demoProjects } from "@/lib/demo-data";
-import { calculateOrderEstimate, formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
-import { isRequestStatus } from "@/lib/request-status";
+import {
+  calculateOrderEstimate,
+  formatDurationRange,
+  formatPriceRange,
+  getOrderAddonTotals,
+  getOrderBaseEstimate
+} from "@/lib/order-calculator";
+import {
+  formatRequestStatusChangeBody,
+  isRequestStatus,
+  requestStatusLabels,
+  requestStatuses
+} from "@/lib/request-status";
+import type { OrderRequest } from "@/lib/types";
 import { createSlug } from "@/lib/slug";
 import { fieldLimits } from "@/lib/field-limits";
 import {
@@ -99,6 +111,30 @@ describe("validation helpers", () => {
     });
   });
 
+  it("breaks request estimates into package base and add-on totals", () => {
+    const request = {
+      packagePriceFrom: 37000,
+      packagePriceTo: 50000,
+      packageDurationFromDays: 11,
+      packageDurationToDays: 15,
+      selectedAddons: [
+        { id: "addon-fast", title: "Срочность", description: "", price: 18000, durationDays: 5 },
+        { id: "addon-templates", title: "Шаблоны", description: "", price: 15000, durationDays: 4 }
+      ]
+    } as OrderRequest;
+
+    expect(getOrderBaseEstimate(request)).toEqual({
+      priceFrom: 37000,
+      priceTo: 50000,
+      durationFromDays: 11,
+      durationToDays: 15
+    });
+    expect(getOrderAddonTotals(request.selectedAddons)).toEqual({
+      price: 33000,
+      durationDays: 9
+    });
+  });
+
   it("formats price and duration ranges with spaced dashes", () => {
     expect(formatPriceRange(25000, 45000)).toBe("25 000 ₽ – 45 000 ₽");
     expect(formatDurationRange(10, 18)).toBe("10 – 18 раб. дн.");
@@ -111,6 +147,18 @@ describe("validation helpers", () => {
 
   it("keeps request statuses constrained", () => {
     expect(isRequestStatus("new")).toBe(true);
+    expect(isRequestStatus("in_work")).toBe(true);
+    expect(requestStatuses).toEqual([
+      "new",
+      "in_progress",
+      "approved",
+      "in_work",
+      "completed",
+      "rejected"
+    ]);
+    expect(requestStatusLabels.in_progress).toBe("В обработке");
+    expect(requestStatusLabels.in_work).toBe("В работе");
+    expect(formatRequestStatusChangeBody("in_work")).toBe("Заявка переведена в статус «В работе».");
     expect(isRequestStatus("archived")).toBe(false);
   });
 

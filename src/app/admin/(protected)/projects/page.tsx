@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import { AdminCard } from "@/components/admin-card";
+import { AdminImageMultiSelect } from "@/components/admin-image-multi-select";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminProjectOrderForm } from "@/components/admin-project-order-form";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -44,38 +45,6 @@ function findCoverImageId(project: Project | undefined, images: PortfolioImage[]
   }
 
   return project.coverImageId ?? images.find((image) => image.publicUrl === project.coverImageUrl)?.id ?? "";
-}
-
-function ImageChecks({
-  images,
-  selectedIds
-}: {
-  images: PortfolioImage[];
-  selectedIds: string[];
-}) {
-  if (!images.length) {
-    return (
-      <p className="border border-line bg-paper px-4 py-3 text-sm text-muted">
-        Сначала загрузите изображения в разделе «Изображения»
-      </p>
-    );
-  }
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {images.map((image) => (
-        <label className="flex items-center gap-3 border border-line bg-white p-2 text-sm transition hover:border-ink" key={image.id}>
-          <input defaultChecked={selectedIds.includes(image.id)} name="galleryImageIds" type="checkbox" value={image.id} />
-          {image.publicUrl ? (
-            <span className="relative h-12 w-16 shrink-0 overflow-hidden bg-line">
-              <Image alt="" className="object-cover" fill sizes="64px" src={image.publicUrl} />
-            </span>
-          ) : null}
-          <span className="min-w-0 truncate">{imageLabel(image)}</span>
-        </label>
-      ))}
-    </div>
-  );
 }
 
 function ProjectForm({
@@ -168,10 +137,16 @@ function ProjectForm({
           </Field>
         </div>
         <Field label="Галерея проекта" hint="Отметьте изображения, которые должны появиться в галерее кейса. Один файл можно использовать в нескольких проектах">
-          <ImageChecks
-            images={images}
-            selectedIds={project?.gallery.map((image) => image.id) ?? []}
-          />
+          {images.length ? (
+            <AdminImageMultiSelect
+              images={images}
+              selectedIds={project?.gallery.map((image) => image.id) ?? []}
+            />
+          ) : (
+            <p className="border border-line bg-paper px-4 py-3 text-sm text-muted">
+              Сначала загрузите изображения в разделе «Изображения»
+            </p>
+          )}
         </Field>
         <Field label="Связанные услуги">
           <RelationChecks

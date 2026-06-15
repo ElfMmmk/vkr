@@ -2,6 +2,7 @@ export type RequestStatus =
   | "new"
   | "in_progress"
   | "approved"
+  | "in_work"
   | "completed"
   | "rejected";
 

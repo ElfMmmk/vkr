@@ -21,6 +21,16 @@ export type UploadOrderAttachmentsResult =
       message: string;
     };
 
+export type DeleteOrderAttachmentResult =
+  | {
+      ok: true;
+      requestId: string;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
 export function getOrderAttachmentFiles(
   formData: FormData,
   fieldName = "attachments"
@@ -156,4 +166,69 @@ export async function createOrderAttachmentSignedUrls(
       };
     })
   );
+}
+
+export async function deleteOrderAttachmentFile(
+  client: AppClient,
+  input: {
+    attachmentId: string;
+    actorUserId: string;
+    canDeleteAny: boolean;
+    requestId?: string;
+  }
+): Promise<DeleteOrderAttachmentResult> {
+  const { data: attachment, error: attachmentError } = await client
+    .from("order_attachments")
+    .select("id, request_id, client_user_id, storage_path")
+    .eq("id", input.attachmentId)
+    .maybeSingle();
+
+  if (attachmentError || !attachment) {
+    return {
+      ok: false,
+      message: "Файл не найден."
+    };
+  }
+
+  if (!input.canDeleteAny && attachment.client_user_id !== input.actorUserId) {
+    return {
+      ok: false,
+      message: "Недостаточно прав для удаления файла."
+    };
+  }
+
+  if (input.requestId && attachment.request_id !== input.requestId) {
+    return {
+      ok: false,
+      message: "Файл не относится к указанной заявке."
+    };
+  }
+
+  const storageResult = await client.storage
+    .from(ORDER_ATTACHMENTS_BUCKET)
+    .remove([attachment.storage_path]);
+
+  if (storageResult.error) {
+    return {
+      ok: false,
+      message: "Не удалось удалить файл из хранилища."
+    };
+  }
+
+  const { error: deleteError } = await client
+    .from("order_attachments")
+    .delete()
+    .eq("id", attachment.id);
+
+  if (deleteError) {
+    return {
+      ok: false,
+      message: "Файл удалён из хранилища, но метаданные удалить не удалось."
+    };
+  }
+
+  return {
+    ok: true,
+    requestId: attachment.request_id
+  };
 }

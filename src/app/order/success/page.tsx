@@ -23,7 +23,7 @@ export default async function OrderSuccessPage({
           <h1 className="mt-4 text-5xl font-semibold leading-tight">Спасибо за заказ</h1>
           <p className="mt-5 text-lg leading-8 text-muted">
             Дизайнер получит бриф, проверит предварительный расчёт, уточнит условия и подготовит
-            договор-заказ для согласования.
+            заказ для согласования.
           </p>
           <OrderSuccessClient />
           <div className="mt-8 grid gap-3 text-left sm:grid-cols-3">
@@ -36,7 +36,7 @@ export default async function OrderSuccessPage({
               <p className="mt-2 text-sm leading-6 text-muted">Если нужно, менеджер задаст вопросы по срокам и составу.</p>
             </div>
             <div className="border border-line bg-white p-4">
-              <h2 className="font-semibold">3. Договор-заказ</h2>
+              <h2 className="font-semibold">3. Заказ</h2>
               <p className="mt-2 text-sm leading-6 text-muted">Финальные условия появятся в личном кабинете.</p>
             </div>
           </div>

@@ -40,7 +40,7 @@ export type AdminAnalytics = {
     completedRequests: number;
     acceptedContracts: number;
     acceptedContractValue: number;
-    averageEstimate: number;
+    averageAcceptedOrderValue: number;
     publishedProjects: number;
     mediaFiles: number;
   };
@@ -82,7 +82,7 @@ const staleInProgressDays = 7;
 
 const attentionReasonLabels: Record<AdminAttentionReason, string> = {
   new_request: "Новая заявка",
-  sent_contract: "Договор ждёт принятия",
+  sent_contract: "Заказ ждёт принятия",
   stale_in_progress: "Долго в обработке"
 };
 
@@ -126,18 +126,6 @@ function formatDayKey(date: Date): string {
 
 function formatDayLabel(date: Date): string {
   return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
-}
-
-function getEstimateValue(request: OrderRequest): number | null {
-  const values = [request.estimatedPriceFrom, request.estimatedPriceTo].filter(
-    (value): value is number => typeof value === "number"
-  );
-
-  if (!values.length) {
-    return null;
-  }
-
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function getTrendStart(requests: OrderRequest[], periodStart: Date | null, now: Date): Date {
@@ -341,11 +329,13 @@ export function buildAdminAnalytics({
   const acceptedContracts = periodRequests.filter(
     (request) => request.contract?.status === "accepted"
   );
-  const estimateValues = periodRequests
-    .map(getEstimateValue)
-    .filter((value): value is number => typeof value === "number");
-  const averageEstimate = estimateValues.length
-    ? Math.round(estimateValues.reduce((sum, value) => sum + value, 0) / estimateValues.length)
+  const averageAcceptedOrderValue = acceptedContracts.length
+    ? Math.round(
+        acceptedContracts.reduce(
+          (sum, request) => sum + (request.contract?.finalPrice ?? 0),
+          0
+        ) / acceptedContracts.length
+      )
     : 0;
 
   return {
@@ -360,7 +350,7 @@ export function buildAdminAnalytics({
         (sum, request) => sum + (request.contract?.finalPrice ?? 0),
         0
       ),
-      averageEstimate,
+      averageAcceptedOrderValue,
       publishedProjects: projects.filter((project) => project.isPublished).length,
       mediaFiles: images.length
     },

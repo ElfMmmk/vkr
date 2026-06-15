@@ -18,9 +18,16 @@ import {
   hashClaimToken,
   isClaimTokenExpired
 } from "@/lib/request-claim";
-import { uploadOrderAttachmentFiles } from "@/lib/order-attachment-storage";
+import {
+  deleteOrderAttachmentFile,
+  uploadOrderAttachmentFiles
+} from "@/lib/order-attachment-storage";
 import { recommendOrderSetup, type OrderQuizAnswers } from "@/lib/order-quiz";
 import { buildRequestTimeline } from "@/lib/request-timeline";
+import {
+  contractFeedbackRoleLabels,
+  contractStatusLabels
+} from "@/lib/contract-status";
 import type { OrderRequest, Service } from "@/lib/types";
 
 const services: Service[] = [
@@ -171,10 +178,25 @@ describe("order experience helpers", () => {
       "Заявка создана",
       "Статус: В обработке",
       "Материал загружен",
-      "Договор-заказ подготовлен",
+      "Заказ подготовлен",
       "Статус: Согласована",
-      "Договор-заказ принят"
+      "Заказ принят"
     ]);
+  });
+
+  it("uses client-facing order status and feedback role labels", () => {
+    expect(contractStatusLabels).toMatchObject({
+      draft: "Черновик",
+      sent: "На согласовании",
+      revision_requested: "На доработке",
+      accepted: "Принят",
+      cancelled: "Отменён"
+    });
+    expect(contractFeedbackRoleLabels).toEqual({
+      client: "Клиент",
+      manager: "Дизайнер",
+      admin: "Админ"
+    });
   });
 
   it("parses only compatible order drafts", () => {
@@ -370,6 +392,57 @@ describe("order experience helpers", () => {
     expect(deletedAttachmentIds).toEqual(["attachment-1"]);
     expect(removedStoragePaths).toHaveLength(1);
     expect(removedStoragePaths[0]?.[0]).toMatch(/^request-1\/.+\.txt$/);
+  });
+
+  it("deletes an order attachment from storage and metadata", async () => {
+    const removedStoragePaths: string[][] = [];
+    const deletedAttachmentIds: string[] = [];
+
+    const client = {
+      from: (table: string) => ({
+        select: () => ({
+          eq: (_column: string, value: string) => ({
+            maybeSingle: async () => ({
+              data: table === "order_attachments"
+                ? {
+                    id: value,
+                    request_id: "request-1",
+                    client_user_id: "client-1",
+                    storage_path: "request-1/brief.pdf"
+                  }
+                : null,
+              error: null
+            })
+          })
+        }),
+        delete: () => ({
+          eq: async (_column: string, id: string) => {
+            deletedAttachmentIds.push(id);
+
+            return { error: null };
+          }
+        })
+      }),
+      storage: {
+        from: () => ({
+          remove: async (paths: string[]) => {
+            removedStoragePaths.push(paths);
+
+            return { error: null };
+          }
+        })
+      }
+    };
+
+    const result = await deleteOrderAttachmentFile(client as never, {
+      actorUserId: "client-1",
+      attachmentId: "attachment-1",
+      canDeleteAny: false
+    });
+
+    expect(result).toEqual({ ok: true, requestId: "request-1" });
+    expect(removedStoragePaths).toEqual([["request-1/brief.pdf"]]);
+    expect(deletedAttachmentIds).toEqual(["attachment-1"]);
   });
 
   it("hashes claim tokens and treats them as expired after ttl", () => {
