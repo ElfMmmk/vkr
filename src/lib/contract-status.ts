@@ -14,5 +14,5 @@ export const contractFeedbackRoleLabels: Record<
 > = {
   client: "Клиент",
   manager: "Дизайнер",
-  admin: "Админ"
+  admin: "Дизайнер"
 };

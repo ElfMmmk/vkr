@@ -1,12 +1,11 @@
 "use client";
 
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
 
-import { FormSubmitButton } from "@/components/form-submit-button";
 import {
-  reorderServiceAddonsAction,
-  reorderServicePackagesAction
+  saveServiceAddonsOrderAction,
+  saveServicePackagesOrderAction
 } from "@/lib/actions/admin";
 
 type OrderItem = {
@@ -27,8 +26,28 @@ export function AdminServiceItemOrderForm({
 }) {
   const [orderedItems, setOrderedItems] = useState(items);
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const action = kind === "package" ? reorderServicePackagesAction : reorderServiceAddonsAction;
-  const noun = kind === "package" ? "пакетов" : "дополнительных услуг";
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [isPending, startTransition] = useTransition();
+  const dragChangedRef = useRef(false);
+  const dragOrderRef = useRef<OrderItem[] | null>(null);
+  const action = kind === "package" ? saveServicePackagesOrderAction : saveServiceAddonsOrderAction;
+
+  function persistOrder(nextItems: OrderItem[]) {
+    if (!canWrite) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("serviceId", serviceId);
+    nextItems.forEach((item) => formData.append("itemIds", item.id));
+    setSaveStatus("saving");
+
+    startTransition(() => {
+      void action(formData)
+        .then(() => setSaveStatus("saved"))
+        .catch(() => setSaveStatus("error"));
+    });
+  }
 
   function moveTo(targetId: string) {
     if (!draggedId || draggedId === targetId) {
@@ -46,22 +65,35 @@ export function AdminServiceItemOrderForm({
       const next = current.slice();
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
+      dragChangedRef.current = true;
+      dragOrderRef.current = next;
       return next;
     });
   }
 
   function moveByIndex(index: number, direction: -1 | 1) {
-    setOrderedItems((current) => {
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= current.length) {
-        return current;
-      }
+    const nextIndex = index + direction;
 
-      const next = current.slice();
-      const [moved] = next.splice(index, 1);
-      next.splice(nextIndex, 0, moved);
-      return next;
-    });
+    if (nextIndex < 0 || nextIndex >= orderedItems.length) {
+      return;
+    }
+
+    const next = orderedItems.slice();
+    const [moved] = next.splice(index, 1);
+    next.splice(nextIndex, 0, moved);
+    setOrderedItems(next);
+    persistOrder(next);
+  }
+
+  function handleDragEnd() {
+    setDraggedId(null);
+
+    if (dragChangedRef.current && dragOrderRef.current) {
+      persistOrder(dragOrderRef.current);
+    }
+
+    dragChangedRef.current = false;
+    dragOrderRef.current = null;
   }
 
   if (items.length < 2) {
@@ -69,29 +101,37 @@ export function AdminServiceItemOrderForm({
   }
 
   return (
-    <form action={action} className="mt-4 grid gap-3">
-      <input name="serviceId" type="hidden" value={serviceId} />
+    <div className="mt-4 grid gap-3">
       <fieldset className="grid gap-2" disabled={!canWrite}>
         {orderedItems.map((item, index) => (
           <div
             className="flex items-center gap-2 border border-line bg-white p-3"
-            draggable={canWrite}
+            draggable={canWrite && !isPending}
             key={item.id}
-            onDragEnd={() => setDraggedId(null)}
+            onDragEnd={handleDragEnd}
             onDragOver={(event) => {
               event.preventDefault();
+              if (isPending) {
+                return;
+              }
               moveTo(item.id);
             }}
-            onDragStart={() => setDraggedId(item.id)}
+            onDragStart={() => {
+              if (isPending) {
+                return;
+              }
+              dragChangedRef.current = false;
+              dragOrderRef.current = null;
+              setDraggedId(item.id);
+            }}
           >
-            <input name="itemIds" type="hidden" value={item.id} />
             <span className="text-xs font-semibold text-muted">{String(index + 1).padStart(2, "0")}</span>
             <GripVertical aria-hidden="true" className="shrink-0 text-muted" size={17} />
             <span className="min-w-0 flex-1 break-words text-sm font-semibold">{item.title}</span>
             <button
               aria-label={`Поднять ${item.title}`}
               className="focus-ring inline-grid h-8 w-8 place-items-center border border-line bg-white text-muted disabled:opacity-40"
-              disabled={index === 0}
+              disabled={!canWrite || index === 0 || isPending}
               onClick={() => moveByIndex(index, -1)}
               type="button"
             >
@@ -100,7 +140,7 @@ export function AdminServiceItemOrderForm({
             <button
               aria-label={`Опустить ${item.title}`}
               className="focus-ring inline-grid h-8 w-8 place-items-center border border-line bg-white text-muted disabled:opacity-40"
-              disabled={index === orderedItems.length - 1}
+              disabled={!canWrite || index === orderedItems.length - 1 || isPending}
               onClick={() => moveByIndex(index, 1)}
               type="button"
             >
@@ -109,12 +149,15 @@ export function AdminServiceItemOrderForm({
           </div>
         ))}
       </fieldset>
-      <FormSubmitButton
-        className="focus-ring inline-flex min-h-10 items-center justify-center border border-ink bg-ink px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-        disabled={!canWrite}
-        idleLabel={`Сохранить порядок ${noun}`}
-        pendingLabel="Сохранение..."
-      />
-    </form>
+      <p aria-live="polite" className="text-xs leading-5 text-muted">
+        {saveStatus === "saving"
+          ? "Порядок сохраняется..."
+          : saveStatus === "saved"
+            ? "Порядок сохранён автоматически."
+            : saveStatus === "error"
+              ? "Не удалось сохранить порядок. Измените порядок ещё раз или обновите страницу."
+              : "Порядок сохраняется автоматически после изменения."}
+      </p>
+    </div>
   );
 }

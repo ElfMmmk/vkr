@@ -38,6 +38,7 @@ create table if not exists public.service_packages (
   display_order integer not null default 100,
   is_active boolean not null default true,
   is_recommended boolean not null default false,
+  recommendation_tags jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -302,6 +303,16 @@ add column if not exists included_items text[] not null default '{}'::text[];
 
 alter table public.service_packages
 add column if not exists is_recommended boolean not null default false;
+
+alter table public.service_packages
+add column if not exists recommendation_tags jsonb not null default '{}'::jsonb;
+
+alter table public.service_packages
+drop constraint if exists service_packages_recommendation_tags_object_check;
+
+alter table public.service_packages
+add constraint service_packages_recommendation_tags_object_check
+check (jsonb_typeof(recommendation_tags) = 'object');
 
 create index if not exists services_active_order_idx on public.services (is_active, display_order);
 create index if not exists service_packages_service_order_idx on public.service_packages (service_id, is_active, display_order);

@@ -41,8 +41,14 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
   }
 
   const contract = request.contract;
+  const contractTermsLocked = contract?.status === "sent" || contract?.status === "accepted";
   const contractIsAccepted = contract?.status === "accepted";
-  const canEditContract = admin.canManageRequests && !contractIsAccepted;
+  const canEditContract = admin.canManageRequests && !contractTermsLocked;
+  const canCommentOnContract =
+    admin.canManageRequests &&
+    Boolean(contract && ["draft", "sent", "revision_requested"].includes(contract.status));
+  const shouldShowContractFeedback =
+    Boolean(contract && (canCommentOnContract || contract.feedback.length > 0));
   const finalPrice = contract?.finalPrice ?? request.estimatedPriceTo ?? request.estimatedPriceFrom ?? 0;
   const finalDuration =
     contract?.finalDurationDays ??
@@ -118,7 +124,7 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
               ) : null}
               {request.selectedAddons.length ? (
                 <section>
-                  <h2 className="font-semibold">Выбранные доплаты</h2>
+                  <h2 className="font-semibold">Выбранные дополнительные услуги</h2>
                   <ul className="mt-2 grid gap-2 text-muted">
                     {request.selectedAddons.map((addon) => (
                       <li key={addon.id}>
@@ -229,23 +235,18 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                     name="materials"
                   />
                 </Field>
-                <Field label="Пояснение для клиента">
-                  <textarea
-                    className={textareaClass}
-                    defaultValue={contract?.managerComment ?? ""}
-                    maxLength={fieldLimits.orderContract.managerComment.max}
-                    name="managerComment"
-                  />
-                </Field>
-                {contractIsAccepted ? (
+                {contractTermsLocked ? (
                   <p className="border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
-                    Редактирование недоступно. Клиент принял заказ.
-                    {contract.acceptedAt ? ` Время согласования: ${new Date(contract.acceptedAt).toLocaleString("ru-RU")}.` : ""}
+                    {contractIsAccepted
+                      ? "Редактирование недоступно. Клиент принял заказ."
+                      : "Редактирование недоступно. Заказ находится на согласовании у клиента."}
+                    {contractIsAccepted && contract.acceptedAt ? ` Время согласования: ${new Date(contract.acceptedAt).toLocaleString("ru-RU")}.` : ""}
                   </p>
                 ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormSubmitButton
-                    className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-paper"
+                    className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-paper disabled:cursor-not-allowed disabled:border-line disabled:bg-line disabled:text-muted disabled:hover:bg-line disabled:active:translate-y-0"
+                    disabled={!canEditContract}
                     idleLabel="Сохранить черновик"
                     name="status"
                     pendingLabel="Сохранение..."
@@ -253,6 +254,7 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
                   />
                   <FormSubmitButton
                     className={adminPrimaryButtonClass}
+                    disabled={!canEditContract}
                     idleLabel="Отправить на согласование"
                     name="status"
                     pendingLabel="Отправка..."
@@ -263,34 +265,34 @@ export default async function AdminRequestDetailPage({ params }: AdminRequestDet
             </form>
             {contract ? (
               <>
-                <ContractFeedbackThread feedback={contract.feedback} viewer="staff" />
-                <form
-                  action={saveOrderContractFeedbackAction}
-                  className="mt-5 grid gap-3 border border-line bg-paper p-4"
-                >
-                  <AdminFormFieldset canWrite={admin.canManageRequests}>
-                    <input name="contractId" type="hidden" value={contract.id} />
-                    <input name="requestId" type="hidden" value={request.id} />
-                    <Field
-                      label={admin.role === "admin" ? "Комментарий администратора" : "Комментарий дизайнера"}
-                      hint="Комментарий появится в диалоге с клиентом"
-                      required
-                    >
-                      <textarea
-                        className={textareaClass}
-                        maxLength={1000}
-                        minLength={10}
-                        name="message"
-                        required
+                {shouldShowContractFeedback ? (
+                  <ContractFeedbackThread feedback={contract.feedback} viewer="staff" />
+                ) : null}
+                {canCommentOnContract ? (
+                  <form
+                    action={saveOrderContractFeedbackAction}
+                    className="mt-5 grid gap-3 border border-line bg-paper p-4"
+                  >
+                    <AdminFormFieldset canWrite={canCommentOnContract}>
+                      <input name="contractId" type="hidden" value={contract.id} />
+                      <input name="requestId" type="hidden" value={request.id} />
+                      <Field label="Сообщение клиенту" hint="Сообщение появится в обсуждении заказа" required>
+                        <textarea
+                          className={textareaClass}
+                          maxLength={1000}
+                          minLength={10}
+                          name="message"
+                          required
+                        />
+                      </Field>
+                      <FormSubmitButton
+                        className={adminPrimaryButtonClass}
+                        idleLabel="Отправить сообщение"
+                        pendingLabel="Отправка..."
                       />
-                    </Field>
-                    <FormSubmitButton
-                      className={adminPrimaryButtonClass}
-                      idleLabel="Отправить комментарий"
-                      pendingLabel="Отправка..."
-                    />
-                  </AdminFormFieldset>
-                </form>
+                    </AdminFormFieldset>
+                  </form>
+                ) : null}
               </>
             ) : (
               <p className="mt-5 text-sm text-muted">

@@ -33,6 +33,7 @@ import {
   recommendOrderSetup,
   type OrderQuizAnswers
 } from "@/lib/order-quiz";
+import { findFirstInvalidStepBeforeTarget } from "@/lib/order-step-navigation";
 import type { Project, Service } from "@/lib/types";
 
 function canUseQuizAnswers(answers: Partial<OrderQuizAnswers>): answers is OrderQuizAnswers {
@@ -246,61 +247,72 @@ export function OrderForm({
     );
   }
 
-  function validateCurrentStep(): boolean {
-    if (activeStepId === "service" && !selectedServiceId) {
-      setLocalStepError("Выберите услугу или пройдите подбор.");
-      return false;
+  function getStepError(stepId: OrderStepId): string | null {
+    if (stepId === "service" && !selectedServiceId) {
+      return "Выберите услугу или пройдите подбор.";
     }
 
-    if (activeStepId === "service" && !selectedPackageId) {
-      setLocalStepError("Выберите пакет работ.");
-      return false;
+    if (stepId === "service" && !selectedPackageId) {
+      return "Выберите пакет работ.";
     }
 
-    if (activeStepId === "brief") {
+    if (stepId === "brief") {
       if (resultDescription.trim().length < fieldLimits.order.resultDescription.min) {
-        setLocalStepError("Опишите ожидаемый результат чуть подробнее.");
-        return false;
+        return "Опишите ожидаемый результат чуть подробнее.";
       }
 
       if (stylePreferences.trim().length < fieldLimits.order.stylePreferences.min) {
-        setLocalStepError("Добавьте стиль или ориентир.");
-        return false;
+        return "Добавьте стиль или ориентир.";
       }
     }
 
-    if (activeStepId === "contact") {
+    if (stepId === "contact") {
       if (!clientName.trim() || !contactValue.trim()) {
-        setLocalStepError("Укажите имя и контакт для связи.");
-        return false;
+        return "Укажите имя и контакт для связи.";
       }
 
       const contactResult = normalizeAndValidateContact(contactMethod, contactValue);
       if (!contactResult.ok) {
-        setLocalStepError(contactResult.error);
-        return false;
+        return contactResult.error;
       }
 
       setContactValue(contactResult.value);
 
       if (attachmentError) {
-        setLocalStepError(attachmentError);
-        return false;
+        return attachmentError;
       }
     }
 
-    setLocalStepError("");
-    return true;
+    return null;
   }
 
-  function goNext() {
-    if (!validateCurrentStep()) {
+  function selectStep(stepId: OrderStepId, stepIndex: number) {
+    if (stepIndex <= activeStepIndex) {
+      setLocalStepError("");
+      setActiveStepId(stepId);
       return;
     }
 
+    const invalidStep = findFirstInvalidStepBeforeTarget(
+      stepIndex,
+      steps.map((step) => step.id),
+      getStepError
+    );
+
+    if (invalidStep) {
+      setActiveStepId(invalidStep.stepId);
+      setLocalStepError(invalidStep.error);
+      return;
+    }
+
+    setLocalStepError("");
+    setActiveStepId(stepId);
+  }
+
+  function goNext() {
     const nextStep = steps[Math.min(activeStepIndex + 1, steps.length - 1)];
 
-    setActiveStepId(nextStep.id);
+    selectStep(nextStep.id, Math.min(activeStepIndex + 1, steps.length - 1));
   }
 
   function goBack() {
@@ -403,11 +415,7 @@ export function OrderForm({
           <StepNavigation
             activeStepId={activeStepId}
             activeStepIndex={activeStepIndex}
-            onSelectStep={(stepId, stepIndex) => {
-              if (stepIndex <= activeStepIndex || validateCurrentStep()) {
-                setActiveStepId(stepId);
-              }
-            }}
+            onSelectStep={selectStep}
             steps={steps}
           />
 

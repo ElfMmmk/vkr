@@ -658,8 +658,6 @@ test.describe("real Supabase admin smoke", () => {
       const serviceCard = page.getByRole("heading", { name: service.title }).locator("xpath=ancestor::section[1]");
 
       await serviceCard.getByRole("button", { name: `Опустить ${packageTitles[0]}` }).click();
-      await serviceCard.getByRole("button", { name: "Сохранить порядок пакетов" }).click();
-      await page.goto("/admin/services");
 
       await expect
         .poll(async () => {
@@ -672,10 +670,9 @@ test.describe("real Supabase admin smoke", () => {
         })
         .toEqual([...packageTitles].reverse());
 
+      await page.goto("/admin/services");
       const refreshedCard = page.getByRole("heading", { name: service.title }).locator("xpath=ancestor::section[1]");
       await refreshedCard.getByRole("button", { name: `Опустить ${addonTitles[0]}` }).click();
-      await refreshedCard.getByRole("button", { name: "Сохранить порядок дополнительных услуг" }).click();
-      await page.goto("/admin/services");
 
       await expect
         .poll(async () => {
@@ -1013,11 +1010,20 @@ test.describe("real Supabase admin smoke", () => {
     await contractForm
       .locator('textarea[name="materials"]')
       .fill("Макет, исходные материалы и подготовленные файлы результата.");
-    await contractForm.locator('textarea[name="managerComment"]').fill("Срок и стоимость согласованы.");
     await contractForm.getByRole("button", { name: "Отправить на согласование" }).click();
 
     await expect(page).toHaveURL(new RegExp(`/admin/requests/${fixture!.requestId}`));
     await expect(page.getByText("Заказ: На согласовании")).toBeVisible();
+    const lockedContractForm = page.locator('form:has(input[name="finalPrice"])');
+    await expect(lockedContractForm.getByRole("button", { name: "Сохранить черновик" })).toBeDisabled();
+    await expect(lockedContractForm.getByRole("button", { name: "Отправить на согласование" })).toBeDisabled();
+
+    await page
+      .locator('textarea[name="message"]')
+      .fill("Здравствуйте, проверьте условия заказа и напишите, если нужны уточнения.");
+    await page.getByRole("button", { name: "Отправить сообщение" }).click();
+    await expect(page).toHaveURL(new RegExp(`notice=order-comment-saved`));
+    await expect(page.getByText("Здравствуйте, проверьте условия заказа и напишите")).toBeVisible();
 
     await loginAsClient(page, fixture!.users.client);
     await page.goto(`/account/requests/${fixture!.requestId}`);
@@ -1025,15 +1031,26 @@ test.describe("real Supabase admin smoke", () => {
     await expect(page.getByRole("heading", { name: "История" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Таймлайн" })).toHaveCount(0);
     await expect(page.getByText("На согласовании")).toBeVisible();
+    await expect(page.getByText("Дизайнер")).toBeVisible();
+    await expect(page.getByText("Здравствуйте, проверьте условия заказа и напишите")).toBeVisible();
 
-    await page.getByText("Запросить изменения").click();
+    await page
+      .locator('textarea[name="message"]')
+      .fill("Спасибо, условия увидел. Перед запросом изменений уточню один вопрос.");
+    await page.getByRole("button", { name: "Отправить сообщение" }).click();
+    await expect(page).toHaveURL(new RegExp(`notice=order-comment-saved`));
+    await expect(page.getByText("На согласовании")).toBeVisible();
+
+    await page.getByRole("button", { name: "Запросить изменения" }).click();
+    await expect(page.getByRole("dialog", { name: "Запросить изменения" })).toBeVisible();
     await page.locator('textarea[name="feedback"]').fill("Уточните, пожалуйста, состав финальных файлов и этапы передачи.");
-    await page.getByRole("button", { name: "Отправить комментарий" }).click();
+    await page.getByRole("button", { name: "Отправить запрос" }).click();
     await expect(page).toHaveURL(new RegExp(`notice=order-contract-revision-requested`));
     await expect(page.getByText("На доработке")).toBeVisible();
 
     await loginAs(page, fixture!.users.manager);
     await page.goto(`/admin/requests/${fixture!.requestId}`);
+    await expect(page.getByText("Спасибо, условия увидел. Перед запросом изменений")).toBeVisible();
     await expect(page.getByText("Уточните, пожалуйста, состав финальных файлов и этапы передачи.")).toBeVisible();
     const revisedContractForm = page.locator('form:has(input[name="finalPrice"])');
     await revisedContractForm

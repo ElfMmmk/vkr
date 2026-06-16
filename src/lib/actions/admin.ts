@@ -12,6 +12,10 @@ import {
 import { fieldLimits } from "@/lib/field-limits";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
 import { deleteOrderAttachmentFile } from "@/lib/order-attachment-storage";
+import {
+  buildPackageRecommendationTags,
+  orderQuizAnswerKeys
+} from "@/lib/order-quiz";
 import { formatRequestStatusChangeBody } from "@/lib/request-status";
 import { createSlug } from "@/lib/slug";
 import { parsePackageIncludedItems } from "@/lib/service-package-marketing";
@@ -237,7 +241,15 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
     durationToDays: formString(formData, "durationToDays"),
     displayOrder,
     isActive: formBoolean(formData, "isActive"),
-    isRecommended: formBoolean(formData, "isRecommended")
+    isRecommended: formBoolean(formData, "isRecommended"),
+    recommendationTags: buildPackageRecommendationTags(
+      Object.fromEntries(
+        orderQuizAnswerKeys.map((key) => [
+          key,
+          formStringArray(formData, `recommendationTags.${key}`)
+        ])
+      )
+    )
   });
   const payload = {
     service_id: parsed.serviceId,
@@ -253,7 +265,8 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
     duration_to_days: parsed.durationToDays,
     display_order: parsed.displayOrder,
     is_active: parsed.isActive,
-    is_recommended: parsed.isRecommended
+    is_recommended: parsed.isRecommended,
+    recommendation_tags: parsed.recommendationTags
   };
   const result = id
     ? await client.from("service_packages").update(payload).eq("id", id)
@@ -389,7 +402,7 @@ export async function reorderServicesAction(formData: FormData): Promise<void> {
   redirectWithNotice("/admin/services", "services-reordered");
 }
 
-export async function reorderServicePackagesAction(formData: FormData): Promise<void> {
+async function updateServicePackagesOrder(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const serviceId = cleanId(formString(formData, "serviceId"));
@@ -418,10 +431,18 @@ export async function reorderServicePackagesAction(formData: FormData): Promise<
   revalidatePath("/admin/services");
   revalidatePath("/services");
   revalidatePath("/order");
+}
+
+export async function saveServicePackagesOrderAction(formData: FormData): Promise<void> {
+  await updateServicePackagesOrder(formData);
+}
+
+export async function reorderServicePackagesAction(formData: FormData): Promise<void> {
+  await updateServicePackagesOrder(formData);
   redirectWithNotice("/admin/services", "service-packages-reordered");
 }
 
-export async function reorderServiceAddonsAction(formData: FormData): Promise<void> {
+async function updateServiceAddonsOrder(formData: FormData): Promise<void> {
   await requireWritableAdmin();
   const client = getSupabaseAdminOrThrow();
   const serviceId = cleanId(formString(formData, "serviceId"));
@@ -449,6 +470,14 @@ export async function reorderServiceAddonsAction(formData: FormData): Promise<vo
 
   revalidatePath("/admin/services");
   revalidatePath("/order");
+}
+
+export async function saveServiceAddonsOrderAction(formData: FormData): Promise<void> {
+  await updateServiceAddonsOrder(formData);
+}
+
+export async function reorderServiceAddonsAction(formData: FormData): Promise<void> {
+  await updateServiceAddonsOrder(formData);
   redirectWithNotice("/admin/services", "service-addons-reordered");
 }
 
@@ -859,7 +888,7 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
       mutationError(existingContractError);
     }
 
-    if (existingContract?.status === "accepted") {
+    if (existingContract?.status === "sent" || existingContract?.status === "accepted") {
       redirectWithNotice(
         `/admin/requests/${existingContract.request_id ?? parsed.requestId}`,
         "order-contract-locked"
@@ -890,7 +919,7 @@ export async function saveOrderContractAction(formData: FormData): Promise<void>
   if (previousStatus === "revision_requested" && parsed.status === "sent") {
     await client.from("notifications").insert({
       type: "system",
-      title: "Заказ отправлен повторно",
+      title: "Условия обновлены и отправлены",
       body: "Исправленные условия отправлены клиенту на повторное согласование.",
       entity_type: "request",
       entity_id: parsed.requestId,
@@ -920,12 +949,16 @@ export async function saveOrderContractFeedbackAction(formData: FormData): Promi
   const client = getSupabaseAdminOrThrow();
   const { data: contract, error: contractError } = await client
     .from("order_contracts")
-    .select("id, request_id")
+    .select("id, request_id, status")
     .eq("id", contractId)
     .eq("request_id", requestId)
     .maybeSingle();
 
-  if (contractError || !contract) {
+  if (
+    contractError ||
+    !contract ||
+    !["draft", "sent", "revision_requested"].includes(contract.status)
+  ) {
     redirectWithNotice(`/admin/requests/${requestId}`, "order-comment-failed");
   }
 

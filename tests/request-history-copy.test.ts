@@ -11,6 +11,10 @@ const clientAccountPage = readFileSync(
   join(process.cwd(), "src", "app", "account", "page.tsx"),
   "utf8"
 );
+const contractFeedbackThread = readFileSync(
+  join(process.cwd(), "src", "components", "contract-feedback-thread.tsx"),
+  "utf8"
+);
 const adminRequestPage = readFileSync(
   join(process.cwd(), "src", "app", "admin", "(protected)", "requests", "[id]", "page.tsx"),
   "utf8"
@@ -50,11 +54,21 @@ describe("client request history copy", () => {
     expect(visiblePages).not.toContain("договор-заказ");
   });
 
-  it("shows order status tags on request cards and request details", () => {
+  it("shows order status tags only in the admin-facing request UI", () => {
     expect(adminRequestsPage).toContain("ContractStatusBadge");
     expect(adminRequestPage).toContain("ContractStatusBadge");
-    expect(clientAccountPage).toContain("ContractStatusBadge");
-    expect(clientRequestPage).toContain("ContractStatusBadge");
+    expect(clientAccountPage).not.toContain("ContractStatusBadge");
+    expect(clientRequestPage).not.toContain("ContractStatusBadge");
+  });
+
+  it("labels order chat as discussion and removes legacy manager explanation copy", () => {
+    expect(contractFeedbackThread).toContain("Обсуждение заказа");
+    expect(contractFeedbackThread).not.toContain("Комментарии к заказу");
+    expect(adminRequestPage).not.toContain("Пояснение для клиента");
+  });
+
+  it("highlights the newest history item with a non-cobalt border", () => {
+    expect(clientRequestPage).toContain('index === 0 ? "border-accent" : "border-cobalt/30"');
   });
 
   it("uses searchable multi-select for project gallery images", () => {
@@ -65,7 +79,17 @@ describe("client request history copy", () => {
   it("keeps services forms in collapsible full-width sections", () => {
     expect(adminServicesPage).toContain('title="Новая услуга"');
     expect(adminServicesPage).toContain("collapsible");
-    expect(adminServicesPage).toContain(">Пакеты и дополнительные услуги</");
+    expect(adminServicesPage).toContain("Пакеты");
+    expect(adminServicesPage).toContain("Дополнительные услуги");
+    expect(adminServicesPage).not.toContain("Пакеты и дополнительные услуги");
+  });
+
+  it("separates service management tools from existing service cards", () => {
+    expect(adminServicesPage).toContain("Управление услугами");
+    expect(adminServicesPage).toContain('title="Новая услуга"');
+    expect(adminServicesPage).toContain('title="Порядок на сайте"');
+    expect(adminServicesPage).toContain("Список услуг");
+    expect(adminServicesPage).toContain("Редактируйте уже созданные услуги");
   });
 
   it("uses Russian analytics labels and notification pagination controls", () => {

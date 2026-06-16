@@ -4,7 +4,6 @@ import type { OrderAttachment, OrderContract, OrderRequest, RequestStatusHistory
 export type RequestTimelineEventType =
   | "attachment"
   | "contract"
-  | "contract_feedback"
   | "created"
   | "status";
 
@@ -52,7 +51,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     {
       id: `contract-created-${contract.id}`,
       type: "contract",
-      title: "Заказ подготовлен",
+      title: "Условия отправлены на согласование",
       description:
         contract.status === "accepted"
           ? "Финальные условия были отправлены на согласование."
@@ -60,16 +59,6 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
       createdAt: contract.createdAt
     }
   ];
-
-  for (const feedback of contract.feedback) {
-    events.push({
-      id: `contract-feedback-${feedback.id}`,
-      type: "contract_feedback",
-      title: "Запрошены изменения заказа",
-      description: feedback.message,
-      createdAt: feedback.createdAt
-    });
-  }
 
   const latestFeedback = contract.feedback.at(-1);
   if (
@@ -81,7 +70,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     events.push({
       id: `contract-resent-${contract.id}-${contract.updatedAt}`,
       type: "contract",
-      title: "Заказ отправлен повторно",
+      title: "Условия обновлены и отправлены",
       description: "Исправленные условия отправлены клиенту на повторное согласование.",
       createdAt: contract.updatedAt
     });
@@ -91,7 +80,7 @@ function buildContractEvents(contract: OrderContract | null | undefined): Reques
     events.push({
       id: `contract-accepted-${contract.id}`,
       type: "contract",
-      title: "Заказ принят",
+      title: "Условия приняты",
       description: "Условия заказа согласованы клиентом.",
       createdAt: contract.acceptedAt
     });
@@ -116,5 +105,5 @@ export function buildRequestTimeline(request: OrderRequest): RequestTimelineEven
     ...buildContractEvents(request.contract)
   ];
 
-  return events.sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+  return events.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
 }

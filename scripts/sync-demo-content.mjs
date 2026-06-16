@@ -82,7 +82,8 @@ async function syncCatalog(client, catalog) {
         duration_to_days: item.durationToDays,
         display_order: (index + 1) * 10,
         is_active: true,
-        is_recommended: Boolean(item.isRecommended)
+        is_recommended: Boolean(item.isRecommended),
+        recommendation_tags: item.recommendationTags ?? {}
       });
     }
 

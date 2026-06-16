@@ -1,4 +1,5 @@
 import catalog from "@/lib/demo-catalog.json";
+import { normalizePackageRecommendationTags, type PackageRecommendationTags } from "@/lib/order-quiz";
 import type { Project, Service, Tag } from "@/lib/types";
 
 type CatalogPackage = {
@@ -14,6 +15,7 @@ type CatalogPackage = {
   durationFromDays: number;
   durationToDays: number;
   isRecommended?: boolean;
+  recommendationTags?: PackageRecommendationTags;
 };
 
 type CatalogAddon = {
@@ -100,7 +102,8 @@ export const catalogServices: Service[] = typedCatalog.services.map((service, se
     serviceId: service.id,
     displayOrder: (itemIndex + 1) * 10,
     isActive: true,
-    isRecommended: Boolean(item.isRecommended)
+    isRecommended: Boolean(item.isRecommended),
+    recommendationTags: normalizePackageRecommendationTags(item.recommendationTags)
   })),
   addons: service.addons.map((item, itemIndex) => ({
     ...item,

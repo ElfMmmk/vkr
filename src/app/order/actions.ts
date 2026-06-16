@@ -208,9 +208,9 @@ export async function submitOrderAction(
 
   if (selectedAddons.some((addon) => !addon)) {
     return {
-      message: "Проверьте выбранные доплаты",
+      message: "Проверьте выбранные дополнительные услуги",
       fieldErrors: {
-        addonIds: ["Выберите доплаты из списка услуги"]
+        addonIds: ["Выберите дополнительные услуги для выбранной услуги"]
       },
       values
     };

@@ -296,6 +296,61 @@ export async function requestOrderContractRevisionAction(formData: FormData): Pr
   redirect(`/account/requests/${requestId}?notice=order-contract-revision-requested`);
 }
 
+export async function saveClientOrderContractFeedbackAction(formData: FormData): Promise<void> {
+  const session = await requireClientSession();
+  const requestId = formString(formData, "requestId").trim();
+  const contractId = formString(formData, "contractId").trim();
+  const message = formString(formData, "message").trim();
+
+  if (
+    !requestId ||
+    !contractId ||
+    message.length < fieldLimits.orderContract.feedback.min ||
+    message.length > fieldLimits.orderContract.feedback.max
+  ) {
+    redirect(`/account/requests/${requestId}?notice=order-comment-invalid`);
+  }
+
+  const client = getSupabaseAdminOrThrow();
+  const { data: request } = await client
+    .from("requests")
+    .select("id, client_user_id, order_contracts(id, status)")
+    .eq("id", requestId)
+    .maybeSingle();
+  const contracts = Array.isArray(request?.order_contracts)
+    ? request.order_contracts
+    : request?.order_contracts
+      ? [request.order_contracts]
+      : [];
+  const contract = contracts.find((item) => item.id === contractId);
+
+  if (
+    !request ||
+    request.client_user_id !== session.id ||
+    !contract ||
+    !["draft", "sent", "revision_requested"].includes(contract.status)
+  ) {
+    redirect(`/account/requests/${requestId}?notice=order-comment-failed`);
+  }
+
+  const { error } = await client.from("order_contract_feedback").insert({
+    contract_id: contractId,
+    request_id: requestId,
+    client_user_id: session.id,
+    author_role: "client",
+    message
+  });
+
+  if (error) {
+    redirect(`/account/requests/${requestId}?notice=order-comment-failed`);
+  }
+
+  revalidatePath("/account");
+  revalidatePath(`/account/requests/${requestId}`);
+  revalidatePath(`/admin/requests/${requestId}`);
+  redirect(`/account/requests/${requestId}?notice=order-comment-saved`);
+}
+
 export async function uploadClientOrderAttachmentAction(formData: FormData): Promise<void> {
   const session = await requireClientSession();
   const requestId = formString(formData, "requestId").trim();

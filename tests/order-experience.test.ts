@@ -23,6 +23,7 @@ import {
   uploadOrderAttachmentFiles
 } from "@/lib/order-attachment-storage";
 import { recommendOrderSetup, type OrderQuizAnswers } from "@/lib/order-quiz";
+import { findFirstInvalidStepBeforeTarget } from "@/lib/order-step-navigation";
 import { buildRequestTimeline } from "@/lib/request-timeline";
 import {
   contractFeedbackRoleLabels,
@@ -55,7 +56,8 @@ const services: Service[] = [
         durationToDays: 12,
         displayOrder: 10,
         isActive: true,
-        isRecommended: false
+        isRecommended: false,
+        recommendationTags: {}
       }
     ],
     addons: []
@@ -84,7 +86,8 @@ const services: Service[] = [
         durationToDays: 8,
         displayOrder: 10,
         isActive: true,
-        isRecommended: false
+        isRecommended: false,
+        recommendationTags: {}
       }
     ],
     addons: []
@@ -152,7 +155,17 @@ describe("order experience helpers", () => {
         status: "accepted",
         acceptedAt: "2026-06-06T12:00:00.000Z",
         createdAt: "2026-06-06T11:00:00.000Z",
-        feedback: []
+        updatedAt: "2026-06-06T11:45:00.000Z",
+        feedback: [
+          {
+            id: "feedback-1",
+            contractId: "contract-1",
+            requestId: "request-1",
+            authorRole: "client",
+            message: "Комментарий без смены статуса.",
+            createdAt: "2026-06-06T11:40:00.000Z"
+          }
+        ]
       },
       statusHistory: [
         {
@@ -175,13 +188,35 @@ describe("order experience helpers", () => {
     };
 
     expect(buildRequestTimeline(request).map((event) => event.title)).toEqual([
-      "Заявка создана",
-      "Статус: В обработке",
-      "Материал загружен",
-      "Заказ подготовлен",
+      "Условия приняты",
+      "Условия обновлены и отправлены",
       "Статус: Согласована",
-      "Заказ принят"
+      "Условия отправлены на согласование",
+      "Материал загружен",
+      "Статус: В обработке",
+      "Заявка создана"
     ]);
+  });
+
+  it("blocks forward step jumps until every previous order step is valid", () => {
+    const stepIds = ["service", "extras", "brief", "contact", "review"] as const;
+    const invalidStep = findFirstInvalidStepBeforeTarget(4, stepIds, (stepId) =>
+      stepId === "brief" ? "Заполните бриф." : null
+    );
+
+    expect(invalidStep).toEqual({
+      error: "Заполните бриф.",
+      index: 2,
+      stepId: "brief"
+    });
+    expect(
+      findFirstInvalidStepBeforeTarget(2, stepIds, (stepId) =>
+        stepId === "contact" ? "Укажите контакт." : null
+      )
+    ).toBeNull();
+    expect(
+      findFirstInvalidStepBeforeTarget(0, stepIds, () => "Даже не проверяем текущий шаг")
+    ).toBeNull();
   });
 
   it("uses client-facing order status and feedback role labels", () => {
@@ -195,7 +230,7 @@ describe("order experience helpers", () => {
     expect(contractFeedbackRoleLabels).toEqual({
       client: "Клиент",
       manager: "Дизайнер",
-      admin: "Админ"
+      admin: "Дизайнер"
     });
   });
 

@@ -18,7 +18,14 @@
           "priceFrom": 25000,
           "priceTo": 45000,
           "durationFromDays": 10,
-          "durationToDays": 18
+          "durationToDays": 18,
+          "recommendationTags": {
+            "taskType": ["brand"],
+            "goal": ["launch", "refresh"],
+            "urgency": ["standard", "fast"],
+            "materials": ["partial", "ready"],
+            "scope": ["single"]
+          }
         },
         {
           "id": "pkg-brand-style",
@@ -32,7 +39,14 @@
           "priceTo": 100000,
           "durationFromDays": 18,
           "durationToDays": 30,
-          "isRecommended": true
+          "isRecommended": true,
+          "recommendationTags": {
+            "taskType": ["brand"],
+            "goal": ["launch", "sell", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["none", "partial"],
+            "scope": ["full"]
+          }
         },
         {
           "id": "pkg-brand-system",
@@ -45,7 +59,14 @@
           "priceFrom": 110000,
           "priceTo": 180000,
           "durationFromDays": 30,
-          "durationToDays": 45
+          "durationToDays": 45,
+          "recommendationTags": {
+            "taskType": ["brand"],
+            "goal": ["launch", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["none", "partial"],
+            "scope": ["full"]
+          }
         }
       ],
       "addons": [
@@ -83,7 +104,14 @@
           "priceFrom": 18000,
           "priceTo": 30000,
           "durationFromDays": 7,
-          "durationToDays": 12
+          "durationToDays": 12,
+          "recommendationTags": {
+            "taskType": ["social"],
+            "goal": ["launch", "refresh"],
+            "urgency": ["standard", "fast"],
+            "materials": ["partial", "ready"],
+            "scope": ["single"]
+          }
         },
         {
           "id": "pkg-social-system",
@@ -97,7 +125,14 @@
           "priceTo": 60000,
           "durationFromDays": 12,
           "durationToDays": 20,
-          "isRecommended": true
+          "isRecommended": true,
+          "recommendationTags": {
+            "taskType": ["social"],
+            "goal": ["launch", "sell", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["partial", "ready"],
+            "scope": ["full"]
+          }
         },
         {
           "id": "pkg-social-month",
@@ -110,7 +145,14 @@
           "priceFrom": 65000,
           "priceTo": 95000,
           "durationFromDays": 20,
-          "durationToDays": 30
+          "durationToDays": 30,
+          "recommendationTags": {
+            "taskType": ["social"],
+            "goal": ["sell", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["partial", "ready"],
+            "scope": ["full"]
+          }
         }
       ],
       "addons": [
@@ -148,7 +190,14 @@
           "priceFrom": 22000,
           "priceTo": 40000,
           "durationFromDays": 10,
-          "durationToDays": 18
+          "durationToDays": 18,
+          "recommendationTags": {
+            "taskType": ["packaging"],
+            "goal": ["launch", "sell", "refresh"],
+            "urgency": ["standard", "fast"],
+            "materials": ["partial", "ready"],
+            "scope": ["single"]
+          }
         },
         {
           "id": "pkg-packaging-line",
@@ -162,7 +211,14 @@
           "priceTo": 80000,
           "durationFromDays": 18,
           "durationToDays": 28,
-          "isRecommended": true
+          "isRecommended": true,
+          "recommendationTags": {
+            "taskType": ["packaging"],
+            "goal": ["launch", "sell", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["partial", "ready"],
+            "scope": ["full"]
+          }
         },
         {
           "id": "pkg-packaging-complex",
@@ -175,7 +231,14 @@
           "priceFrom": 85000,
           "priceTo": 140000,
           "durationFromDays": 28,
-          "durationToDays": 42
+          "durationToDays": 42,
+          "recommendationTags": {
+            "taskType": ["packaging"],
+            "goal": ["launch", "sell"],
+            "urgency": ["standard"],
+            "materials": ["none", "partial"],
+            "scope": ["full"]
+          }
         }
       ],
       "addons": [
@@ -213,7 +276,14 @@
           "priceFrom": 15000,
           "priceTo": 28000,
           "durationFromDays": 5,
-          "durationToDays": 9
+          "durationToDays": 9,
+          "recommendationTags": {
+            "taskType": ["presentation"],
+            "goal": ["sell", "event"],
+            "urgency": ["standard", "fast"],
+            "materials": ["partial", "ready"],
+            "scope": ["single"]
+          }
         },
         {
           "id": "pkg-presentation-20",
@@ -227,7 +297,14 @@
           "priceTo": 48000,
           "durationFromDays": 8,
           "durationToDays": 14,
-          "isRecommended": true
+          "isRecommended": true,
+          "recommendationTags": {
+            "taskType": ["presentation"],
+            "goal": ["launch", "sell", "event"],
+            "urgency": ["standard"],
+            "materials": ["partial", "ready"],
+            "scope": ["full"]
+          }
         },
         {
           "id": "pkg-presentation-system",
@@ -240,7 +317,14 @@
           "priceFrom": 45000,
           "priceTo": 75000,
           "durationFromDays": 14,
-          "durationToDays": 22
+          "durationToDays": 22,
+          "recommendationTags": {
+            "taskType": ["presentation"],
+            "goal": ["sell", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["partial", "ready"],
+            "scope": ["full"]
+          }
         }
       ],
       "addons": [
@@ -278,7 +362,14 @@
           "priceFrom": 45000,
           "priceTo": 75000,
           "durationFromDays": 14,
-          "durationToDays": 22
+          "durationToDays": 22,
+          "recommendationTags": {
+            "taskType": ["other"],
+            "goal": ["launch", "sell", "event"],
+            "urgency": ["standard", "fast"],
+            "materials": ["partial", "ready"],
+            "scope": ["single"]
+          }
         },
         {
           "id": "pkg-web-corporate",
@@ -292,7 +383,14 @@
           "priceTo": 140000,
           "durationFromDays": 24,
           "durationToDays": 38,
-          "isRecommended": true
+          "isRecommended": true,
+          "recommendationTags": {
+            "taskType": ["other"],
+            "goal": ["launch", "sell", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["partial", "ready"],
+            "scope": ["full"]
+          }
         },
         {
           "id": "pkg-web-product",
@@ -305,7 +403,14 @@
           "priceFrom": 120000,
           "priceTo": 220000,
           "durationFromDays": 35,
-          "durationToDays": 60
+          "durationToDays": 60,
+          "recommendationTags": {
+            "taskType": ["other"],
+            "goal": ["launch", "refresh"],
+            "urgency": ["standard"],
+            "materials": ["none", "partial"],
+            "scope": ["full"]
+          }
         }
       ],
       "addons": [

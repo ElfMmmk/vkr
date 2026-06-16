@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { contactMethods, normalizeAndValidateContact } from "@/lib/contact";
 import { fieldLimits } from "@/lib/field-limits";
+import { normalizePackageRecommendationTags } from "@/lib/order-quiz";
 import { requestStatuses } from "@/lib/request-status";
 
 export const pageKeySchema = z.enum(["home", "about", "services", "contacts"]);
@@ -102,7 +103,8 @@ export const servicePackageSchema = z
       .min(fieldLimits.servicePackage.displayOrder.min)
       .max(fieldLimits.servicePackage.displayOrder.max),
     isActive: z.boolean(),
-    isRecommended: z.boolean().default(false)
+    isRecommended: z.boolean().default(false),
+    recommendationTags: z.unknown().transform(normalizePackageRecommendationTags).default({})
   })
   .refine((value) => value.priceTo >= value.priceFrom, {
     message: "Максимальная цена не может быть меньше минимальной",

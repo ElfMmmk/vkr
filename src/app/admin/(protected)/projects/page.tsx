@@ -165,7 +165,7 @@ function ProjectForm({
           </label>
           <label className="flex items-center gap-3 border border-line bg-white px-4 py-3 text-sm font-semibold">
             <input defaultChecked={project?.isPublished ?? true} name="isPublished" type="checkbox" />
-            Показывать на сайте
+            Отображать
           </label>
         </div>
         <FormSubmitButton

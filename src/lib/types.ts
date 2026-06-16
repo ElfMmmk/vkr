@@ -1,3 +1,5 @@
+import type { PackageRecommendationTags } from "@/lib/order-quiz";
+
 export type RequestStatus =
   | "new"
   | "in_progress"
@@ -51,6 +53,7 @@ export type ServicePackage = {
   displayOrder: number;
   isActive: boolean;
   isRecommended: boolean;
+  recommendationTags: PackageRecommendationTags;
 };
 
 export type ServiceAddon = {

@@ -55,6 +55,14 @@ img {
   outline-offset: 3px;
 }
 
+.details-chevron {
+  transition: transform 160ms ease;
+}
+
+details[open] > summary .details-chevron {
+  transform: rotate(180deg);
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);

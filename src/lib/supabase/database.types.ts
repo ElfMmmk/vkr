@@ -789,6 +789,7 @@ export type Database = {
           display_order: number;
           is_active: boolean;
           is_recommended: boolean;
+          recommendation_tags: Json;
           created_at: string;
           updated_at: string;
         };
@@ -808,6 +809,7 @@ export type Database = {
           display_order?: number;
           is_active?: boolean;
           is_recommended?: boolean;
+          recommendation_tags?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -827,6 +829,7 @@ export type Database = {
           display_order?: number;
           is_active?: boolean;
           is_recommended?: boolean;
+          recommendation_tags?: Json;
           created_at?: string;
           updated_at?: string;
         };

@@ -4,13 +4,13 @@ import { notFound } from "next/navigation";
 import {
   acceptOrderContractAction,
   deleteClientOrderAttachmentAction,
-  requestOrderContractRevisionAction,
+  saveClientOrderContractFeedbackAction,
   uploadClientOrderAttachmentAction
 } from "@/app/account/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ContractFeedbackThread } from "@/components/contract-feedback-thread";
-import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { OrderRevisionModal } from "@/components/order-revision-modal";
 import { OrderEstimateBreakdown } from "@/components/order-estimate-breakdown";
 import { RouteFlashToast } from "@/components/route-flash-toast";
 import { SiteFooter } from "@/components/site-footer";
@@ -55,9 +55,15 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
     canManageAttachments &&
     attachments.length < MAX_ORDER_ATTACHMENT_COUNT;
   const visibleContract =
-    request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status)
+    request.contract && ["draft", "sent", "revision_requested", "accepted"].includes(request.contract.status)
       ? request.contract
       : null;
+  const acceptedContract = visibleContract?.status === "accepted" ? visibleContract : null;
+  const canCommentOnContract =
+    Boolean(visibleContract && ["draft", "sent", "revision_requested"].includes(visibleContract.status));
+  const shouldShowContractFeedback =
+    Boolean(visibleContract && (canCommentOnContract || visibleContract.feedback.length > 0));
+  const visibleContractWorkScope = visibleContract?.workScope.replace(/^Задача:\s*/i, "") ?? "";
 
   return (
     <>
@@ -76,12 +82,18 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
             </h1>
             <p className="mt-3 text-muted">
               {request.packageTitle || "Пакет не выбран"} ·{" "}
-              <OrderEstimateBreakdown compact request={request} />
+              {acceptedContract ? (
+                <>
+                  Итоговая стоимость: {formatRubles(acceptedContract.finalPrice)} · Срок выполнения:{" "}
+                  {acceptedContract.finalDurationDays} раб. дн.
+                </>
+              ) : (
+                <OrderEstimateBreakdown compact request={request} />
+              )}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={request.status} />
-            <ContractStatusBadge status={visibleContract?.status} />
           </div>
         </div>
 
@@ -102,7 +114,20 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
                 </div>
               </dl>
               <div className="mt-5 border border-line bg-paper p-4">
-                <OrderEstimateBreakdown request={request} />
+                {acceptedContract ? (
+                  <dl className="grid gap-3 text-sm leading-6 md:grid-cols-2">
+                    <div>
+                      <dt className="font-semibold text-muted">Итоговая стоимость</dt>
+                      <dd className="font-semibold">{formatRubles(acceptedContract.finalPrice)}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-muted">Срок выполнения</dt>
+                      <dd className="font-semibold">{acceptedContract.finalDurationDays} раб. дн.</dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <OrderEstimateBreakdown request={request} />
+                )}
               </div>
               <div className="mt-6 grid gap-5 text-sm leading-6">
                 <section>
@@ -119,7 +144,7 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
                 </section>
                 {request.selectedAddons.length ? (
                   <section>
-                    <h3 className="font-semibold">Доплаты</h3>
+                    <h3 className="font-semibold">Дополнительные услуги</h3>
                     <ul className="mt-2 grid gap-2 text-muted">
                       {request.selectedAddons.map((addon) => (
                         <li key={addon.id}>
@@ -137,58 +162,63 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
               <section className="border border-cobalt/25 bg-cobalt/10 p-5">
                 <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                   <div>
-                    <h2 className="text-2xl font-semibold">Заказ</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted">
-                      Итоговая стоимость: {formatRubles(visibleContract.finalPrice)} · срок:{" "}
-                      {visibleContract.finalDurationDays} раб. дн.
-                    </p>
+                    <h2 className="text-2xl font-semibold">Условия заказа</h2>
                   </div>
-                  <ContractStatusBadge status={visibleContract.status} />
                 </div>
-                <p className="mt-4 text-sm leading-6">{visibleContract.workScope}</p>
-                {visibleContract.managerComment ? (
-                  <p className="mt-3 text-sm leading-6 text-muted">{visibleContract.managerComment}</p>
-                ) : null}
-                <ContractFeedbackThread feedback={visibleContract.feedback} viewer="client" />
+                <dl className="mt-4 grid gap-3 text-sm leading-6 md:grid-cols-2">
+                  <div>
+                    <dt className="font-semibold text-muted">Стоимость</dt>
+                    <dd className="font-semibold">{formatRubles(visibleContract.finalPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-muted">Срок</dt>
+                    <dd className="font-semibold">{visibleContract.finalDurationDays} раб. дн.</dd>
+                  </div>
+                </dl>
+                <div className="mt-4 text-sm leading-6">
+                  <h3 className="font-semibold">Задача</h3>
+                  <p className="mt-2">{visibleContractWorkScope}</p>
+                </div>
                 {visibleContract.status === "sent" ? (
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
                     <form action={acceptOrderContractAction}>
                       <input name="requestId" type="hidden" value={request.id} />
                       <input name="contractId" type="hidden" value={visibleContract.id} />
                       <FormSubmitButton
-                        className="focus-ring inline-flex min-h-11 w-full items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                        className="focus-ring inline-flex min-h-11 w-full items-center justify-center border border-cobalt bg-cobalt px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white hover:text-cobalt active:translate-y-px"
                         idleLabel="Принять условия"
                         pendingLabel="Принятие..."
                       />
                     </form>
-                    <details className="border border-line bg-white md:col-span-2">
-                      <summary className="focus-ring cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
-                        Запросить изменения
-                      </summary>
-                      <form action={requestOrderContractRevisionAction} className="grid gap-3 border-t border-line p-4">
-                        <input name="requestId" type="hidden" value={request.id} />
-                        <input name="contractId" type="hidden" value={visibleContract.id} />
-                        <label className="text-sm font-semibold" htmlFor="contract-feedback">
-                          Что нужно изменить
-                        </label>
-                        <textarea
-                          className="min-h-32 w-full border border-line bg-white px-3 py-2 text-sm leading-6"
-                          id="contract-feedback"
-                          maxLength={1000}
-                          minLength={10}
-                          name="feedback"
-                          placeholder="Опишите, какие условия требуется уточнить или изменить"
-                          required
-                        />
-                        <p className="text-xs text-muted">От 10 до 1000 символов.</p>
-                        <FormSubmitButton
-                          className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
-                          idleLabel="Отправить комментарий"
-                          pendingLabel="Отправка..."
-                        />
-                      </form>
-                    </details>
+                    <OrderRevisionModal contractId={visibleContract.id} requestId={request.id} />
                   </div>
+                ) : null}
+                {shouldShowContractFeedback ? (
+                  <ContractFeedbackThread feedback={visibleContract.feedback} viewer="client" />
+                ) : null}
+                {canCommentOnContract ? (
+                  <form action={saveClientOrderContractFeedbackAction} className="mt-5 grid gap-3 border border-line bg-white p-4">
+                    <input name="requestId" type="hidden" value={request.id} />
+                    <input name="contractId" type="hidden" value={visibleContract.id} />
+                    <label className="text-sm font-semibold" htmlFor="client-order-comment">
+                      Сообщение дизайнеру
+                    </label>
+                    <textarea
+                      className="min-h-28 w-full border border-line bg-white px-3 py-2 text-sm leading-6"
+                      id="client-order-comment"
+                      maxLength={1000}
+                      minLength={10}
+                      name="message"
+                      placeholder="Напишите вопрос или уточнение по заказу"
+                      required
+                    />
+                    <p className="text-xs text-muted">От 10 до 1000 символов.</p>
+                    <FormSubmitButton
+                      className="focus-ring inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                      idleLabel="Отправить сообщение"
+                      pendingLabel="Отправка..."
+                    />
+                  </form>
                 ) : null}
               </section>
             ) : null}
@@ -266,8 +296,8 @@ export default async function AccountRequestDetailPage({ params }: AccountReques
             <section className="border border-line bg-paper p-5">
               <h2 className="text-xl font-semibold">История</h2>
               <ol className="mt-4 grid gap-3 text-sm leading-6">
-                {timeline.map((event) => (
-                  <li className="border-l-2 border-cobalt/30 pl-3" key={event.id}>
+                {timeline.map((event, index) => (
+                  <li className={`border-l-2 pl-3 ${index === 0 ? "border-accent" : "border-cobalt/30"}`} key={event.id}>
                     <time
                       className="block text-xs font-semibold uppercase tracking-[0.12em] text-muted"
                       dateTime={event.createdAt}

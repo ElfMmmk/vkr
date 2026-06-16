@@ -16,6 +16,7 @@ import type {
   Tag
 } from "@/lib/types";
 import type { Json, Tables } from "@/lib/supabase/database.types";
+import { normalizePackageRecommendationTags } from "@/lib/order-quiz";
 
 export type ServicePackageRow = Tables<"service_packages">;
 export type ServiceAddonRow = Tables<"service_addons">;
@@ -127,7 +128,8 @@ export function mapServicePackage(row: ServicePackageRow): ServicePackage {
     durationToDays: row.duration_to_days ?? 1,
     displayOrder: row.display_order ?? 100,
     isActive: row.is_active ?? true,
-    isRecommended: row.is_recommended ?? false
+    isRecommended: row.is_recommended ?? false,
+    recommendationTags: normalizePackageRecommendationTags(row.recommendation_tags)
   };
 }
 

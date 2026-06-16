@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { clientSignOutAction } from "@/app/account/actions";
-import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { OrderEstimateBreakdown } from "@/components/order-estimate-breakdown";
 import { RouteFlashToast } from "@/components/route-flash-toast";
 import { SiteFooter } from "@/components/site-footer";
@@ -9,7 +8,6 @@ import { SiteHeader } from "@/components/site-header";
 import { StatusBadge } from "@/components/status-badge";
 import { requireClientSession } from "@/lib/auth";
 import { listClientRequests } from "@/lib/data/client";
-import { formatRubles } from "@/lib/order-calculator";
 
 export const dynamic = "force-dynamic";
 
@@ -70,14 +68,6 @@ export default async function AccountPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge status={request.status} />
-                      <ContractStatusBadge
-                        status={
-                          request.contract
-                          && ["sent", "revision_requested", "accepted"].includes(request.contract.status)
-                            ? request.contract.status
-                            : null
-                        }
-                      />
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 text-sm leading-6 md:grid-cols-2">
@@ -86,8 +76,23 @@ export default async function AccountPage() {
                       {request.packageTitle || "Не выбран"}
                     </p>
                     <p>
-                      <span className="font-semibold">Предварительно:</span>{" "}
-                      <OrderEstimateBreakdown compact request={request} />
+                      <span className="font-semibold">
+                        {request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status)
+                          ? "Стоимость и срок:"
+                          : "Предварительно:"}
+                      </span>{" "}
+                      <OrderEstimateBreakdown
+                        compact
+                        fixedTerms={
+                          request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status)
+                            ? {
+                                finalPrice: request.contract.finalPrice,
+                                finalDurationDays: request.contract.finalDurationDays
+                              }
+                            : undefined
+                        }
+                        request={request}
+                      />
                     </p>
                   </div>
                   <p className="mt-4 text-sm leading-6 text-muted">
@@ -101,32 +106,22 @@ export default async function AccountPage() {
                       Открыть заказ
                     </Link>
                   </div>
-                  {request.contract && ["sent", "revision_requested", "accepted"].includes(request.contract.status) ? (
+                  {request.contract?.status === "sent" ? (
                     <div className="mt-5 border border-cobalt/25 bg-cobalt/10 p-4">
                       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                         <div>
-                          <h4 className="text-lg font-semibold">Заказ</h4>
+                          <h4 className="text-lg font-semibold">Условия ждут подтверждения</h4>
                           <p className="mt-2 text-sm leading-6 text-muted">
-                            Итоговая стоимость: {formatRubles(request.contract.finalPrice)} · срок:{" "}
-                            {request.contract.finalDurationDays} раб. дн.
+                            Проверьте состав работ, примите условия или запросите изменения.
                           </p>
                         </div>
-                        <ContractStatusBadge status={request.contract.status} />
                       </div>
-                      <p className="mt-3 text-sm leading-6">{request.contract.workScope}</p>
-                      {request.contract.managerComment ? (
-                        <p className="mt-2 text-sm leading-6 text-muted">
-                          {request.contract.managerComment}
-                        </p>
-                      ) : null}
-                      {request.contract.status === "sent" ? (
-                        <Link
-                          className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
-                          href={`/account/requests/${request.id}`}
-                        >
-                          Перейти к согласованию
-                        </Link>
-                      ) : null}
+                      <Link
+                        className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:bg-accent active:translate-y-px"
+                        href={`/account/requests/${request.id}`}
+                      >
+                        Перейти к согласованию
+                      </Link>
                     </div>
                   ) : null}
                 </article>
