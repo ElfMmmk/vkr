@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
+import type { Locale } from "@/lib/i18n";
+
 type GallerySlide = {
   src: string;
   alt: string;
@@ -11,10 +13,11 @@ type GallerySlide = {
 };
 
 type ProjectGallerySliderProps = {
+  locale: Locale;
   slides: GallerySlide[];
 };
 
-export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
+export function ProjectGallerySlider({ locale, slides }: ProjectGallerySliderProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const hasMultipleSlides = slides.length > 1;
   const activeSlide = slides[activeIndex] ?? slides[0];
@@ -22,7 +25,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
   if (!activeSlide) {
     return (
       <div className="grid min-h-72 place-items-center border border-line bg-white text-sm text-muted">
-        Изображения для галереи пока не добавлены
+        {locale === "en" ? "Gallery images have not been added yet" : "Изображения для галереи пока не добавлены"}
       </div>
     );
   }
@@ -36,7 +39,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
   }
 
   return (
-    <section aria-label="Галерея проекта" className="space-y-4">
+    <section aria-label={locale === "en" ? "Project gallery" : "Галерея проекта"} className="space-y-4">
       <div className="overflow-hidden border border-line bg-white">
         <div className="group/slider relative aspect-[16/10] w-full bg-paper md:aspect-[16/9]">
           <Image
@@ -51,7 +54,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
           {hasMultipleSlides ? (
             <>
               <button
-                aria-label="Предыдущее изображение"
+                aria-label={locale === "en" ? "Previous image" : "Предыдущее изображение"}
                 className="focus-ring absolute inset-y-0 left-0 grid w-20 place-items-center bg-ink/0 text-white opacity-75 transition hover:bg-ink/15 hover:opacity-100 active:bg-ink/25 md:opacity-0 md:group-hover/slider:opacity-100"
                 onClick={goToPrevious}
                 type="button"
@@ -61,7 +64,7 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
                 </span>
               </button>
               <button
-                aria-label="Следующее изображение"
+                aria-label={locale === "en" ? "Next image" : "Следующее изображение"}
                 className="focus-ring absolute inset-y-0 right-0 grid w-20 place-items-center bg-ink/0 text-white opacity-75 transition hover:bg-ink/15 hover:opacity-100 active:bg-ink/25 md:opacity-0 md:group-hover/slider:opacity-100"
                 onClick={goToNext}
                 type="button"
@@ -81,10 +84,10 @@ export function ProjectGallerySlider({ slides }: ProjectGallerySliderProps) {
         </div>
       </div>
       {hasMultipleSlides ? (
-        <div className="flex flex-wrap gap-2" aria-label="Миниатюры галереи">
+        <div className="flex flex-wrap gap-2" aria-label={locale === "en" ? "Gallery thumbnails" : "Миниатюры галереи"}>
           {slides.map((slide, index) => (
             <button
-              aria-label={`Открыть изображение ${index + 1}`}
+              aria-label={locale === "en" ? `Open image ${index + 1}` : `Открыть изображение ${index + 1}`}
               className={`focus-ring relative h-16 w-24 overflow-hidden border bg-white transition active:translate-y-px ${
                 index === activeIndex ? "border-ink" : "border-line hover:border-muted hover:bg-paper"
               }`}

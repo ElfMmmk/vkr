@@ -19,7 +19,10 @@ import {
   type TagRow
 } from "@/lib/data/mappers";
 import { getOptionalSupabaseAdmin } from "@/lib/supabase/server";
-import type { RequestStatus } from "@/lib/supabase/database.types";
+import type {
+  RequestStatus,
+  TranslationEntityType
+} from "@/lib/supabase/database.types";
 import type {
   AdminUserListResult,
   AnalyticsEvent,
@@ -73,6 +76,58 @@ function isRequestStatus(value: string): value is RequestStatus {
   );
 }
 
+type AdminTranslationRow = {
+  entity_type: TranslationEntityType;
+  entity_id: string;
+  fields: Record<string, unknown> | null;
+};
+
+async function loadAdminTranslations(
+  client: NonNullable<ReturnType<typeof getOptionalSupabaseAdmin>>,
+  ids: string[]
+): Promise<Map<string, Record<string, unknown>>> {
+  if (!ids.length) {
+    return new Map();
+  }
+
+  const { data, error } = await client
+    .from("entity_translations")
+    .select("entity_type, entity_id, fields")
+    .eq("locale", "en")
+    .in("entity_id", ids);
+
+  if (error) {
+    return new Map();
+  }
+
+  return new Map(
+    ((data as AdminTranslationRow[] | null) ?? []).map((row) => [
+      `${row.entity_type}:${row.entity_id}`,
+      row.fields ?? {}
+    ])
+  );
+}
+
+function translationFor(
+  translations: Map<string, Record<string, unknown>>,
+  entityType: TranslationEntityType,
+  entityId: string
+): Record<string, unknown> | undefined {
+  return translations.get(`${entityType}:${entityId}`);
+}
+
+async function attachAdminProjectTranslations(
+  client: NonNullable<ReturnType<typeof getOptionalSupabaseAdmin>>,
+  projects: Project[]
+): Promise<Project[]> {
+  const translations = await loadAdminTranslations(client, projects.map((project) => project.id));
+
+  return projects.map((project) => ({
+    ...project,
+    englishTranslation: translationFor(translations, "project", project.id)
+  }));
+}
+
 export async function listAdminPages(): Promise<PageContent[]> {
   const client = getOptionalSupabaseAdmin();
 
@@ -85,7 +140,13 @@ export async function listAdminPages(): Promise<PageContent[]> {
     .select("*")
     .order("page_key", { ascending: true });
 
-  return requireAdminData(data as PageRow[] | null, error, "admin pages").map(mapPage);
+  const pages = requireAdminData(data as PageRow[] | null, error, "admin pages").map(mapPage);
+  const translations = await loadAdminTranslations(client, pages.map((page) => page.id));
+
+  return pages.map((page) => ({
+    ...page,
+    englishTranslation: translationFor(translations, "page", page.id)
+  }));
 }
 
 export async function listAdminServices(): Promise<Service[]> {
@@ -100,7 +161,26 @@ export async function listAdminServices(): Promise<Service[]> {
     .select("*, service_packages(*), service_addons(*)")
     .order("display_order", { ascending: true });
 
-  return requireAdminData(data as ServiceRow[] | null, error, "admin services").map(mapService);
+  const services = requireAdminData(data as ServiceRow[] | null, error, "admin services").map(mapService);
+  const ids = services.flatMap((service) => [
+    service.id,
+    ...service.packages.map((packageItem) => packageItem.id),
+    ...service.addons.map((addon) => addon.id)
+  ]);
+  const translations = await loadAdminTranslations(client, ids);
+
+  return services.map((service) => ({
+    ...service,
+    englishTranslation: translationFor(translations, "service", service.id),
+    packages: service.packages.map((packageItem) => ({
+      ...packageItem,
+      englishTranslation: translationFor(translations, "service_package", packageItem.id)
+    })),
+    addons: service.addons.map((addon) => ({
+      ...addon,
+      englishTranslation: translationFor(translations, "service_addon", addon.id)
+    }))
+  }));
 }
 
 export async function listAdminTags(): Promise<Tag[]> {
@@ -112,7 +192,13 @@ export async function listAdminTags(): Promise<Tag[]> {
 
   const { data, error } = await client.from("tags").select("*").order("title");
 
-  return requireAdminData(data as TagRow[] | null, error, "admin tags").map(mapTag);
+  const tags = requireAdminData(data as TagRow[] | null, error, "admin tags").map(mapTag);
+  const translations = await loadAdminTranslations(client, tags.map((tag) => tag.id));
+
+  return tags.map((tag) => ({
+    ...tag,
+    englishTranslation: translationFor(translations, "tag", tag.id)
+  }));
 }
 
 export async function listAdminProjects(): Promise<Project[]> {
@@ -182,10 +268,13 @@ export async function listAdminProjects(): Promise<Project[]> {
       throw new Error(`Failed to load legacy admin project media: ${legacyImageError.message}`);
     }
 
-    return attachLegacyProjectImages(
-      projectRows,
-      (legacyImageData as ImageRow[] | null) ?? []
-    ).map(mapProject);
+    return attachAdminProjectTranslations(
+      client,
+      attachLegacyProjectImages(
+        projectRows,
+        (legacyImageData as ImageRow[] | null) ?? []
+      ).map(mapProject)
+    );
   }
 
   if (relationError || coverError) {
@@ -194,15 +283,18 @@ export async function listAdminProjects(): Promise<Project[]> {
     );
   }
 
-  return attachProjectMedia(
-    projectRows,
-    (relationData as Array<{
-      project_id: string;
-      sort_order: number | null;
-      images: ImageRow | ImageRow[] | null;
-    }> | null) ?? [],
-    (coverData as ImageRow[] | null) ?? []
-  ).map(mapProject);
+  return attachAdminProjectTranslations(
+    client,
+    attachProjectMedia(
+      projectRows,
+      (relationData as Array<{
+        project_id: string;
+        sort_order: number | null;
+        images: ImageRow | ImageRow[] | null;
+      }> | null) ?? [],
+      (coverData as ImageRow[] | null) ?? []
+    ).map(mapProject)
+  );
 }
 
 export async function listAdminImages(): Promise<PortfolioImage[]> {
@@ -217,7 +309,13 @@ export async function listAdminImages(): Promise<PortfolioImage[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  return requireAdminData(data as ImageRow[] | null, error, "admin images").map(mapImage);
+  const images = requireAdminData(data as ImageRow[] | null, error, "admin images").map(mapImage);
+  const translations = await loadAdminTranslations(client, images.map((image) => image.id));
+
+  return images.map((image) => ({
+    ...image,
+    englishTranslation: translationFor(translations, "image", image.id)
+  }));
 }
 
 export async function listAdminAnalyticsEvents(): Promise<AnalyticsEvent[]> {

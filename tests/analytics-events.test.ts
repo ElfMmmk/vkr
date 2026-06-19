@@ -34,6 +34,25 @@ describe("analytics event helpers", () => {
     });
   });
 
+  it("removes claim tokens and unknown identifiers from analytics URLs", () => {
+    const event = parseAnalyticsEventPayload({
+      eventType: "cta_click",
+      path: "/order/success",
+      search: "?claim=secret-token&service=brand-identity&email=client@example.test",
+      href: "/order/success?claim=secret-token&service=brand-identity",
+      referrer: "https://example.test/order/success?claim=secret-token&sort=recent",
+      label: "Continue"
+    });
+
+    expect(event).toMatchObject({
+      search: "?service=brand-identity",
+      href: "/order/success?service=brand-identity",
+      referrer: "https://example.test/order/success?sort=recent"
+    });
+    expect(JSON.stringify(event)).not.toContain("secret-token");
+    expect(JSON.stringify(event)).not.toContain("client@example.test");
+  });
+
   it("normalizes CTA click payloads and rejects non-public paths", () => {
     expect(
       parseAnalyticsEventPayload({

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import type { Locale } from "@/lib/i18n";
 import { ORDER_DRAFT_STORAGE_KEY } from "@/lib/order-draft";
 
 type LastOrderSummary = {
@@ -31,7 +32,7 @@ function parseSummary(raw: string | null): LastOrderSummary | null {
   }
 }
 
-export function OrderSuccessClient() {
+export function OrderSuccessClient({ locale }: { locale: Locale }) {
   const [summary, setSummary] = useState<LastOrderSummary | null>(null);
 
   useEffect(() => {
@@ -49,28 +50,30 @@ export function OrderSuccessClient() {
 
   return (
     <section className="mt-8 border border-line bg-white p-5 text-left">
-      <h2 className="text-xl font-semibold">Кратко по заявке</h2>
+      <h2 className="text-xl font-semibold">
+        {locale === "en" ? "Request summary" : "Кратко по заявке"}
+      </h2>
       <dl className="mt-4 grid gap-3 text-sm leading-6 sm:grid-cols-2">
         <div>
-          <dt className="font-semibold text-muted">Услуга</dt>
-          <dd>{summary.serviceTitle || "Уточняется"}</dd>
+          <dt className="font-semibold text-muted">{locale === "en" ? "Service" : "Услуга"}</dt>
+          <dd>{summary.serviceTitle || (locale === "en" ? "To be confirmed" : "Уточняется")}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted">Пакет</dt>
-          <dd>{summary.packageTitle || "Уточняется"}</dd>
+          <dt className="font-semibold text-muted">{locale === "en" ? "Package" : "Пакет"}</dt>
+          <dd>{summary.packageTitle || (locale === "en" ? "To be confirmed" : "Уточняется")}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted">Стоимость</dt>
-          <dd>{summary.price || "Уточняется"}</dd>
+          <dt className="font-semibold text-muted">{locale === "en" ? "Price" : "Стоимость"}</dt>
+          <dd>{summary.price || (locale === "en" ? "To be confirmed" : "Уточняется")}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted">Срок</dt>
-          <dd>{summary.duration || "Уточняется"}</dd>
+          <dt className="font-semibold text-muted">{locale === "en" ? "Timing" : "Срок"}</dt>
+          <dd>{summary.duration || (locale === "en" ? "To be confirmed" : "Уточняется")}</dd>
         </div>
       </dl>
       {summary.files?.length ? (
         <p className="mt-4 text-sm leading-6 text-muted">
-          Материалы приложены: {summary.files.join(", ")}.
+          {locale === "en" ? "Attached files" : "Материалы приложены"}: {summary.files.join(", ")}.
         </p>
       ) : null}
     </section>

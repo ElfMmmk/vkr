@@ -30,7 +30,12 @@ export default async function OrderPage({
           }
         />
         <section className="mt-8 border border-line bg-white p-4 sm:p-6 md:mt-10 md:p-8">
-          <OrderForm projects={projects} selectedServiceSlug={params.service} services={services} />
+          <OrderForm
+            locale={locale}
+            projects={projects}
+            selectedServiceSlug={params.service}
+            services={services}
+          />
         </section>
       </main>
       <SiteFooter />

@@ -40,7 +40,7 @@ test.describe("WCAG smoke audit", () => {
   test("admin login exposes only configured authentication controls", async ({ page }) => {
     await page.goto("/admin/login");
 
-    await expect(page.getByLabel("Email администратора")).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Пароль")).toBeVisible();
     await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
   });

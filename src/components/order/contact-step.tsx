@@ -11,6 +11,7 @@ import {
 import { contactPlaceholders } from "@/components/order/order-form-config";
 import { formatContactInput } from "@/lib/contact";
 import { fieldLimits } from "@/lib/field-limits";
+import type { Locale } from "@/lib/i18n";
 import {
   MAX_ORDER_ATTACHMENT_COUNT,
   validateOrderAttachmentList,
@@ -26,6 +27,7 @@ type ContactStepProps = {
   contactMethod: string;
   contactValue: string;
   fieldErrors: FieldErrors;
+  locale: Locale;
   setAttachmentError: Dispatch<SetStateAction<string>>;
   setAttachmentFiles: Dispatch<SetStateAction<OrderAttachmentFileLike[]>>;
   setClientName: Dispatch<SetStateAction<string>>;
@@ -40,6 +42,7 @@ export function ContactStep({
   contactMethod,
   contactValue,
   fieldErrors,
+  locale,
   setAttachmentError,
   setAttachmentFiles,
   setClientName,
@@ -49,20 +52,20 @@ export function ContactStep({
   return (
     <div className="grid gap-5">
       <div className="grid gap-5 md:grid-cols-2">
-        <Field label="Имя" required>
+        <Field label={locale === "en" ? "Name" : "Имя"} required>
           <LimitedInput
             aria-invalid={Boolean(fieldErrors?.clientName) || undefined}
             className={`${inputClass}${invalidClass(Boolean(fieldErrors?.clientName))}`}
             maxLength={fieldLimits.order.clientName.max}
             name="clientName"
             onChange={(event) => setClientName(event.target.value)}
-            placeholder="Как к вам обращаться"
+            placeholder={locale === "en" ? "How should we address you?" : "Как к вам обращаться"}
             required
             value={clientName}
           />
           <FieldError errors={fieldErrors?.clientName} />
         </Field>
-        <Field label="Способ связи" required>
+        <Field label={locale === "en" ? "Contact method" : "Способ связи"} required>
           <select
             className={`${selectClass}${invalidClass(Boolean(fieldErrors?.contactMethod))}`}
             name="contactMethod"
@@ -73,16 +76,16 @@ export function ContactStep({
             required
             value={contactMethod}
           >
-            <option>Telegram</option>
-            <option>Email</option>
-            <option>Телефон</option>
-            <option>Другой способ</option>
+            <option value="Telegram">Telegram</option>
+            <option value="Email">Email</option>
+            <option value="Телефон">{locale === "en" ? "Phone" : "Телефон"}</option>
+            <option value="Другой способ">{locale === "en" ? "Other" : "Другой способ"}</option>
           </select>
           <FieldError errors={fieldErrors?.contactMethod} />
         </Field>
       </div>
 
-      <Field label="Контакт" required>
+      <Field label={locale === "en" ? "Contact" : "Контакт"} required>
         {contactMethod === "Телефон" ? (
           <input
             aria-invalid={Boolean(fieldErrors?.contactValue) || undefined}
@@ -104,7 +107,11 @@ export function ContactStep({
             maxLength={fieldLimits.order.contactValue.max}
             name="contactValue"
             onChange={(event) => setContactValue(event.target.value)}
-            placeholder={contactPlaceholders[contactMethod]}
+            placeholder={
+              locale === "en" && contactMethod === "Другой способ"
+                ? "Enter your preferred contact method"
+                : contactPlaceholders[contactMethod]
+            }
             required
             type={contactMethod === "Email" ? "email" : "text"}
             value={contactValue}
@@ -113,7 +120,7 @@ export function ContactStep({
         <FieldError errors={fieldErrors?.contactValue} />
       </Field>
 
-      <Field label="Материалы к заказу">
+      <Field label={locale === "en" ? "Project files" : "Материалы к заказу"}>
         <input
           accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,text/plain"
           className={inputClass}
@@ -122,18 +129,20 @@ export function ContactStep({
           onChange={(event) => {
             const files = fileListToMetadata(event.target.files);
             setAttachmentFiles(files);
-            setAttachmentError(validateOrderAttachmentList(files) ?? "");
+            setAttachmentError(validateOrderAttachmentList(files, locale) ?? "");
           }}
           type="file"
         />
         <p className="mt-2 text-sm leading-6 text-muted">
-          До {MAX_ORDER_ATTACHMENT_COUNT} файлов: PDF, DOC, DOCX, TXT, JPEG, PNG или WebP, до 10 МБ каждый.
+          {locale === "en"
+            ? `Up to ${MAX_ORDER_ATTACHMENT_COUNT} files: PDF, DOC, DOCX, TXT, JPEG, PNG, or WebP, up to 10 MB each.`
+            : `До ${MAX_ORDER_ATTACHMENT_COUNT} файлов: PDF, DOC, DOCX, TXT, JPEG, PNG или WebP, до 10 МБ каждый.`}
         </p>
         {attachmentFiles.length ? (
           <ul className="mt-3 grid gap-2 text-sm text-muted">
             {attachmentFiles.map((file) => (
               <li key={`${file.name}-${file.size}`}>
-                {file.name} · {formatBytes(file.size)}
+                {file.name} · {formatBytes(file.size, locale)}
               </li>
             ))}
           </ul>

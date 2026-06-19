@@ -4,15 +4,51 @@ import { AdminCard } from "@/components/admin-card";
 import { AdminImageMultiSelect } from "@/components/admin-image-multi-select";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminProjectOrderForm } from "@/components/admin-project-order-form";
+import {
+  AdminTranslatedFields,
+  type AdminTranslatedField
+} from "@/components/admin-translated-fields";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { Field, inputClass, selectClass, textareaClass } from "@/components/form-controls";
-import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import { Field, inputClass, selectClass } from "@/components/form-controls";
+import { LimitedInput } from "@/components/limited-text-control";
 import { deleteProjectAction, saveProjectAction } from "@/lib/actions/admin";
 import { requireContentAdmin } from "@/lib/auth";
 import { listAdminImages, listAdminProjects, listAdminServices, listAdminTags } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import type { PortfolioImage, Project, Service, Tag } from "@/lib/types";
+
+const projectTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название",
+    maxLength: fieldLimits.project.title.max,
+    minLength: fieldLimits.project.title.min,
+    placeholder: "Название проекта",
+    required: true
+  },
+  {
+    name: "shortDescription",
+    label: "Краткое описание",
+    hint: "Показывается в карточке проекта",
+    kind: "textarea",
+    maxLength: fieldLimits.project.shortDescription.max,
+    minLength: fieldLimits.project.shortDescription.min,
+    placeholder: "Коротко о задаче и результате",
+    required: true
+  },
+  {
+    name: "fullDescription",
+    label: "Полное описание",
+    hint: "Текст внутри страницы кейса",
+    kind: "textarea",
+    maxLength: fieldLimits.project.fullDescription.max,
+    minLength: fieldLimits.project.fullDescription.min,
+    placeholder: "Опишите задачу, решение и итог проекта",
+    required: true,
+    rows: 7
+  }
+];
 
 function RelationChecks({
   name,
@@ -67,52 +103,27 @@ function ProjectForm({
     <form action={saveProjectAction} className="grid gap-4">
       <AdminFormFieldset canWrite={canWrite}>
         <input name="id" type="hidden" value={project?.id ?? ""} />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название" required>
-            <LimitedInput
-              className={inputClass}
-              defaultValue={project?.title}
-              maxLength={fieldLimits.project.title.max}
-              minLength={fieldLimits.project.title.min}
-              name="title"
-              placeholder="Название проекта"
-              required
-            />
-          </Field>
-          <Field
-            label="Адрес страницы"
-            hint="Можно оставить пустым: адрес создастся автоматически из названия"
-          >
-            <LimitedInput
-              className={inputClass}
-              defaultValue={project?.slug}
-              maxLength={fieldLimits.project.slug.max}
-              minLength={fieldLimits.project.slug.min}
-              name="slug"
-              placeholder="botanica-lab"
-            />
-          </Field>
-        </div>
-        <Field label="Краткое описание" hint="Показывается в карточке проекта" required>
-          <LimitedTextarea
-            className={textareaClass}
-            defaultValue={project?.shortDescription}
-            maxLength={fieldLimits.project.shortDescription.max}
-            minLength={fieldLimits.project.shortDescription.min}
-            name="shortDescription"
-            placeholder="Коротко о задаче и результате"
-            required
-          />
-        </Field>
-        <Field label="Полное описание" hint="Текст внутри страницы кейса" required>
-          <LimitedTextarea
-            className={`${textareaClass} min-h-44`}
-            defaultValue={project?.fullDescription}
-            maxLength={fieldLimits.project.fullDescription.max}
-            minLength={fieldLimits.project.fullDescription.min}
-            name="fullDescription"
-            placeholder="Опишите задачу, решение и итог проекта"
-            required
+        <AdminTranslatedFields
+          english={project?.englishTranslation}
+          entityType="project"
+          fields={projectTextFields}
+          russian={{
+            title: project?.title ?? "",
+            shortDescription: project?.shortDescription ?? "",
+            fullDescription: project?.fullDescription ?? ""
+          }}
+        />
+        <Field
+          label="Адрес страницы"
+          hint="Можно оставить пустым: адрес создастся автоматически из русского названия"
+        >
+          <LimitedInput
+            className={inputClass}
+            defaultValue={project?.slug}
+            maxLength={fieldLimits.project.slug.max}
+            minLength={fieldLimits.project.slug.min}
+            name="slug"
+            placeholder="botanica-lab"
           />
         </Field>
         <div className="grid gap-4 md:grid-cols-2">

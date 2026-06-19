@@ -40,7 +40,7 @@ test("public visitor can browse portfolio and open an order form", async ({ page
 
 test("admin login renders setup notice or authentication form", async ({ page }) => {
   await page.goto("/admin/login");
-  await expect(page.getByRole("heading", { name: "Вход в административную панель" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в служебную панель" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 
   const setupNotice = page.getByText("Вход временно недоступен");
@@ -48,7 +48,7 @@ test("admin login renders setup notice or authentication form", async ({ page })
   if (await setupNotice.isVisible()) {
     await expect(setupNotice).toBeVisible();
   } else {
-    await expect(page.getByLabel("Email администратора")).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Пароль")).toBeVisible();
   }
 });
@@ -57,7 +57,7 @@ test("protected admin routes require Supabase authentication", async ({ page }) 
   await page.goto("/admin");
 
   await expect(page).toHaveURL(/\/admin\/login$/);
-  await expect(page.getByRole("heading", { name: "Вход в административную панель" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в служебную панель" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 });
 
@@ -119,7 +119,9 @@ test("tablet public header stays inside viewport", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Графический дизайн, который помогает брендам говорить точнее" })
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Оставить заявку" })).toBeVisible();
+  await expect(
+    page.getByRole("banner").getByRole("link", { name: "Оставить заявку" })
+  ).toBeVisible();
 
   const layout = await page.evaluate(() => {
     const clippedInteractive = Array.from(document.querySelectorAll("a, button"))
@@ -156,6 +158,52 @@ test("portfolio supports multi-select filters and sorting", async ({ page }) => 
   await expect(page).toHaveURL(/service=brand-identity/);
   await expect(page).toHaveURL(/service=presentation-design/);
   await expect(page).toHaveURL(/tag=digital/);
+});
+
+test("English locale stays English across public routes at laptop viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "en", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /Graphic design that helps brands communicate clearly|Page/
+  );
+
+  const routes = [
+    "/",
+    "/about",
+    "/services",
+    "/portfolio",
+    "/portfolio/studio-frame",
+    "/contacts",
+    "/privacy",
+    "/order",
+    "/order/success",
+    "/account/login",
+    "/account/register"
+  ];
+  const russianMarkers = [
+    "О дизайнере",
+    "Оформить заказ",
+    "Регистрация клиента",
+    "Вход клиента",
+    "Политика обработки персональных данных",
+    "Спасибо за заказ",
+    "Сводка заказа",
+    "Выберите направление"
+  ];
+
+  for (const route of routes) {
+    await page.goto(route);
+    const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+    );
+
+    expect(hasHorizontalOverflow, route).toBe(false);
+    for (const marker of russianMarkers) {
+      expect(bodyText, `${route} contains ${marker}`).not.toContain(marker);
+    }
+  }
 });
 
 test("mobile portfolio keeps filters and cards inside viewport", async ({ page }) => {
@@ -266,7 +314,7 @@ test("mobile order form keeps visual examples inside viewport", async ({ page })
   expect(hasHorizontalOverflow).toBe(false);
 });
 
-test("order wizard stays inside viewport and summary does not overlap controls", async ({ page }) => {
+test("mobile and tablet order wizard stays inside viewport and summary does not overlap controls", async ({ page }) => {
   for (const width of [390, 768, 1024, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/order?service=brand-identity");
@@ -387,8 +435,8 @@ test("mobile admin login keeps authentication form inside viewport", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/login");
 
-  await expect(page.getByRole("heading", { name: "Вход в административную панель" })).toBeVisible();
-  await expect(page.getByLabel("Email администратора")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вход в служебную панель" })).toBeVisible();
+  await expect(page.getByLabel("Email")).toBeVisible();
   await expect(page.getByLabel("Пароль")).toBeVisible();
   await expect(page.getByRole("button", { name: "Войти в demo admin" })).toHaveCount(0);
 

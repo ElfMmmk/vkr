@@ -1,4 +1,5 @@
 import type { OrderStepId } from "@/lib/order-draft";
+import type { Locale } from "@/lib/i18n";
 
 type OrderStep = {
   id: OrderStepId;
@@ -9,6 +10,7 @@ type OrderStep = {
 type StepNavigationProps = {
   activeStepId: OrderStepId;
   activeStepIndex: number;
+  locale: Locale;
   steps: OrderStep[];
   onSelectStep: (stepId: OrderStepId, stepIndex: number) => void;
 };
@@ -16,17 +18,20 @@ type StepNavigationProps = {
 export function StepNavigation({
   activeStepId,
   activeStepIndex,
+  locale,
   onSelectStep,
   steps
 }: StepNavigationProps) {
   const progress = ((activeStepIndex + 1) / steps.length) * 100;
 
   return (
-    <nav aria-label="Шаги оформления заказа">
+    <nav aria-label={locale === "en" ? "Order steps" : "Шаги оформления заказа"}>
       <div className="sm:hidden">
         <div className="flex items-center justify-between gap-4 text-sm">
           <span className="font-semibold text-ink">{steps[activeStepIndex].title}</span>
-          <span className="text-muted">{activeStepIndex + 1} из {steps.length}</span>
+          <span className="text-muted">
+            {activeStepIndex + 1} {locale === "en" ? "of" : "из"} {steps.length}
+          </span>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden bg-line">
           <div className="h-full bg-cobalt transition-all" style={{ width: `${progress}%` }} />

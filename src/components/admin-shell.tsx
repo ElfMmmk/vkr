@@ -103,7 +103,7 @@ export function AdminShell({
             }`}
             href="/admin"
           >
-            Панель администратора
+            Служебная панель
           </Link>
           <button
             aria-label={isCollapsed ? "Развернуть меню" : "Свернуть меню"}
@@ -138,7 +138,7 @@ export function AdminShell({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <Link className="focus-ring block text-2xl font-semibold" href="/admin">
-                Панель администратора
+                Служебная панель
               </Link>
               <p className="mt-1 truncate text-sm leading-6 text-white/60">
                 {email} · {roleLabels[role]}

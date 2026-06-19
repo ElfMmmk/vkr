@@ -23,6 +23,24 @@ const requestInWorkPatchSql = readFileSync(
   join(process.cwd(), "supabase", "update_request_status_in_work.sql"),
   "utf8"
 );
+const translationsAndAnalyticsMigrationSql = readFileSync(
+  join(
+    process.cwd(),
+    "supabase",
+    "migrations",
+    "20260619000000_extend_entity_translations_and_cleanup_analytics.sql"
+  ),
+  "utf8"
+);
+const englishTranslationsSeedSql = readFileSync(
+  join(
+    process.cwd(),
+    "supabase",
+    "migrations",
+    "20260619001000_seed_english_entity_translations.sql"
+  ),
+  "utf8"
+);
 
 describe("supabase security schema", () => {
   it("keeps order inserts server-only for public Supabase clients", () => {
@@ -80,6 +98,54 @@ describe("supabase security schema", () => {
     expect(schemaSql).toContain("alter table public.analytics_events enable row level security;");
     expect(schemaSql).toContain("revoke all on public.analytics_events from anon, authenticated;");
     expect(schemaSql).toContain("grant all privileges on public.analytics_events to service_role;");
+  });
+
+  it("supports translations for every public content entity and cleans leaked claim analytics", () => {
+    const supportedTypes =
+      "'page', 'service', 'service_package', 'service_addon', 'project', 'tag', 'image'";
+
+    expect(schemaSql).toContain(`entity_type in (${supportedTypes})`);
+    expect(translationsAndAnalyticsMigrationSql).toContain(
+      "drop constraint if exists entity_translations_entity_type_check"
+    );
+    expect(translationsAndAnalyticsMigrationSql).toContain(`entity_type in (${supportedTypes})`);
+    expect(translationsAndAnalyticsMigrationSql).toContain("delete from public.analytics_events");
+    expect(translationsAndAnalyticsMigrationSql).toContain("(^|[?&])claim=");
+    expect(schemaSql).toContain("delete_entity_translations_for_row");
+    expect(translationsAndAnalyticsMigrationSql).toContain(
+      "delete_entity_translations_for_row"
+    );
+
+    for (const triggerName of [
+      "services_delete_entity_translations",
+      "service_packages_delete_entity_translations",
+      "service_addons_delete_entity_translations",
+      "projects_delete_entity_translations",
+      "tags_delete_entity_translations",
+      "images_delete_entity_translations"
+    ]) {
+      expect(schemaSql).toContain(triggerName);
+      expect(translationsAndAnalyticsMigrationSql).toContain(triggerName);
+    }
+  });
+
+  it("seeds English translations idempotently for every editable public entity", () => {
+    for (const entityType of [
+      "page",
+      "service",
+      "service_package",
+      "service_addon",
+      "project",
+      "tag",
+      "image"
+    ]) {
+      expect(englishTranslationsSeedSql).toContain(`'${entityType}'`);
+    }
+
+    expect(englishTranslationsSeedSql).toContain(
+      "on conflict (entity_type, entity_id, locale)"
+    );
+    expect(englishTranslationsSeedSql).toContain("do update set fields = excluded.fields");
   });
 
   it("adds request order columns before indexes reference them", () => {

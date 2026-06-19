@@ -7,7 +7,14 @@ export type AnalyticsEventType = "page_view" | "cta_click";
 export type NotificationType = "request_created" | "request_status_changed" | "contract_revision_requested" | "system";
 export type NotificationAudienceRole = "admin" | "manager";
 export type ImageParentType = "project" | "page" | "service" | "free";
-export type TranslationEntityType = "page" | "service" | "tag" | "project" | "image";
+export type TranslationEntityType =
+  | "page"
+  | "service"
+  | "service_package"
+  | "service_addon"
+  | "project"
+  | "tag"
+  | "image";
 export type TranslationLocale = "ru" | "en";
 
 export type Database = {

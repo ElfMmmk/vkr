@@ -1,52 +1,61 @@
 import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
+import {
+  AdminTranslatedFields,
+  type AdminTranslatedField
+} from "@/components/admin-translated-fields";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { Field, inputClass, textareaClass } from "@/components/form-controls";
-import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import { Field, inputClass } from "@/components/form-controls";
+import { LimitedInput } from "@/components/limited-text-control";
 import { deleteTagAction, saveTagAction } from "@/lib/actions/admin";
 import { requireContentAdmin } from "@/lib/auth";
 import { listAdminTags } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import type { Tag } from "@/lib/types";
 
+const tagTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название",
+    maxLength: fieldLimits.tag.title.max,
+    minLength: fieldLimits.tag.title.min,
+    placeholder: "Брендинг",
+    required: true
+  },
+  {
+    name: "description",
+    label: "Описание",
+    kind: "textarea",
+    maxLength: fieldLimits.tag.description.max,
+    placeholder: "Короткое пояснение для внутренней навигации"
+  }
+];
+
 function TagForm({ tag, canWrite }: { tag?: Tag; canWrite: boolean }) {
   return (
     <form action={saveTagAction} className="grid gap-4">
       <AdminFormFieldset canWrite={canWrite}>
         <input name="id" type="hidden" value={tag?.id ?? ""} />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название" required>
-            <LimitedInput
-              className={inputClass}
-              defaultValue={tag?.title}
-              maxLength={fieldLimits.tag.title.max}
-              minLength={fieldLimits.tag.title.min}
-              name="title"
-              placeholder="Брендинг"
-              required
-            />
-          </Field>
-          <Field
-            label="Адрес в ссылке"
-            hint="Можно оставить пустым: адрес создастся автоматически из названия."
-          >
-            <LimitedInput
-              className={inputClass}
-              defaultValue={tag?.slug}
-              maxLength={fieldLimits.tag.slug.max}
-              minLength={fieldLimits.tag.slug.min}
-              name="slug"
-              placeholder="branding"
-            />
-          </Field>
-        </div>
-        <Field label="Описание">
-          <LimitedTextarea
-            className={textareaClass}
-            defaultValue={tag?.description}
-            maxLength={fieldLimits.tag.description.max}
-            name="description"
-            placeholder="Короткое пояснение для внутренней навигации"
+        <AdminTranslatedFields
+          english={tag?.englishTranslation}
+          entityType="tag"
+          fields={tagTextFields}
+          russian={{
+            title: tag?.title ?? "",
+            description: tag?.description ?? ""
+          }}
+        />
+        <Field
+          label="Адрес в ссылке"
+          hint="Можно оставить пустым: адрес создастся автоматически из русского названия."
+        >
+          <LimitedInput
+            className={inputClass}
+            defaultValue={tag?.slug}
+            maxLength={fieldLimits.tag.slug.max}
+            minLength={fieldLimits.tag.slug.min}
+            name="slug"
+            placeholder="branding"
           />
         </Field>
         <FormSubmitButton

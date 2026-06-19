@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccountAuthForm } from "@/components/account-auth-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n-server";
 
 export default async function AccountRegisterPage({
   searchParams
@@ -10,6 +11,7 @@ export default async function AccountRegisterPage({
   searchParams: Promise<{ claim?: string }>;
 }) {
   const params = await searchParams;
+  const locale = await getLocale();
   const claimQuery = params.claim ? `?claim=${encodeURIComponent(params.claim)}` : "";
 
   return (
@@ -18,18 +20,21 @@ export default async function AccountRegisterPage({
       <main id="main-content" className="container-shell grid gap-8 py-16 md:grid-cols-[minmax(0,0.8fr)_minmax(320px,0.6fr)] md:py-24">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Личный кабинет
+            {locale === "en" ? "Client account" : "Личный кабинет"}
           </p>
-          <h1 className="mt-3 text-4xl font-semibold leading-tight">Регистрация клиента</h1>
+          <h1 className="mt-3 text-4xl font-semibold leading-tight">
+            {locale === "en" ? "Create a client account" : "Регистрация клиента"}
+          </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-            После регистрации новые заявки будут автоматически привязаны к кабинету, а клиент
-            сможет отслеживать их состояние.
+            {locale === "en"
+              ? "After registration, new requests are linked to your account automatically so you can track their progress."
+              : "После регистрации новые заявки будут автоматически привязаны к кабинету, а клиент сможет отслеживать их состояние."}
           </p>
           <Link className="focus-ring mt-6 inline-flex text-sm font-semibold text-accent hover:text-ink" href={`/account/login${claimQuery}`}>
-            Уже есть кабинет? Войти
+            {locale === "en" ? "Already have an account? Sign in" : "Уже есть кабинет? Войти"}
           </Link>
         </div>
-        <AccountAuthForm claimToken={params.claim ?? ""} mode="register" />
+        <AccountAuthForm claimToken={params.claim ?? ""} locale={locale} mode="register" />
       </main>
       <SiteFooter />
     </>

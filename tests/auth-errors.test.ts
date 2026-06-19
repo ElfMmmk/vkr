@@ -26,6 +26,10 @@ describe("getRegistrationErrorMessage", () => {
         message: "Email address not authorized"
       })
     ).toBe(registrationErrorMessages.emailNotAuthorized);
+    expect(registrationErrorMessages.emailNotAuthorized).toBe(
+      "Не удалось отправить письмо на этот адрес. Проверьте email или используйте другой адрес."
+    );
+    expect(registrationErrorMessages.emailNotAuthorized).not.toMatch(/Supabase|SMTP|баз[аы] данных/i);
   });
 
   it("keeps the generic message for unrelated registration errors", () => {

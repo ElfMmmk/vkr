@@ -14,7 +14,7 @@ export function LoginForm() {
   return (
     <div className="space-y-5">
       <form action={formAction} className="space-y-5">
-        <Field label="Email администратора" required>
+        <Field label="Email" required>
           <LimitedInput
             autoComplete="email"
             className={inputClass}

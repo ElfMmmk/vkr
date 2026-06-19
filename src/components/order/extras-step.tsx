@@ -3,12 +3,14 @@ import Link from "next/link";
 
 import { FieldError } from "@/components/order/form-parts";
 import { formatRubles } from "@/lib/order-calculator";
+import type { Locale } from "@/lib/i18n";
 import type { Project, ServiceAddon } from "@/lib/types";
 
 type FieldErrors = Record<string, string[]> | undefined;
 
 type ExtrasStepProps = {
   fieldErrors: FieldErrors;
+  locale: Locale;
   onSelectReferenceProject: (projectId: string) => void;
   onToggleAddon: (addonId: string) => void;
   referenceProjectId: string;
@@ -19,6 +21,7 @@ type ExtrasStepProps = {
 
 export function ExtrasStep({
   fieldErrors,
+  locale,
   onSelectReferenceProject,
   onToggleAddon,
   referenceProjectId,
@@ -30,7 +33,7 @@ export function ExtrasStep({
     <div className="grid gap-6">
       {serviceAddons.length ? (
         <section className="border border-line bg-white p-5">
-          <h3 className="text-xl font-semibold">Дополнительные услуги</h3>
+          <h3 className="text-xl font-semibold">{locale === "en" ? "Add-ons" : "Дополнительные услуги"}</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {serviceAddons.map((addon) => (
               <label
@@ -55,8 +58,12 @@ export function ExtrasStep({
                     {addon.description}
                   </span>
                   <span className="mt-2 block text-sm font-semibold text-cobalt">
-                    +{formatRubles(addon.price)}
-                    {addon.durationDays ? ` · +${addon.durationDays} раб. дн.` : ""}
+                    +{formatRubles(addon.price, locale)}
+                    {addon.durationDays
+                      ? locale === "en"
+                        ? ` · +${addon.durationDays} business days`
+                        : ` · +${addon.durationDays} раб. дн.`
+                      : ""}
                   </span>
                 </span>
               </label>
@@ -66,16 +73,19 @@ export function ExtrasStep({
         </section>
       ) : (
         <p className="border border-line bg-paper p-4 text-sm leading-6 text-muted">
-          Для этой услуги нет дополнительных опций. Можно перейти дальше.
+          {locale === "en"
+            ? "This service has no optional add-ons. You can continue."
+            : "Для этой услуги нет дополнительных опций. Можно перейти дальше."}
         </p>
       )}
 
       {serviceExamples.length ? (
         <section className="border border-line bg-paper p-5">
-          <h3 className="text-xl font-semibold">Проект из портфолио</h3>
+          <h3 className="text-xl font-semibold">{locale === "en" ? "Portfolio reference" : "Проект из портфолио"}</h3>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Если вам близка подача одного из проектов, отметьте его как визуальный ориентир.
-            Он поможет понять желаемое направление, но не предполагает точного повторения работы.
+            {locale === "en"
+              ? "Choose a project if its visual direction is close to what you need. It is a reference, not a request to copy the work."
+              : "Если вам близка подача одного из проектов, отметьте его как визуальный ориентир. Он поможет понять желаемое направление, но не предполагает точного повторения работы."}
           </p>
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             {serviceExamples.map((project) => (
@@ -97,7 +107,7 @@ export function ExtrasStep({
                       />
                     ) : (
                       <span className="grid h-full place-items-center px-4 text-center text-sm text-muted">
-                        Обложка пока не добавлена
+                        {locale === "en" ? "Cover not added yet" : "Обложка пока не добавлена"}
                       </span>
                     )}
                   </span>
@@ -122,7 +132,7 @@ export function ExtrasStep({
                   className="focus-ring mx-4 mb-4 inline-flex text-sm font-semibold text-accent transition hover:text-ink active:translate-y-px"
                   href={`/portfolio/${project.slug}`}
                 >
-                  Открыть проект
+                  {locale === "en" ? "Open project" : "Открыть проект"}
                 </Link>
               </article>
             ))}
@@ -135,7 +145,9 @@ export function ExtrasStep({
                 type="radio"
                 value=""
               />
-              <span className="text-sm font-semibold text-muted">Не выбирать проект</span>
+              <span className="text-sm font-semibold text-muted">
+                {locale === "en" ? "No reference project" : "Не выбирать проект"}
+              </span>
             </label>
           </div>
           <FieldError errors={fieldErrors?.referenceProjectId} />

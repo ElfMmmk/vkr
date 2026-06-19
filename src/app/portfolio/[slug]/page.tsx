@@ -126,6 +126,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             {locale === "en" ? "Gallery" : "Галерея"}
           </h2>
           <ProjectGallerySlider
+            locale={locale}
             slides={[project.coverImageUrl, ...project.gallery.map((image) => image.publicUrl)]
               .filter(Boolean)
               .map((imageUrl, index) => ({

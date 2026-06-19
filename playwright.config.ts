@@ -3,10 +3,12 @@ import { defineConfig, devices } from "@playwright/test";
 const e2ePort = process.env.PLAYWRIGHT_PORT ?? "3000";
 const e2eBaseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${e2ePort}`;
 const useSupabaseE2E = process.env.PLAYWRIGHT_SUPABASE_E2E === "1";
+const desktopOnly = process.env.PLAYWRIGHT_DESKTOP_ONLY === "1";
 
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
+  grepInvert: desktopOnly ? /mobile|tablet/ : undefined,
   use: {
     baseURL: e2eBaseURL,
     trace: "on-first-retry"
@@ -36,7 +38,10 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1366, height: 768 }
+      }
     }
   ]
 });

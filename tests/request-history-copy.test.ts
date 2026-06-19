@@ -42,16 +42,19 @@ const adminNotificationsPage = readFileSync(
 
 describe("client request history copy", () => {
   it("labels the order communication timeline as history", () => {
-    expect(clientRequestPage).toContain(">История</h2>");
+    expect(clientRequestPage).toContain('history: "История"');
+    expect(clientRequestPage).toContain("{copy.history}</h2>");
     expect(clientRequestPage).not.toContain(">Таймлайн</h2>");
   });
 
-  it("renames contract-order UI copy to order", () => {
+  it("renames contract-order UI copy to order terms", () => {
     const visiblePages = [clientRequestPage, clientAccountPage, adminRequestPage].join("\n");
 
-    expect(visiblePages).toContain(">Заказ</h2>");
+    expect(clientRequestPage).toContain('terms: "Условия заказа"');
+    expect(clientRequestPage).toContain("{copy.terms}</h2>");
     expect(visiblePages).not.toContain("Договор-заказ");
     expect(visiblePages).not.toContain("договор-заказ");
+    expect(clientRequestPage).not.toContain('"draft", "sent"');
   });
 
   it("shows order status tags only in the admin-facing request UI", () => {

@@ -1,9 +1,11 @@
 import { FieldError } from "@/components/order/form-parts";
 import { formatDurationRange, formatPriceRange } from "@/lib/order-calculator";
+import type { Locale } from "@/lib/i18n";
 import type { ServicePackage } from "@/lib/types";
 
 type PackageStepProps = {
   packages: ServicePackage[];
+  locale: Locale;
   selectedPackageId: string;
   errors?: string[];
   onSelectPackage: (packageId: string) => void;
@@ -11,6 +13,7 @@ type PackageStepProps = {
 
 export function PackageStep({
   errors,
+  locale,
   onSelectPackage,
   packages,
   selectedPackageId
@@ -51,7 +54,7 @@ export function PackageStep({
                 ) : null}
                 {isRecommended ? (
                   <span className="border border-cobalt/25 bg-white px-2 py-1 text-xs font-semibold text-cobalt">
-                    Оптимальный выбор
+                    {locale === "en" ? "Best match" : "Оптимальный выбор"}
                   </span>
                 ) : null}
               </span>
@@ -60,11 +63,11 @@ export function PackageStep({
               </span>
               {hasMarketing ? (
                 <span className="mt-3 grid gap-2 text-sm leading-6 text-ink">
-                  {item.bestFor ? <span>Подойдёт: {item.bestFor}</span> : null}
-                  {item.outcome ? <span>Результат: {item.outcome}</span> : null}
+                  {item.bestFor ? <span>{locale === "en" ? "Best for" : "Подойдёт"}: {item.bestFor}</span> : null}
+                  {item.outcome ? <span>{locale === "en" ? "Outcome" : "Результат"}: {item.outcome}</span> : null}
                   {item.includedItems.length ? (
                     <span className="grid gap-1">
-                      <span className="font-semibold">Входит:</span>
+                      <span className="font-semibold">{locale === "en" ? "Includes:" : "Входит:"}</span>
                       <span className="flex flex-wrap gap-2">
                         {item.includedItems.map((includedItem) => (
                           <span
@@ -80,12 +83,14 @@ export function PackageStep({
                 </span>
               ) : (
                 <span className="mt-2 block text-sm leading-6 text-ink">
-                  Подойдёт, если нужен понятный состав работ и предварительный диапазон до обсуждения деталей.
+                  {locale === "en"
+                    ? "A clear scope and preliminary range before the detailed discussion."
+                    : "Подойдёт, если нужен понятный состав работ и предварительный диапазон до обсуждения деталей."}
                 </span>
               )}
               <span className="mt-2 block text-sm font-semibold text-cobalt">
-                {formatPriceRange(item.priceFrom, item.priceTo)} ·{" "}
-                {formatDurationRange(item.durationFromDays, item.durationToDays)}
+                {formatPriceRange(item.priceFrom, item.priceTo, locale)} ·{" "}
+                {formatDurationRange(item.durationFromDays, item.durationToDays, locale)}
               </span>
             </span>
           </label>
@@ -93,8 +98,9 @@ export function PackageStep({
       })}
       {!packages.length ? (
         <p className="border border-line bg-white p-4 text-sm leading-6 text-muted xl:col-span-3">
-          По этой услуге пока нельзя оформить заказ: дизайнер уточняет состав работ и ориентиры по стоимости.
-          Выберите другую услугу или вернитесь к заказу позже.
+          {locale === "en"
+            ? "This service is not available for online ordering yet. Choose another service or return later."
+            : "По этой услуге пока нельзя оформить заказ: дизайнер уточняет состав работ и ориентиры по стоимости. Выберите другую услугу или вернитесь к заказу позже."}
         </p>
       ) : null}
       <div className="xl:col-span-3">

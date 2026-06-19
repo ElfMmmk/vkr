@@ -4,12 +4,15 @@ import { useId, useState } from "react";
 
 import { requestOrderContractRevisionAction } from "@/app/account/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import type { Locale } from "@/lib/i18n";
 
 export function OrderRevisionModal({
   contractId,
+  locale,
   requestId
 }: {
   contractId: string;
+  locale: Locale;
   requestId: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +25,7 @@ export function OrderRevisionModal({
         onClick={() => setIsOpen(true)}
         type="button"
       >
-        Запросить изменения
+        {locale === "en" ? "Request changes" : "Запросить изменения"}
       </button>
       {isOpen ? (
         <div
@@ -35,10 +38,12 @@ export function OrderRevisionModal({
             <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
               <div>
                 <h2 className="text-xl font-semibold" id={titleId}>
-                  Запросить изменения
+                  {locale === "en" ? "Request changes" : "Запросить изменения"}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  Опишите, какие условия нужно уточнить или изменить. Сообщение появится в обсуждении заказа.
+                  {locale === "en"
+                    ? "Describe which terms should be clarified or changed. The message will appear in the order discussion."
+                    : "Опишите, какие условия нужно уточнить или изменить. Сообщение появится в обсуждении заказа."}
                 </p>
               </div>
               <button
@@ -46,7 +51,9 @@ export function OrderRevisionModal({
                 onClick={() => setIsOpen(false)}
                 type="button"
               >
-                <span className="sr-only">Закрыть окно</span>
+                <span className="sr-only">
+                  {locale === "en" ? "Close dialog" : "Закрыть окно"}
+                </span>
                 ×
               </button>
             </div>
@@ -54,7 +61,7 @@ export function OrderRevisionModal({
               <input name="requestId" type="hidden" value={requestId} />
               <input name="contractId" type="hidden" value={contractId} />
               <label className="text-sm font-semibold" htmlFor="contract-revision-feedback">
-                Что нужно изменить
+                {locale === "en" ? "What should be changed" : "Что нужно изменить"}
               </label>
               <textarea
                 className="min-h-36 w-full border border-line bg-white px-3 py-2 text-sm leading-6"
@@ -62,22 +69,28 @@ export function OrderRevisionModal({
                 maxLength={1000}
                 minLength={10}
                 name="feedback"
-                placeholder="Например: уточнить состав финальных файлов, сроки передачи или этапы работы"
+                placeholder={
+                  locale === "en"
+                    ? "For example: clarify the final files, delivery timing, or work stages"
+                    : "Например: уточнить состав финальных файлов, сроки передачи или этапы работы"
+                }
                 required
               />
-              <p className="text-xs text-muted">От 10 до 1000 символов.</p>
+              <p className="text-xs text-muted">
+                {locale === "en" ? "10 to 1,000 characters." : "От 10 до 1000 символов."}
+              </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <FormSubmitButton
                   className="focus-ring inline-flex min-h-11 items-center justify-center border border-accent bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white hover:text-accent active:translate-y-px"
-                  idleLabel="Отправить запрос"
-                  pendingLabel="Отправка..."
+                  idleLabel={locale === "en" ? "Send request" : "Отправить запрос"}
+                  pendingLabel={locale === "en" ? "Sending..." : "Отправка..."}
                 />
                 <button
                   className="focus-ring inline-flex min-h-11 items-center justify-center border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink"
                   onClick={() => setIsOpen(false)}
                   type="button"
                 >
-                  Отмена
+                  {locale === "en" ? "Cancel" : "Отмена"}
                 </button>
               </div>
             </form>

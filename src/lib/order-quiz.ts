@@ -1,4 +1,5 @@
 import type { Service } from "@/lib/types";
+import type { Locale } from "@/lib/i18n";
 
 export type OrderQuizAnswers = {
   taskType: "brand" | "presentation" | "social" | "packaging" | "other";
@@ -180,7 +181,33 @@ export function recommendOrderSetup(
   };
 }
 
-export function quizAnswersToBrief(answers: OrderQuizAnswers): string {
+export function quizAnswersToBrief(
+  answers: OrderQuizAnswers,
+  locale: Locale = "ru"
+): string {
+  if (locale === "en") {
+    const taskLabels: Record<OrderQuizAnswers["taskType"], string> = {
+      brand: "a brand or identity project",
+      other: "a design task",
+      packaging: "packaging or print materials",
+      presentation: "a presentation",
+      social: "social media materials"
+    };
+    const goalLabels: Record<OrderQuizAnswers["goal"], string> = {
+      event: "for an event or talk",
+      launch: "for a launch",
+      refresh: "for a visual refresh",
+      sell: "for sales and presenting an offer"
+    };
+    const materialLabels: Record<OrderQuizAnswers["materials"], string> = {
+      none: "materials need to be created from scratch",
+      partial: "some source materials are available",
+      ready: "source materials are ready"
+    };
+
+    return `Task: ${taskLabels[answers.taskType]} ${goalLabels[answers.goal]}; ${materialLabels[answers.materials]}.`;
+  }
+
   const taskLabels: Record<OrderQuizAnswers["taskType"], string> = {
     brand: "бренд или айдентика",
     other: "дизайн-задача",

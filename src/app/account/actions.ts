@@ -8,6 +8,9 @@ import { getAdminEmail, requireClientSession, resolveUserProfile } from "@/lib/a
 import { getRegistrationErrorMessage } from "@/lib/auth-errors";
 import { fieldLimits } from "@/lib/field-limits";
 import { formString } from "@/lib/form";
+import { normalizeLocale } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { accountActionMessages } from "@/lib/localized-action-messages";
 import { MAX_ORDER_ATTACHMENT_COUNT } from "@/lib/order-attachments";
 import {
   deleteOrderAttachmentFile,
@@ -25,17 +28,25 @@ export type AccountFormState = {
   message?: string;
 };
 
-const accountAuthSchema = z.object({
-  email: z.string().trim().email("Введите корректный email").max(fieldLimits.login.email.max),
-  password: z
-    .string()
-    .min(fieldLimits.login.password.min, "Пароль должен быть длиннее")
-    .max(fieldLimits.login.password.max)
-});
+function createAccountAuthSchema(messages: ReturnType<typeof accountActionMessages>) {
+  return z.object({
+    email: z
+      .string()
+      .trim()
+      .email(messages.invalidEmail)
+      .max(fieldLimits.login.email.max),
+    password: z
+      .string()
+      .min(fieldLimits.login.password.min, messages.passwordTooShort)
+      .max(fieldLimits.login.password.max)
+  });
+}
 
-const registerSchema = accountAuthSchema.extend({
-  fullName: z.string().trim().min(2, "Укажите имя").max(120)
-});
+function createRegisterSchema(messages: ReturnType<typeof accountActionMessages>) {
+  return createAccountAuthSchema(messages).extend({
+    fullName: z.string().trim().min(2, messages.fullNameRequired).max(120)
+  });
+}
 
 async function claimRequestForUser(token: string, userId: string): Promise<string | null> {
   if (!token) {
@@ -101,30 +112,33 @@ export async function clientLoginAction(
   _previousState: AccountFormState,
   formData: FormData
 ): Promise<AccountFormState> {
+  const locale = normalizeLocale(formString(formData, "locale"));
+  const messages = accountActionMessages(locale);
+
   if (!hasSupabasePublicEnv()) {
-    return { message: "Вход временно недоступен. Попробуйте позже." };
+    return { message: messages.signInUnavailable };
   }
 
-  const parsed = accountAuthSchema.safeParse({
+  const parsed = createAccountAuthSchema(messages).safeParse({
     email: formString(formData, "email"),
     password: formString(formData, "password")
   });
   const claimToken = formString(formData, "claimToken");
 
   if (!parsed.success) {
-    return { message: parsed.error.issues[0]?.message ?? "Проверьте данные входа." };
+    return { message: parsed.error.issues[0]?.message ?? messages.invalidLoginData };
   }
 
   const client = await createSupabaseServerClient();
 
   if (!client) {
-    return { message: "Вход временно недоступен. Попробуйте позже." };
+    return { message: messages.signInUnavailable };
   }
 
   const { data, error } = await client.auth.signInWithPassword(parsed.data);
 
   if (error || !data.user) {
-    return { message: "Не удалось войти. Проверьте email и пароль." };
+    return { message: messages.signInFailed };
   }
 
   const claimedRequestId = await claimRequestForUser(claimToken, data.user.id);
@@ -136,11 +150,14 @@ export async function clientRegisterAction(
   _previousState: AccountFormState,
   formData: FormData
 ): Promise<AccountFormState> {
+  const locale = normalizeLocale(formString(formData, "locale"));
+  const messages = accountActionMessages(locale);
+
   if (!hasSupabasePublicEnv()) {
-    return { message: "Регистрация временно недоступна. Попробуйте позже." };
+    return { message: messages.registrationUnavailable };
   }
 
-  const parsed = registerSchema.safeParse({
+  const parsed = createRegisterSchema(messages).safeParse({
     email: formString(formData, "email"),
     password: formString(formData, "password"),
     fullName: formString(formData, "fullName")
@@ -148,23 +165,20 @@ export async function clientRegisterAction(
   const claimToken = formString(formData, "claimToken");
 
   if (!parsed.success) {
-    return { message: parsed.error.issues[0]?.message ?? "Проверьте данные регистрации." };
+    return { message: parsed.error.issues[0]?.message ?? messages.invalidRegistrationData };
   }
 
   const email = parsed.data.email.toLowerCase();
   const adminEmail = getAdminEmail();
 
   if (adminEmail && email === adminEmail) {
-    return {
-      message:
-        "Этот email используется для административного доступа. Войдите через административную панель."
-    };
+    return { message: messages.adminEmailRestricted };
   }
 
   const client = await createSupabaseServerClient();
 
   if (!client) {
-    return { message: "Регистрация временно недоступна. Попробуйте позже." };
+    return { message: messages.registrationUnavailable };
   }
 
   const { data, error } = await client.auth.signUp({
@@ -178,7 +192,7 @@ export async function clientRegisterAction(
   });
 
   if (error) {
-    return { message: getRegistrationErrorMessage(error) };
+    return { message: getRegistrationErrorMessage(error, locale) };
   }
 
   if (data.user) {
@@ -352,6 +366,7 @@ export async function saveClientOrderContractFeedbackAction(formData: FormData):
 }
 
 export async function uploadClientOrderAttachmentAction(formData: FormData): Promise<void> {
+  const locale = await getLocale();
   const session = await requireClientSession();
   const requestId = formString(formData, "requestId").trim();
 
@@ -390,6 +405,7 @@ export async function uploadClientOrderAttachmentAction(formData: FormData): Pro
   const upload = await uploadOrderAttachmentFiles(client, {
     clientUserId: session.id,
     files,
+    locale,
     requestId
   });
 
@@ -403,6 +419,7 @@ export async function uploadClientOrderAttachmentAction(formData: FormData): Pro
 }
 
 export async function deleteClientOrderAttachmentAction(formData: FormData): Promise<void> {
+  const locale = await getLocale();
   const session = await requireClientSession();
   const attachmentId = formString(formData, "attachmentId").trim();
   const requestId = formString(formData, "requestId").trim();
@@ -437,6 +454,7 @@ export async function deleteClientOrderAttachmentAction(formData: FormData): Pro
     actorUserId: session.id,
     attachmentId,
     canDeleteAny: true,
+    locale,
     requestId
   });
 

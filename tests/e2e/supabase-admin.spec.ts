@@ -391,9 +391,28 @@ test.describe("real Supabase admin smoke", () => {
     await page.goto("/admin/requests");
     await expect(page).toHaveURL(/\/admin\/requests/);
     await page.goto("/admin/services");
-    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page).toHaveURL(/\/admin\?notice=content-access-denied$/);
+    await expect(page.getByRole("heading", { name: "Работа с заказами" })).toBeVisible();
+    await expect(page.getByText("Недостаточно прав для этого раздела")).toBeVisible();
 
     await loginAsRejected(page, fixture!.users.client);
+  });
+
+  test("client account and order detail stay English after locale switch", async ({ page }) => {
+    expect(fixture).not.toBeNull();
+    expect(fixture!.requestId).toBeTruthy();
+
+    await loginAsClient(page, fixture!.users.client);
+    await page.goto("/account");
+    await page.getByRole("button", { name: "en", exact: true }).click();
+    await expect(page.getByText("Client account", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "My orders" })).toBeVisible();
+    await page.getByRole("link", { name: "Open order" }).click();
+    await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}`));
+    await expect(page.getByRole("heading", { name: "Brief" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+    await expect(page.getByText("Contact method")).toBeVisible();
+    await expect(page.getByText("Способ связи")).toHaveCount(0);
   });
 
   test("admin users list keeps row actions inside the desktop viewport", async ({ page }) => {
@@ -432,7 +451,7 @@ test.describe("real Supabase admin smoke", () => {
       await page.goto(target);
       await expect(page).toHaveURL(/\/admin\/analytics/);
       await expect(page.getByText("Просмотры страниц")).toBeVisible();
-      await expect(page.getByText("Клики по CTA")).toBeVisible();
+      await expect(page.getByText("Клики по кнопкам")).toBeVisible();
       await expect(page.getByText(`/qa-${fixture!.prefix}`)).toBeVisible();
       await expect(page.getByText(`QA order ${fixture!.prefix}`)).toBeVisible();
     }
@@ -443,7 +462,9 @@ test.describe("real Supabase admin smoke", () => {
 
     const adminClient = fixture!.adminClient;
     const marker = `${fixture!.prefix}-endpoint`;
-    const search = `?analytics-db-smoke=${marker}`;
+    const claimToken = `${marker}-claim-secret`;
+    const search = `?service=${marker}&claim=${claimToken}`;
+    const expectedSearch = `?service=${marker}`;
     const createdEventIds: string[] = [];
 
     try {
@@ -503,7 +524,7 @@ test.describe("real Supabase admin smoke", () => {
               .from("analytics_events")
               .select("id")
               .eq("path", "/portfolio")
-              .eq("search", search);
+              .eq("search", expectedSearch);
 
             if (error) {
               throw new Error(`Failed to read analytics smoke rows: ${error.message}`);
@@ -519,7 +540,7 @@ test.describe("real Supabase admin smoke", () => {
         .from("analytics_events")
         .select("id, event_type, path, search, href, label, metadata, source_hash")
         .eq("path", "/portfolio")
-        .eq("search", search);
+        .eq("search", expectedSearch);
 
       expect(error).toBeNull();
       expect(events).toHaveLength(2);
@@ -534,12 +555,13 @@ test.describe("real Supabase admin smoke", () => {
       expect(eventTypes).toEqual(["cta_click", "page_view"]);
       expect(pageView?.href).toBe("");
       expect(pageView?.label).toBe("");
-      expect(ctaClick?.href).toBe(`/order${search}`);
+      expect(ctaClick?.href).toBe(`/order${expectedSearch}`);
       expect(ctaClick?.label).toBe(`Analytics DB smoke ${marker}`);
       expect(pageView?.metadata).toMatchObject({ fixture: marker, smoke: "analytics-db" });
       expect(ctaClick?.metadata).toMatchObject({ fixture: marker, smoke: "analytics-db" });
       expect(new Set(events?.map((event) => event.source_hash).filter(Boolean)).size).toBe(1);
       expect(JSON.stringify(events)).not.toContain("Playwright");
+      expect(JSON.stringify(events)).not.toContain(claimToken);
     } finally {
       if (createdEventIds.length > 0) {
         await adminClient.from("analytics_events").delete().in("id", createdEventIds);
@@ -549,7 +571,7 @@ test.describe("real Supabase admin smoke", () => {
         .from("analytics_events")
         .delete()
         .eq("path", "/portfolio")
-        .eq("search", search);
+        .eq("search", expectedSearch);
     }
   });
 
@@ -560,13 +582,19 @@ test.describe("real Supabase admin smoke", () => {
 
     await loginAs(page, fixture!.users.admin);
     await page.goto("/admin/services");
-    const serviceForm = page.locator('form:has(input[name="title"])').first();
+    const serviceForm = page
+      .getByRole("button", { name: "Создать услугу", exact: true })
+      .locator("xpath=ancestor::form");
 
-    await serviceForm.locator('input[name="title"]').fill(title);
+    await serviceForm.getByPlaceholder("Айдентика бренда").fill(title);
     await serviceForm.locator('input[name="slug"]').fill(fixture!.serviceSlug);
-    await serviceForm.locator('textarea[name="description"]').fill("Temporary service for e2e smoke.");
-    await serviceForm.locator('textarea[name="details"]').fill("Created by Playwright and removed in cleanup.");
-    await serviceForm.locator('button[type="submit"]').click();
+    await serviceForm
+      .getByPlaceholder("Кратко опишите результат и задачи, для которых подходит услуга")
+      .fill("Temporary service for e2e smoke.");
+    await serviceForm
+      .getByPlaceholder("Например: логотип, палитра, шрифтовая пара, правила применения")
+      .fill("Created by Playwright and removed in cleanup.");
+    await serviceForm.getByRole("button", { name: "Создать услугу", exact: true }).click();
     await expect
       .poll(async () => {
         const { data } = await adminClient
@@ -655,7 +683,11 @@ test.describe("real Supabase admin smoke", () => {
 
       await loginAs(page, fixture!.users.admin);
       await page.goto("/admin/services");
-      const serviceCard = page.getByRole("heading", { name: service.title }).locator("xpath=ancestor::section[1]");
+      const serviceCard = page
+        .getByRole("heading", { name: service.title })
+        .locator("xpath=ancestor::details[1]");
+      await serviceCard.locator(":scope > summary").click();
+      await serviceCard.getByText("Пакеты", { exact: true }).click();
 
       await serviceCard.getByRole("button", { name: `Опустить ${packageTitles[0]}` }).click();
 
@@ -671,7 +703,11 @@ test.describe("real Supabase admin smoke", () => {
         .toEqual([...packageTitles].reverse());
 
       await page.goto("/admin/services");
-      const refreshedCard = page.getByRole("heading", { name: service.title }).locator("xpath=ancestor::section[1]");
+      const refreshedCard = page
+        .getByRole("heading", { name: service.title })
+        .locator("xpath=ancestor::details[1]");
+      await refreshedCard.locator(":scope > summary").click();
+      await refreshedCard.getByText("Дополнительные услуги", { exact: true }).click();
       await refreshedCard.getByRole("button", { name: `Опустить ${addonTitles[0]}` }).click();
 
       await expect
@@ -789,7 +825,10 @@ test.describe("real Supabase admin smoke", () => {
       });
       await attachmentForm.locator('button[type="submit"]').click();
       await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}.*notice=attachment-uploaded`));
-      await expect(page.getByRole("link", { name: fileName })).toBeVisible();
+      const clientMaterialsSection = page
+        .getByRole("heading", { level: 2, name: "Материалы", exact: true })
+        .locator("..");
+      await expect(clientMaterialsSection.getByText(fileName, { exact: true })).toBeVisible();
 
       await expect
         .poll(async () => {
@@ -812,7 +851,10 @@ test.describe("real Supabase admin smoke", () => {
 
       await loginAs(page, fixture!.users.manager);
       await page.goto(`/admin/requests/${fixture!.requestId}`);
-      await expect(page.getByRole("link", { name: fileName })).toBeVisible();
+      const managerMaterialsSection = page
+        .getByRole("heading", { level: 2, name: "Материалы клиента", exact: true })
+        .locator("..");
+      await expect(managerMaterialsSection.getByText(fileName, { exact: true })).toBeVisible();
     } finally {
       if (storagePaths.length > 0) {
         await adminClient.storage.from("order-attachments").remove(storagePaths);
@@ -853,7 +895,7 @@ test.describe("real Supabase admin smoke", () => {
       await page.goto("/admin/pages");
 
       const form = page.locator(`form:has(input[name="pageKey"][value="${pageKey}"])`);
-      await form.locator("xpath=ancestor::details[1]").locator("summary").click();
+      await form.locator("xpath=ancestor::details[1]").locator(":scope > summary").click();
       await expect(form).toBeVisible();
 
       await form.getByRole("button", { name: "Добавить текстовый раздел" }).click();
@@ -994,12 +1036,13 @@ test.describe("real Supabase admin smoke", () => {
   });
 
   test("contract supports revision request, resend and acceptance", async ({ page }) => {
+    test.setTimeout(60_000);
     expect(fixture).not.toBeNull();
     expect(fixture!.requestId).toBeTruthy();
 
     await loginAs(page, fixture!.users.manager);
     await page.goto(`/admin/requests/${fixture!.requestId}`);
-    await expect(page.getByRole("heading", { name: "Заказ" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Заказ", exact: true })).toBeVisible();
     const contractForm = page.locator('form:has(input[name="finalPrice"])');
 
     await contractForm.locator('input[name="finalPrice"]').fill("42000");
@@ -1027,11 +1070,14 @@ test.describe("real Supabase admin smoke", () => {
 
     await loginAsClient(page, fixture!.users.client);
     await page.goto(`/account/requests/${fixture!.requestId}`);
-    await expect(page.getByRole("heading", { name: "Заказ" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Условия заказа", exact: true })
+    ).toBeVisible();
     await expect(page.getByRole("heading", { name: "История" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Таймлайн" })).toHaveCount(0);
-    await expect(page.getByText("На согласовании")).toBeVisible();
-    await expect(page.getByText("Дизайнер")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Принять условия" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Запросить изменения" })).toBeVisible();
+    await expect(page.getByText("Дизайнер", { exact: true })).toBeVisible();
     await expect(page.getByText("Здравствуйте, проверьте условия заказа и напишите")).toBeVisible();
 
     await page
@@ -1039,14 +1085,14 @@ test.describe("real Supabase admin smoke", () => {
       .fill("Спасибо, условия увидел. Перед запросом изменений уточню один вопрос.");
     await page.getByRole("button", { name: "Отправить сообщение" }).click();
     await expect(page).toHaveURL(new RegExp(`notice=order-comment-saved`));
-    await expect(page.getByText("На согласовании")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Принять условия" })).toBeVisible();
 
     await page.getByRole("button", { name: "Запросить изменения" }).click();
     await expect(page.getByRole("dialog", { name: "Запросить изменения" })).toBeVisible();
     await page.locator('textarea[name="feedback"]').fill("Уточните, пожалуйста, состав финальных файлов и этапы передачи.");
     await page.getByRole("button", { name: "Отправить запрос" }).click();
     await expect(page).toHaveURL(new RegExp(`notice=order-contract-revision-requested`));
-    await expect(page.getByText("На доработке")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Принять условия" })).toHaveCount(0);
 
     await loginAs(page, fixture!.users.manager);
     await page.goto(`/admin/requests/${fixture!.requestId}`);
@@ -1060,10 +1106,10 @@ test.describe("real Supabase admin smoke", () => {
 
     await loginAsClient(page, fixture!.users.client);
     await page.goto(`/account/requests/${fixture!.requestId}`);
-    await expect(page.getByText("На согласовании")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Принять условия" })).toBeVisible();
     await page.getByRole("button", { name: "Принять условия" }).click();
     await expect(page).toHaveURL(new RegExp(`/account/requests/${fixture!.requestId}\\?notice=order-contract-accepted`));
-    await expect(page.getByText("Принят", { exact: true })).toBeVisible();
+    await expect(page.getByText("Заказ принят", { exact: true })).toBeVisible();
 
     await loginAs(page, fixture!.users.manager);
     await page.goto(`/admin/requests/${fixture!.requestId}`);
@@ -1088,8 +1134,11 @@ test.describe("real Supabase admin smoke", () => {
         mimeType: "image/png",
         buffer: png
       });
-      await page.locator('input[name="title"]').fill(title);
-      await page.locator('button[type="submit"]').click();
+      const uploadForm = page
+        .getByRole("button", { name: "Загрузить", exact: true })
+        .locator("xpath=ancestor::form");
+      await uploadForm.getByPlaceholder("Обложка проекта").fill(title);
+      await uploadForm.getByRole("button", { name: "Загрузить", exact: true }).click();
 
       await expect(page.getByRole("heading", { name: title })).toBeVisible();
 

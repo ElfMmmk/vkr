@@ -215,6 +215,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
           </div>
           <PortfolioSortSelect
             currentSort={sort}
+            locale={locale}
             selectedServices={selectedServices}
             selectedTags={selectedTags}
           />
@@ -222,7 +223,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
         {projects.length ? (
           <div className="mt-12 grid gap-10 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project, index) => (
-              <ProjectCard key={project.id} priority={index < 3} project={project} />
+              <ProjectCard key={project.id} locale={locale} priority={index < 3} project={project} />
             ))}
           </div>
         ) : (

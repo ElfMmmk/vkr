@@ -1,4 +1,5 @@
-import { requestStatusLabels } from "@/lib/request-status";
+import type { Locale } from "@/lib/i18n";
+import { getRequestStatusLabel } from "@/lib/request-status";
 import type { RequestStatus } from "@/lib/types";
 
 const styles: Record<RequestStatus, string> = {
@@ -10,10 +11,16 @@ const styles: Record<RequestStatus, string> = {
   rejected: "border-accent/30 bg-accent/10 text-accent"
 };
 
-export function StatusBadge({ status }: { status: RequestStatus }) {
+export function StatusBadge({
+  locale = "ru",
+  status
+}: {
+  locale?: Locale;
+  status: RequestStatus;
+}) {
   return (
     <span className={`inline-flex border px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
-      {requestStatusLabels[status]}
+      {getRequestStatusLabel(status, locale)}
     </span>
   );
 }

@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 
 import { selectClass } from "@/components/form-controls";
+import type { Locale } from "@/lib/i18n";
 
 type PortfolioSortSelectProps = {
   currentSort: "default" | "newest" | "oldest";
+  locale: Locale;
   selectedServices: string[];
   selectedTags: string[];
 };
@@ -40,6 +42,7 @@ function hrefForSort({
 
 export function PortfolioSortSelect({
   currentSort,
+  locale,
   selectedServices,
   selectedTags
 }: PortfolioSortSelectProps) {
@@ -48,7 +51,7 @@ export function PortfolioSortSelect({
   return (
     <label className="block">
       <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-        Сортировка
+        {locale === "en" ? "Sort" : "Сортировка"}
       </span>
       <select
         className={`${selectClass} max-w-xs`}
@@ -64,9 +67,9 @@ export function PortfolioSortSelect({
         }
         value={currentSort}
       >
-        <option value="default">Сначала закреплённые</option>
-        <option value="newest">Сначала новые</option>
-        <option value="oldest">Сначала старые</option>
+        <option value="default">{locale === "en" ? "Featured first" : "Сначала закреплённые"}</option>
+        <option value="newest">{locale === "en" ? "Newest first" : "Сначала новые"}</option>
+        <option value="oldest">{locale === "en" ? "Oldest first" : "Сначала старые"}</option>
       </select>
     </label>
   );

@@ -146,7 +146,7 @@ export function appendBriefChip(currentValue: string, chip: string): string {
   }
 
   const parts = cleanCurrent
-    .split(",")
+    .split(/[,;\n]/)
     .map((part) => part.trim().toLowerCase())
     .filter(Boolean);
 
@@ -154,5 +154,8 @@ export function appendBriefChip(currentValue: string, chip: string): string {
     return cleanCurrent;
   }
 
-  return `${cleanCurrent}, ${cleanChip}`;
+  const normalizedCurrent = cleanCurrent.replace(/[;,]\s*$/, "");
+  const separator = /[.!?]$/.test(normalizedCurrent) ? " " : ", ";
+
+  return `${normalizedCurrent}${separator}${cleanChip}`;
 }

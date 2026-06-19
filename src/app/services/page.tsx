@@ -43,8 +43,8 @@ export default async function ServicesPage() {
                           className="border border-cobalt/25 bg-cobalt/10 px-3 py-1.5 text-sm font-semibold text-cobalt"
                           key={item.id}
                         >
-                          {item.title}: {formatPriceRange(item.priceFrom, item.priceTo)},{" "}
-                          {formatDurationRange(item.durationFromDays, item.durationToDays)}
+                          {item.title}: {formatPriceRange(item.priceFrom, item.priceTo, locale)},{" "}
+                          {formatDurationRange(item.durationFromDays, item.durationToDays, locale)}
                         </span>
                       ))}
                     </div>

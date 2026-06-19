@@ -1,7 +1,8 @@
 import { Field, selectClass } from "@/components/form-controls";
 import { FieldError, invalidClass } from "@/components/order/form-parts";
-import { quizQuestionOptions } from "@/components/order/order-form-config";
+import { getQuizQuestionOptions } from "@/components/order/order-form-config";
 import { PackageStep } from "@/components/order/package-step";
+import type { Locale } from "@/lib/i18n";
 import type { OrderQuizAnswers } from "@/lib/order-quiz";
 import type { Service, ServicePackage } from "@/lib/types";
 
@@ -17,6 +18,7 @@ type ServiceStepProps = {
   selectedServiceId: string;
   fieldErrors: FieldErrors;
   isQuizOpen: boolean;
+  locale: Locale;
   quizAnswers: Partial<OrderQuizAnswers>;
   onApplyQuizRecommendation: () => void;
   onSelectQuizAnswer: (
@@ -30,21 +32,10 @@ type ServiceStepProps = {
   selectedPackageId: string;
 };
 
-const quizQuestionLabels: Record<keyof OrderQuizAnswers, string> = {
-  goal: "Цель",
-  materials: "Материалы",
-  scope: "Объём",
-  taskType: "Тип задачи",
-  urgency: "Срок"
-};
-
-const quizEntries = Object.entries(quizQuestionOptions) as Array<
-  [keyof OrderQuizAnswers, readonly QuizOption[]]
->;
-
 export function ServiceStep({
   fieldErrors,
   isQuizOpen,
+  locale,
   onApplyQuizRecommendation,
   onSelectPackage,
   onSelectQuizAnswer,
@@ -56,14 +47,37 @@ export function ServiceStep({
   selectedServiceId,
   services
 }: ServiceStepProps) {
+  const quizQuestionLabels: Record<keyof OrderQuizAnswers, string> = locale === "en"
+    ? {
+        goal: "Goal",
+        materials: "Materials",
+        scope: "Scope",
+        taskType: "Task type",
+        urgency: "Timing"
+      }
+    : {
+        goal: "Цель",
+        materials: "Материалы",
+        scope: "Объём",
+        taskType: "Тип задачи",
+        urgency: "Срок"
+      };
+  const quizEntries = Object.entries(getQuizQuestionOptions(locale)) as Array<
+    [keyof OrderQuizAnswers, readonly QuizOption[]]
+  >;
+
   return (
     <div className="grid gap-5">
       <div className="border border-line bg-paper p-5">
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <div>
-            <h3 className="text-xl font-semibold">Не знаете, что выбрать?</h3>
+            <h3 className="text-xl font-semibold">
+              {locale === "en" ? "Not sure what to choose?" : "Не знаете, что выбрать?"}
+            </h3>
             <p className="mt-1 text-sm leading-6 text-muted">
-              Ответьте на пять вопросов, и форма подставит подходящее направление.
+              {locale === "en"
+                ? "Answer five questions and the form will suggest a suitable direction."
+                : "Ответьте на пять вопросов, и форма подставит подходящее направление."}
             </p>
           </div>
           <button
@@ -71,7 +85,7 @@ export function ServiceStep({
             onClick={onToggleQuiz}
             type="button"
           >
-            Помочь выбрать
+            {locale === "en" ? "Help me choose" : "Помочь выбрать"}
           </button>
         </div>
 
@@ -103,13 +117,13 @@ export function ServiceStep({
               onClick={onApplyQuizRecommendation}
               type="button"
             >
-              Подобрать услугу
+              {locale === "en" ? "Apply recommendation" : "Подобрать услугу"}
             </button>
           </div>
         ) : null}
       </div>
 
-      <Field label="Услуга" required>
+      <Field label={locale === "en" ? "Service" : "Услуга"} required>
         <select
           className={`${selectClass}${invalidClass(Boolean(fieldErrors?.serviceId))}`}
           name="serviceId"
@@ -128,13 +142,16 @@ export function ServiceStep({
 
       <section>
         <div className="mb-3">
-          <h3 className="text-xl font-semibold text-ink">Пакет</h3>
+          <h3 className="text-xl font-semibold text-ink">{locale === "en" ? "Package" : "Пакет"}</h3>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Сравните состав, предварительную стоимость и срок.
+            {locale === "en"
+              ? "Compare scope, preliminary price, and timing."
+              : "Сравните состав, предварительную стоимость и срок."}
           </p>
         </div>
         <PackageStep
           errors={fieldErrors?.packageId}
+          locale={locale}
           onSelectPackage={onSelectPackage}
           packages={packages}
           selectedPackageId={selectedPackageId}

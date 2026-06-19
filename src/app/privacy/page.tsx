@@ -1,8 +1,9 @@
 import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n-server";
 
-const sections = [
+const sectionsRu = [
   {
     title: "1. Общие положения",
     body:
@@ -35,14 +36,54 @@ const sections = [
   }
 ];
 
-export default function PrivacyPage() {
+const sectionsEn = [
+  {
+    title: "1. General provisions",
+    body:
+      "This policy explains how personal data is processed on the graphic designer portfolio website. The site presents work, describes services, and accepts project requests."
+  },
+  {
+    title: "2. Data we process",
+    body:
+      "A request may include a name, selected service, preferred contact method, contact details, and a message. This information is used only to reply and discuss the project."
+  },
+  {
+    title: "3. Processing purposes",
+    body:
+      "The data is used to register the request, contact the applicant, clarify project details, and manage requests in the service panel."
+  },
+  {
+    title: "4. Storage and protection",
+    body:
+      "Access to requests is limited to authorized staff. Passwords are not stored in plain text, and protected sections require authentication."
+  },
+  {
+    title: "5. Third parties",
+    body:
+      "Personal data is not published or shared with third parties unless disclosure is required by applicable law."
+  },
+  {
+    title: "6. Data requests",
+    body:
+      "A user may request deletion or correction of their data through the contact details provided on the website."
+  }
+];
+
+export default async function PrivacyPage() {
+  const locale = await getLocale();
+  const sections = locale === "en" ? sectionsEn : sectionsRu;
+
   return (
     <>
       <SiteHeader />
       <main id="main-content" className="container-shell py-16 md:py-24">
         <SectionHeading
-          title="Политика обработки персональных данных"
-          description="Документ для формы заявки и контактных данных сайта, ориентированного на работу с пользователями в Российской Федерации."
+          title={locale === "en" ? "Privacy policy" : "Политика обработки персональных данных"}
+          description={
+            locale === "en"
+              ? "Information about personal data submitted through the project request and contact forms."
+              : "Документ для формы заявки и контактных данных сайта, ориентированного на работу с пользователями в Российской Федерации."
+          }
         />
         <div className="mt-12 grid gap-5">
           {sections.map((section) => (

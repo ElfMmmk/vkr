@@ -22,6 +22,7 @@ export type PageContent = {
   title: string;
   body: string;
   blocks: Record<string, string>;
+  englishTranslation?: Record<string, unknown>;
   updatedAt?: string;
 };
 
@@ -35,6 +36,7 @@ export type Service = {
   isActive: boolean;
   packages: ServicePackage[];
   addons: ServiceAddon[];
+  englishTranslation?: Record<string, unknown>;
 };
 
 export type ServicePackage = {
@@ -54,6 +56,7 @@ export type ServicePackage = {
   isActive: boolean;
   isRecommended: boolean;
   recommendationTags: PackageRecommendationTags;
+  englishTranslation?: Record<string, unknown>;
 };
 
 export type ServiceAddon = {
@@ -65,6 +68,7 @@ export type ServiceAddon = {
   durationDays: number;
   displayOrder: number;
   isActive: boolean;
+  englishTranslation?: Record<string, unknown>;
 };
 
 export type Tag = {
@@ -72,6 +76,7 @@ export type Tag = {
   title: string;
   slug: string;
   description: string;
+  englishTranslation?: Record<string, unknown>;
 };
 
 export type PortfolioImage = {
@@ -83,6 +88,7 @@ export type PortfolioImage = {
   parentType: "project" | "page" | "service" | "free";
   parentId: string | null;
   sortOrder: number;
+  englishTranslation?: Record<string, unknown>;
 };
 
 export type Project = {
@@ -101,6 +107,7 @@ export type Project = {
   services: Service[];
   tags: Tag[];
   gallery: PortfolioImage[];
+  englishTranslation?: Record<string, unknown>;
 };
 
 export type OrderRequest = {

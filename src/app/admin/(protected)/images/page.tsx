@@ -1,11 +1,36 @@
 import Image from "next/image";
 
 import { AdminCard } from "@/components/admin-card";
-import { AdminFormFieldset, adminDangerButtonClass } from "@/components/admin-form-lock";
+import {
+  AdminFormFieldset,
+  adminDangerButtonClass,
+  adminPrimaryButtonClass
+} from "@/components/admin-form-lock";
 import { AdminImageUploadForm } from "@/components/admin-image-upload-form";
-import { deleteImageAction } from "@/lib/actions/admin";
+import {
+  AdminTranslatedFields,
+  type AdminTranslatedField
+} from "@/components/admin-translated-fields";
+import { FormSubmitButton } from "@/components/form-submit-button";
+import { deleteImageAction, saveImageTextAction } from "@/lib/actions/admin";
 import { requireContentAdmin } from "@/lib/auth";
 import { listAdminImages } from "@/lib/data/admin";
+import { fieldLimits } from "@/lib/field-limits";
+
+const imageTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название",
+    maxLength: fieldLimits.image.title.max,
+    placeholder: "Обложка проекта"
+  },
+  {
+    name: "caption",
+    label: "Описание",
+    maxLength: fieldLimits.image.caption.max,
+    placeholder: "Что изображено или где использовать файл"
+  }
+];
 
 export default async function AdminImagesPage() {
   const admin = await requireContentAdmin();
@@ -42,6 +67,31 @@ export default async function AdminImagesPage() {
               ) : null}
             </div>
             <p className="mt-3 break-all text-xs leading-5 text-muted">{image.storagePath}</p>
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm font-semibold text-accent">
+                Редактировать текст
+              </summary>
+              <form action={saveImageTextAction} className="mt-4 grid gap-4">
+                <AdminFormFieldset canWrite={admin.canWrite}>
+                  <input name="id" type="hidden" value={image.id} />
+                  <input name="sortOrder" type="hidden" value={image.sortOrder} />
+                  <AdminTranslatedFields
+                    english={image.englishTranslation}
+                    entityType="image"
+                    fields={imageTextFields}
+                    russian={{
+                      title: image.title,
+                      caption: image.caption
+                    }}
+                  />
+                  <FormSubmitButton
+                    className={adminPrimaryButtonClass}
+                    idleLabel="Сохранить текст"
+                    pendingLabel="Сохранение..."
+                  />
+                </AdminFormFieldset>
+              </form>
+            </details>
             <form action={deleteImageAction} className="mt-4">
               <AdminFormFieldset canWrite={admin.canWrite} className="inline-grid">
                 <input name="id" type="hidden" value={image.id} />

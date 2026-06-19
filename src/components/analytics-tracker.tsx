@@ -3,6 +3,11 @@
 import { useEffect, useRef } from "react";
 
 import { isPublicAnalyticsPath } from "@/lib/analytics-routes";
+import {
+  sanitizeAnalyticsHref,
+  sanitizeAnalyticsReferrer,
+  sanitizeAnalyticsSearch
+} from "@/lib/analytics-sanitizer";
 
 type AnalyticsPayload = {
   eventType: "page_view" | "cta_click";
@@ -58,8 +63,8 @@ export function AnalyticsTracker() {
       sendAnalyticsEvent({
         eventType: "page_view",
         path,
-        referrer: document.referrer,
-        search,
+        referrer: sanitizeAnalyticsReferrer(document.referrer),
+        search: sanitizeAnalyticsSearch(search),
         metadata: {
           locale: document.documentElement.lang || "ru"
         }
@@ -75,11 +80,11 @@ export function AnalyticsTracker() {
 
       sendAnalyticsEvent({
         eventType: "cta_click",
-        href: link.getAttribute("href") || link.href,
+        href: sanitizeAnalyticsHref(link.getAttribute("href") || link.href),
         label: getVisibleLabel(link),
         path: window.location.pathname,
-        referrer: document.referrer,
-        search: window.location.search,
+        referrer: sanitizeAnalyticsReferrer(document.referrer),
+        search: sanitizeAnalyticsSearch(window.location.search),
         metadata: {
           locale: document.documentElement.lang || "ru"
         }

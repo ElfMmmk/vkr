@@ -4,7 +4,16 @@ import {
   demoServices,
   demoTags
 } from "@/lib/demo-data";
+import { demoEnglishTranslations } from "@/lib/demo-english-translations";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  createTranslationLookup,
+  localizePageContent,
+  localizeProjectContent,
+  localizeServiceContent,
+  localizeTagContent,
+  type TranslationLookup
+} from "@/lib/content-localization";
 import {
   attachLegacyProjectImages,
   attachProjectMedia,
@@ -20,6 +29,7 @@ import {
 } from "@/lib/data/mappers";
 import { getOptionalSupabasePublic } from "@/lib/supabase/server";
 import { defaultLocale, type Locale } from "@/lib/i18n";
+import type { TranslationEntityType } from "@/lib/entity-translations";
 import type { PageContent, PageKey, PortfolioFilter, Project, Service, Tag } from "@/lib/types";
 
 function isMissingProjectImagesRelation(error: { message?: string } | null): boolean {
@@ -41,82 +51,79 @@ function logPublicDataError(context: string, error: unknown): void {
 }
 
 type TranslationRow = {
+  entity_type: TranslationEntityType;
   entity_id: string;
   fields: Record<string, unknown> | null;
 };
 
 async function loadTranslations(
   client: SupabaseClient | null,
-  entityType: string,
   ids: string[],
   locale: Locale
-): Promise<Map<string, Record<string, unknown>>> {
+): Promise<TranslationLookup> {
   if (!client || locale === defaultLocale || !ids.length) {
     return new Map();
   }
 
   const { data, error } = await client
     .from("entity_translations")
-    .select("entity_id, fields")
-    .eq("entity_type", entityType)
+    .select("entity_type, entity_id, fields")
     .eq("locale", locale)
+    .eq("is_public", true)
     .in("entity_id", ids);
 
   if (error) {
     return new Map();
   }
 
-  return new Map(
-    ((data as TranslationRow[] | null) ?? []).map((row) => [row.entity_id, row.fields ?? {}])
+  return createTranslationLookup(
+    ((data as TranslationRow[] | null) ?? []).map((row) => ({
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      fields: row.fields ?? {}
+    }))
   );
 }
 
-function translatedString(
-  fields: Record<string, unknown> | undefined,
-  key: string,
-  fallback: string
-): string {
-  const value = fields?.[key];
-
-  return typeof value === "string" && value.trim() ? value : fallback;
+function serviceContentIds(services: Service[]): string[] {
+  return services.flatMap((service) => [
+    service.id,
+    ...service.packages.map((packageItem) => packageItem.id),
+    ...service.addons.map((addon) => addon.id)
+  ]);
 }
 
-function localizePage(page: PageContent, fields?: Record<string, unknown>): PageContent {
-  return {
-    ...page,
-    title: translatedString(fields, "title", page.title),
-    body: translatedString(fields, "body", page.body),
-    blocks:
-      fields && typeof fields.blocks === "object" && fields.blocks
-        ? { ...page.blocks, ...(fields.blocks as Record<string, string>) }
-        : page.blocks
-  };
+function projectContentIds(projects: Project[]): string[] {
+  return projects.flatMap((project) => [
+    project.id,
+    ...serviceContentIds(project.services),
+    ...project.tags.map((tag) => tag.id),
+    ...project.gallery.map((image) => image.id)
+  ]);
 }
 
-function localizeService(service: Service, fields?: Record<string, unknown>): Service {
-  return {
-    ...service,
-    title: translatedString(fields, "title", service.title),
-    description: translatedString(fields, "description", service.description),
-    details: translatedString(fields, "details", service.details)
-  };
+async function localizeServices(
+  client: SupabaseClient | null,
+  services: Service[],
+  locale: Locale
+): Promise<Service[]> {
+  const translations = client
+    ? await loadTranslations(client, serviceContentIds(services), locale)
+    : demoEnglishTranslations;
+
+  return services.map((service) => localizeServiceContent(service, translations, locale));
 }
 
-function localizeTag(tag: Tag, fields?: Record<string, unknown>): Tag {
-  return {
-    ...tag,
-    title: translatedString(fields, "title", tag.title),
-    description: translatedString(fields, "description", tag.description)
-  };
-}
+async function localizeProjects(
+  client: SupabaseClient | null,
+  projects: Project[],
+  locale: Locale
+): Promise<Project[]> {
+  const translations = client
+    ? await loadTranslations(client, projectContentIds(projects), locale)
+    : demoEnglishTranslations;
 
-function localizeProject(project: Project, fields?: Record<string, unknown>): Project {
-  return {
-    ...project,
-    title: translatedString(fields, "title", project.title),
-    shortDescription: translatedString(fields, "shortDescription", project.shortDescription),
-    fullDescription: translatedString(fields, "fullDescription", project.fullDescription)
-  };
+  return projects.map((project) => localizeProjectContent(project, translations, locale));
 }
 
 export function filterProjects(projects: Project[], filter: PortfolioFilter): Project[] {
@@ -166,7 +173,11 @@ export async function getPublicServices(locale: Locale = defaultLocale): Promise
   const client = getOptionalSupabasePublic();
 
   if (!client) {
-    return demoServices.filter((service) => service.isActive);
+    return localizeServices(
+      null,
+      demoServices.filter((service) => service.isActive),
+      locale
+    );
   }
 
   const { data, error } = await client
@@ -178,20 +189,25 @@ export async function getPublicServices(locale: Locale = defaultLocale): Promise
   if (error || !data) {
     logPublicDataError("services", error ?? new Error("empty response"));
 
-    return demoServices.filter((service) => service.isActive);
+    return localizeServices(
+      null,
+      demoServices.filter((service) => service.isActive),
+      locale
+    );
   }
 
   const services = (data as ServiceRow[]).map(mapService);
-  const translations = await loadTranslations(client, "service", services.map((service) => service.id), locale);
 
-  return services.map((service) => localizeService(service, translations.get(service.id)));
+  return localizeServices(client, services, locale);
 }
 
 export async function getPublicTags(locale: Locale = defaultLocale): Promise<Tag[]> {
   const client = getOptionalSupabasePublic();
 
   if (!client) {
-    return demoTags;
+    return demoTags.map((tag) =>
+      localizeTagContent(tag, demoEnglishTranslations, locale)
+    );
   }
 
   const { data, error } = await client
@@ -202,13 +218,15 @@ export async function getPublicTags(locale: Locale = defaultLocale): Promise<Tag
   if (error || !data) {
     logPublicDataError("tags", error ?? new Error("empty response"));
 
-    return demoTags;
+    return demoTags.map((tag) =>
+      localizeTagContent(tag, demoEnglishTranslations, locale)
+    );
   }
 
   const tags = (data as TagRow[]).map(mapTag);
-  const translations = await loadTranslations(client, "tag", tags.map((tag) => tag.id), locale);
+  const translations = await loadTranslations(client, tags.map((tag) => tag.id), locale);
 
-  return tags.map((tag) => localizeTag(tag, translations.get(tag.id)));
+  return tags.map((tag) => localizeTagContent(tag, translations, locale));
 }
 
 export async function getPublicPage(
@@ -219,7 +237,7 @@ export async function getPublicPage(
   const client = getOptionalSupabasePublic();
 
   if (!client) {
-    return fallback;
+    return localizePageContent(fallback, demoEnglishTranslations, locale);
   }
 
   const { data, error } = await client
@@ -231,17 +249,17 @@ export async function getPublicPage(
   if (error) {
     logPublicDataError(`page:${pageKey}`, error);
 
-    return fallback;
+    return localizePageContent(fallback, demoEnglishTranslations, locale);
   }
 
   if (!data) {
-    return fallback;
+    return localizePageContent(fallback, demoEnglishTranslations, locale);
   }
 
   const page = mapPage(data as PageRow);
-  const translations = await loadTranslations(client, "page", [page.id], locale);
+  const translations = await loadTranslations(client, [page.id], locale);
 
-  return localizePage(page, translations.get(page.id));
+  return localizePageContent(page, translations, locale);
 }
 
 export async function getPublicProjects(
@@ -251,7 +269,7 @@ export async function getPublicProjects(
   const client = getOptionalSupabasePublic();
 
   if (!client) {
-    return filterProjects(demoProjects, filter);
+    return filterProjects(await localizeProjects(null, demoProjects, locale), filter);
   }
 
   let { data, error } = await client
@@ -276,7 +294,7 @@ export async function getPublicProjects(
   if (error || !data) {
     logPublicDataError("projects", error ?? new Error("empty response"));
 
-    return filterProjects(demoProjects, filter);
+    return filterProjects(await localizeProjects(null, demoProjects, locale), filter);
   }
 
   const projectRows = data as ProjectRow[];
@@ -310,16 +328,8 @@ export async function getPublicProjects(
     if (legacyImageError) {
       logPublicDataError("legacy project media", legacyImageError);
 
-      const projects = projectRows.map(mapProject);
-      const translations = await loadTranslations(
-        client,
-        "project",
-        projects.map((project) => project.id),
-        locale
-      );
-
       return filterProjects(
-        projects.map((project) => localizeProject(project, translations.get(project.id))),
+        await localizeProjects(client, projectRows.map(mapProject), locale),
         filter
       );
     }
@@ -327,24 +337,15 @@ export async function getPublicProjects(
     const projects = attachLegacyProjectImages(projectRows, (legacyImageData as ImageRow[] | null) ?? []).map(
       mapProject
     );
-    const translations = await loadTranslations(client, "project", projects.map((project) => project.id), locale);
 
-    return filterProjects(projects.map((project) => localizeProject(project, translations.get(project.id))), filter);
+    return filterProjects(await localizeProjects(client, projects, locale), filter);
   }
 
   if (relationError || coverError) {
     logPublicDataError("project media", relationError ?? coverError);
 
-    const projects = projectRows.map(mapProject);
-    const translations = await loadTranslations(
-      client,
-      "project",
-      projects.map((project) => project.id),
-      locale
-    );
-
     return filterProjects(
-      projects.map((project) => localizeProject(project, translations.get(project.id))),
+      await localizeProjects(client, projectRows.map(mapProject), locale),
       filter
     );
   }
@@ -358,9 +359,7 @@ export async function getPublicProjects(
       }> | null) ?? [],
       (coverData as ImageRow[] | null) ?? []
     ).map(mapProject);
-  const translations = await loadTranslations(client, "project", projects.map((project) => project.id), locale);
-
-  return filterProjects(projects.map((project) => localizeProject(project, translations.get(project.id))), filter);
+  return filterProjects(await localizeProjects(client, projects, locale), filter);
 }
 
 export async function getPublicProjectBySlug(
@@ -371,7 +370,9 @@ export async function getPublicProjectBySlug(
   const client = getOptionalSupabasePublic();
 
   if (!client) {
-    return fallback;
+    return fallback
+      ? localizeProjectContent(fallback, demoEnglishTranslations, locale)
+      : null;
   }
 
   const { data, error } = await client
@@ -384,7 +385,9 @@ export async function getPublicProjectBySlug(
   if (error) {
     logPublicDataError(`project:${slug}`, error);
 
-    return fallback;
+    return fallback
+      ? localizeProjectContent(fallback, demoEnglishTranslations, locale)
+      : null;
   }
 
   if (!data) {
@@ -414,27 +417,24 @@ export async function getPublicProjectBySlug(
       logPublicDataError(`legacy project media:${slug}`, legacyImageError);
 
       const project = mapProject(data as ProjectRow);
-      const translations = await loadTranslations(client, "project", [project.id], locale);
 
-      return localizeProject(project, translations.get(project.id));
+      return (await localizeProjects(client, [project], locale))[0] ?? null;
     }
 
     const project = mapProject({
       ...(data as ProjectRow),
       images: (legacyImageData as ImageRow[] | null) ?? []
     });
-    const translations = await loadTranslations(client, "project", [project.id], locale);
 
-    return localizeProject(project, translations.get(project.id));
+    return (await localizeProjects(client, [project], locale))[0] ?? null;
   }
 
   if (relationError || coverError) {
     logPublicDataError(`project media:${slug}`, relationError ?? coverError);
 
     const project = mapProject(data as ProjectRow);
-    const translations = await loadTranslations(client, "project", [project.id], locale);
 
-    return localizeProject(project, translations.get(project.id));
+    return (await localizeProjects(client, [project], locale))[0] ?? null;
   }
 
   const project = mapProject(
@@ -448,7 +448,6 @@ export async function getPublicProjectBySlug(
       coverData ? [coverData as ImageRow] : []
     )[0]
   );
-  const translations = await loadTranslations(client, "project", [project.id], locale);
 
-  return localizeProject(project, translations.get(project.id));
+  return (await localizeProjects(client, [project], locale))[0] ?? null;
 }

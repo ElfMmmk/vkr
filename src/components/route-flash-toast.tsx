@@ -4,6 +4,8 @@ import { CheckCircle2, Info, XCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
+import type { Locale } from "@/lib/i18n";
+
 type ToastTone = "success" | "error" | "info";
 
 const routeNotices: Record<string, { message: string; tone: ToastTone }> = {
@@ -54,6 +56,53 @@ const routeNotices: Record<string, { message: string; tone: ToastTone }> = {
   "user-role-updated": { message: "Роль пользователя сохранена", tone: "success" }
 };
 
+const englishRouteNotices: Partial<typeof routeNotices> = {
+  "signed-in": { message: "You are signed in", tone: "success" },
+  registered: { message: "Your account has been created", tone: "success" },
+  "registration-confirm-email": {
+    message: "Your account has been created. Confirm your email, then sign in.",
+    tone: "success"
+  },
+  "signed-out": { message: "You are signed out", tone: "info" },
+  "order-contract-accepted": { message: "Order terms accepted", tone: "success" },
+  "order-contract-accept-failed": {
+    message: "The order terms could not be accepted. Refresh the page and try again.",
+    tone: "error"
+  },
+  "order-contract-revision-requested": {
+    message: "Your message was sent. The order was returned for revision.",
+    tone: "success"
+  },
+  "order-contract-revision-invalid": {
+    message: "The message must contain 10 to 1,000 characters.",
+    tone: "error"
+  },
+  "order-contract-revision-failed": {
+    message: "Changes could not be requested. Refresh the page and try again.",
+    tone: "error"
+  },
+  "order-comment-saved": { message: "Message sent", tone: "success" },
+  "order-comment-invalid": {
+    message: "The message must contain 10 to 1,000 characters.",
+    tone: "error"
+  },
+  "order-comment-failed": { message: "The message could not be sent.", tone: "error" },
+  "request-claimed": { message: "The order was linked to your account", tone: "success" },
+  "attachment-uploaded": { message: "Files added", tone: "success" },
+  "attachment-empty": { message: "Choose a file to upload", tone: "info" },
+  "attachment-limit": { message: "The order file limit has been reached", tone: "error" },
+  "attachment-failed": {
+    message: "The files could not be uploaded. Check them and try again.",
+    tone: "error"
+  },
+  "attachment-deleted": { message: "File deleted", tone: "success" },
+  "attachment-delete-failed": { message: "The file could not be deleted", tone: "error" },
+  "attachments-closed": {
+    message: "Files can no longer be added to this order",
+    tone: "info"
+  }
+};
+
 const toneStyles: Record<ToastTone, string> = {
   success: "border-emerald-300 bg-emerald-50 text-emerald-900",
   error: "border-accent/30 bg-accent/10 text-accent",
@@ -101,10 +150,14 @@ export function ToastMessage({
   );
 }
 
-function RouteFlashToastContent() {
+function RouteFlashToastContent({ locale }: { locale: Locale }) {
   const searchParams = useSearchParams();
   const notice = searchParams.get("notice");
-  const config = notice ? routeNotices[notice] : undefined;
+  const config = notice
+    ? locale === "en"
+      ? englishRouteNotices[notice] ?? routeNotices[notice]
+      : routeNotices[notice]
+    : undefined;
 
   if (!config) {
     return null;
@@ -113,10 +166,10 @@ function RouteFlashToastContent() {
   return <ToastMessage key={notice} message={config.message} tone={config.tone} />;
 }
 
-export function RouteFlashToast() {
+export function RouteFlashToast({ locale = "ru" }: { locale?: Locale }) {
   return (
     <Suspense fallback={null}>
-      <RouteFlashToastContent />
+      <RouteFlashToastContent locale={locale} />
     </Suspense>
   );
 }

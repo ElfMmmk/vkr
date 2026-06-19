@@ -2,9 +2,13 @@ import { AdminCard } from "@/components/admin-card";
 import { AdminFormFieldset, adminDangerButtonClass, adminPrimaryButtonClass } from "@/components/admin-form-lock";
 import { AdminServiceOrderForm } from "@/components/admin-service-order-form";
 import { AdminServiceItemOrderForm } from "@/components/admin-service-item-order-form";
+import {
+  AdminTranslatedFields,
+  type AdminTranslatedField
+} from "@/components/admin-translated-fields";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { Field, inputClass, textareaClass } from "@/components/form-controls";
-import { LimitedInput, LimitedTextarea } from "@/components/limited-text-control";
+import { Field, inputClass } from "@/components/form-controls";
+import { LimitedInput } from "@/components/limited-text-control";
 import { quizQuestionOptions } from "@/components/order/order-form-config";
 import { ChevronDown } from "lucide-react";
 import {
@@ -20,7 +24,6 @@ import { listAdminServices } from "@/lib/data/admin";
 import { fieldLimits } from "@/lib/field-limits";
 import { formatDurationRange, formatPriceRange, formatRubles } from "@/lib/order-calculator";
 import type { OrderQuizAnswers } from "@/lib/order-quiz";
-import { formatPackageIncludedItems } from "@/lib/service-package-marketing";
 import type { Service, ServiceAddon, ServicePackage } from "@/lib/types";
 
 type QuizOption = {
@@ -40,6 +43,101 @@ const packageRecommendationEntries = Object.entries(quizQuestionOptions) as Arra
   [keyof OrderQuizAnswers, readonly QuizOption[]]
 >;
 
+const serviceTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название",
+    maxLength: fieldLimits.service.title.max,
+    minLength: fieldLimits.service.title.min,
+    placeholder: "Айдентика бренда",
+    required: true
+  },
+  {
+    name: "description",
+    label: "Краткое описание",
+    hint: "Один-два предложения для карточки услуги",
+    kind: "textarea",
+    maxLength: fieldLimits.service.description.max,
+    minLength: fieldLimits.service.description.min,
+    placeholder: "Кратко опишите результат и задачи, для которых подходит услуга",
+    required: true
+  },
+  {
+    name: "details",
+    label: "Состав работы",
+    hint: "Дополнительные условия, состав работ или важные ограничения",
+    kind: "textarea",
+    maxLength: fieldLimits.service.details.max,
+    placeholder: "Например: логотип, палитра, шрифтовая пара, правила применения"
+  }
+];
+
+const packageTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название пакета",
+    maxLength: fieldLimits.servicePackage.title.max,
+    minLength: fieldLimits.servicePackage.title.min,
+    placeholder: "Базовый пакет",
+    required: true
+  },
+  {
+    name: "description",
+    label: "Описание пакета",
+    kind: "textarea",
+    maxLength: fieldLimits.servicePackage.description.max,
+    placeholder: "Что входит в пакет и какой результат получает клиент"
+  },
+  {
+    name: "badge",
+    label: "Бейдж",
+    maxLength: fieldLimits.servicePackage.badge.max,
+    placeholder: "Популярный"
+  },
+  {
+    name: "bestFor",
+    label: "Кому подходит",
+    maxLength: fieldLimits.servicePackage.bestFor.max,
+    placeholder: "Для запуска бренда"
+  },
+  {
+    name: "outcome",
+    label: "Ожидаемый результат",
+    maxLength: fieldLimits.servicePackage.outcome.max,
+    placeholder: "Готовая визуальная система"
+  },
+  {
+    name: "includedItems",
+    label: "Что входит",
+    hint: "Один пункт на строку, пустые строки будут пропущены",
+    kind: "textarea",
+    maxLength:
+      fieldLimits.servicePackage.includedItem.max *
+      fieldLimits.servicePackage.includedItems.max,
+    placeholder: "Логотип\nПалитра\nБазовый бренд-гайд",
+    rows: 4,
+    serializeAs: "lines"
+  }
+];
+
+const addonTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название дополнительной услуги",
+    maxLength: fieldLimits.serviceAddon.title.max,
+    minLength: fieldLimits.serviceAddon.title.min,
+    placeholder: "Дополнительная услуга",
+    required: true
+  },
+  {
+    name: "description",
+    label: "Описание дополнительной услуги",
+    kind: "textarea",
+    maxLength: fieldLimits.serviceAddon.description.max,
+    placeholder: "Что добавляется к заказу"
+  }
+];
+
 function packageHasRecommendationTags(packageItem: ServicePackage): boolean {
   return packageRecommendationEntries.some(
     ([key]) => (packageItem.recommendationTags[key]?.length ?? 0) > 0
@@ -52,50 +150,27 @@ function ServiceForm({ service, canWrite }: { service?: Service; canWrite: boole
       <AdminFormFieldset canWrite={canWrite}>
         <input name="id" type="hidden" value={service?.id ?? ""} />
         <input name="displayOrder" type="hidden" value={service?.displayOrder ?? ""} />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название" required>
-            <LimitedInput
-              className={inputClass}
-              defaultValue={service?.title}
-              maxLength={fieldLimits.service.title.max}
-              minLength={fieldLimits.service.title.min}
-              name="title"
-              placeholder="Айдентика бренда"
-              required
-            />
-          </Field>
-          <Field
-            label="Адрес в ссылке"
-            hint="Можно оставить пустым: адрес создастся автоматически из названия"
-          >
-            <LimitedInput
-              className={inputClass}
-              defaultValue={service?.slug}
-              maxLength={fieldLimits.service.slug.max}
-              minLength={fieldLimits.service.slug.min}
-              name="slug"
-              placeholder="brand-identity"
-            />
-          </Field>
-        </div>
-        <Field label="Краткое описание" hint="Один-два предложения для карточки услуги" required>
-          <LimitedTextarea
-            className={textareaClass}
-            defaultValue={service?.description}
-            maxLength={fieldLimits.service.description.max}
-            minLength={fieldLimits.service.description.min}
-            name="description"
-            placeholder="Кратко опишите результат и задачи, для которых подходит услуга"
-            required
-          />
-        </Field>
-        <Field label="Состав работы" hint="Дополнительные условия, состав работ или важные ограничения">
-          <LimitedTextarea
-            className={textareaClass}
-            defaultValue={service?.details}
-            maxLength={fieldLimits.service.details.max}
-            name="details"
-            placeholder="Например: логотип, палитра, шрифтовая пара, правила применения"
+        <AdminTranslatedFields
+          english={service?.englishTranslation}
+          entityType="service"
+          fields={serviceTextFields}
+          russian={{
+            title: service?.title ?? "",
+            description: service?.description ?? "",
+            details: service?.details ?? ""
+          }}
+        />
+        <Field
+          label="Адрес в ссылке"
+          hint="Можно оставить пустым: адрес создастся автоматически из русского названия"
+        >
+          <LimitedInput
+            className={inputClass}
+            defaultValue={service?.slug}
+            maxLength={fieldLimits.service.slug.max}
+            minLength={fieldLimits.service.slug.min}
+            name="slug"
+            placeholder="brand-identity"
           />
         </Field>
         <label className="flex items-center gap-3 text-sm font-semibold">
@@ -134,64 +209,19 @@ function PackageForm({
         <input name="id" type="hidden" value={packageItem?.id ?? ""} />
         <input name="serviceId" type="hidden" value={serviceId} />
         <input name="displayOrder" type="hidden" value={packageItem?.displayOrder ?? ""} />
-        <Field label="Название пакета" required>
-          <LimitedInput
-            className={inputClass}
-            defaultValue={packageItem?.title}
-            maxLength={fieldLimits.servicePackage.title.max}
-            minLength={fieldLimits.servicePackage.title.min}
-            name="title"
-            placeholder="Базовый пакет"
-            required
-          />
-        </Field>
-        <Field label="Описание пакета">
-          <LimitedTextarea
-            className={textareaClass}
-            defaultValue={packageItem?.description}
-            maxLength={fieldLimits.servicePackage.description.max}
-            name="description"
-            placeholder="Что входит в пакет и какой результат получает клиент"
-          />
-        </Field>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Бейдж">
-            <LimitedInput
-              className={inputClass}
-              defaultValue={packageItem?.badge}
-              maxLength={fieldLimits.servicePackage.badge.max}
-              name="badge"
-              placeholder="Популярный"
-            />
-          </Field>
-          <Field label="Кому подходит">
-            <LimitedInput
-              className={inputClass}
-              defaultValue={packageItem?.bestFor}
-              maxLength={fieldLimits.servicePackage.bestFor.max}
-              name="bestFor"
-              placeholder="Для запуска бренда"
-            />
-          </Field>
-          <Field label="Ожидаемый результат">
-            <LimitedInput
-              className={inputClass}
-              defaultValue={packageItem?.outcome}
-              maxLength={fieldLimits.servicePackage.outcome.max}
-              name="outcome"
-              placeholder="Готовая визуальная система"
-            />
-          </Field>
-        </div>
-        <Field label="Что входит" hint="Один пункт на строку, пустые строки будут пропущены">
-          <textarea
-            className={textareaClass}
-            defaultValue={formatPackageIncludedItems(packageItem?.includedItems ?? [])}
-            name="includedItems"
-            placeholder={"Логотип\nПалитра\nБазовый бренд-гайд"}
-            rows={4}
-          />
-        </Field>
+        <AdminTranslatedFields
+          english={packageItem?.englishTranslation}
+          entityType="service_package"
+          fields={packageTextFields}
+          russian={{
+            title: packageItem?.title ?? "",
+            description: packageItem?.description ?? "",
+            badge: packageItem?.badge ?? "",
+            bestFor: packageItem?.bestFor ?? "",
+            outcome: packageItem?.outcome ?? "",
+            includedItems: packageItem?.includedItems ?? []
+          }}
+        />
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="Цена от" required>
             <input
@@ -303,26 +333,15 @@ function AddonForm({
         <input name="id" type="hidden" value={addon?.id ?? ""} />
         <input name="serviceId" type="hidden" value={serviceId} />
         <input name="displayOrder" type="hidden" value={addon?.displayOrder ?? ""} />
-        <Field label="Название дополнительной услуги" required>
-          <LimitedInput
-            className={inputClass}
-            defaultValue={addon?.title}
-            maxLength={fieldLimits.serviceAddon.title.max}
-            minLength={fieldLimits.serviceAddon.title.min}
-            name="title"
-            placeholder="Дополнительная услуга"
-            required
-          />
-        </Field>
-        <Field label="Описание дополнительной услуги">
-          <LimitedTextarea
-            className={textareaClass}
-            defaultValue={addon?.description}
-            maxLength={fieldLimits.serviceAddon.description.max}
-            name="description"
-            placeholder="Что добавляется к заказу"
-          />
-        </Field>
+        <AdminTranslatedFields
+          english={addon?.englishTranslation}
+          entityType="service_addon"
+          fields={addonTextFields}
+          russian={{
+            title: addon?.title ?? "",
+            description: addon?.description ?? ""
+          }}
+        />
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Дополнительная услуга" required>
             <input

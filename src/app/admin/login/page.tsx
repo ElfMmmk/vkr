@@ -14,10 +14,10 @@ export default function AdminLoginPage() {
           ← На сайт
         </Link>
         <h1 className="mt-8 break-words text-3xl font-semibold leading-tight sm:text-4xl">
-          Вход в административную панель
+          Вход в служебную панель
         </h1>
         <p className="mt-4 text-sm leading-6 text-muted">
-          Войдите, чтобы перейти к управлению контентом сайта.
+          Войдите, чтобы работать с заказами и доступными разделами.
         </p>
         {!setupReady ? (
           <div className="mt-6 border border-accent/30 bg-accent/10 p-4 text-sm leading-6 text-accent">

@@ -1,8 +1,11 @@
+import type { Locale } from "@/lib/i18n";
+import { accountActionMessages } from "@/lib/localized-action-messages";
+
 export const registrationErrorMessages = {
   default: "Не удалось зарегистрироваться. Проверьте email или попробуйте позже.",
   emailRateLimit: "Слишком много писем регистрации. Попробуйте позже или используйте демо-аккаунт.",
   emailNotAuthorized:
-    "Email не разрешён встроенной отправкой Supabase. Настройте SMTP или используйте адрес участника проекта."
+    "Не удалось отправить письмо на этот адрес. Проверьте email или используйте другой адрес."
 } as const;
 
 function readErrorField(error: unknown, field: string): string {
@@ -33,7 +36,8 @@ function readErrorStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-export function getRegistrationErrorMessage(error: unknown): string {
+export function getRegistrationErrorMessage(error: unknown, locale: Locale = "ru"): string {
+  const messages = accountActionMessages(locale);
   const code = readErrorField(error, "code").toLowerCase();
   const message =
     error instanceof Error ? error.message.toLowerCase() : readErrorField(error, "message").toLowerCase();
@@ -45,7 +49,7 @@ export function getRegistrationErrorMessage(error: unknown): string {
     message.includes("email rate limit") ||
     message.includes("rate limit exceeded")
   ) {
-    return registrationErrorMessages.emailRateLimit;
+    return messages.registrationRateLimit;
   }
 
   if (
@@ -53,8 +57,8 @@ export function getRegistrationErrorMessage(error: unknown): string {
     message.includes("email address not authorized") ||
     message.includes("email_address_not_authorized")
   ) {
-    return registrationErrorMessages.emailNotAuthorized;
+    return messages.registrationEmailNotAuthorized;
   }
 
-  return registrationErrorMessages.default;
+  return messages.registrationDefault;
 }

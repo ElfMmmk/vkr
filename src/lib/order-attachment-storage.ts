@@ -6,6 +6,8 @@ import {
   sanitizeOrderAttachmentName,
   validateOrderAttachmentList
 } from "@/lib/order-attachments";
+import type { Locale } from "@/lib/i18n";
+import { attachmentActionMessages } from "@/lib/localized-action-messages";
 import type { Database, TablesInsert } from "@/lib/supabase/database.types";
 import type { OrderAttachment } from "@/lib/types";
 
@@ -72,9 +74,12 @@ export async function uploadOrderAttachmentFiles(
     requestId: string;
     clientUserId: string | null;
     files: File[];
+    locale?: Locale;
   }
 ): Promise<UploadOrderAttachmentsResult> {
-  const validationError = validateOrderAttachmentList(input.files);
+  const locale = input.locale ?? "ru";
+  const messages = attachmentActionMessages(locale);
+  const validationError = validateOrderAttachmentList(input.files, locale);
 
   if (validationError) {
     return {
@@ -104,7 +109,7 @@ export async function uploadOrderAttachmentFiles(
 
       return {
         ok: false,
-        message: "Не удалось загрузить материалы. Проверьте файлы и попробуйте ещё раз."
+        message: messages.uploadFailed
       };
     }
 
@@ -126,7 +131,7 @@ export async function uploadOrderAttachmentFiles(
 
       return {
         ok: false,
-        message: "Не удалось сохранить материалы заказа. Попробуйте ещё раз."
+        message: messages.metadataFailed
       };
     }
 
@@ -175,8 +180,10 @@ export async function deleteOrderAttachmentFile(
     actorUserId: string;
     canDeleteAny: boolean;
     requestId?: string;
+    locale?: Locale;
   }
 ): Promise<DeleteOrderAttachmentResult> {
+  const messages = attachmentActionMessages(input.locale ?? "ru");
   const { data: attachment, error: attachmentError } = await client
     .from("order_attachments")
     .select("id, request_id, client_user_id, storage_path")
@@ -186,21 +193,21 @@ export async function deleteOrderAttachmentFile(
   if (attachmentError || !attachment) {
     return {
       ok: false,
-      message: "Файл не найден."
+      message: messages.notFound
     };
   }
 
   if (!input.canDeleteAny && attachment.client_user_id !== input.actorUserId) {
     return {
       ok: false,
-      message: "Недостаточно прав для удаления файла."
+      message: messages.forbidden
     };
   }
 
   if (input.requestId && attachment.request_id !== input.requestId) {
     return {
       ok: false,
-      message: "Файл не относится к указанной заявке."
+      message: messages.wrongRequest
     };
   }
 
@@ -211,7 +218,7 @@ export async function deleteOrderAttachmentFile(
   if (storageResult.error) {
     return {
       ok: false,
-      message: "Не удалось удалить файл из хранилища."
+      message: messages.storageDeleteFailed
     };
   }
 
@@ -223,7 +230,7 @@ export async function deleteOrderAttachmentFile(
   if (deleteError) {
     return {
       ok: false,
-      message: "Файл удалён из хранилища, но метаданные удалить не удалось."
+      message: messages.metadataDeleteFailed
     };
   }
 

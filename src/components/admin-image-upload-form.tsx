@@ -6,9 +6,12 @@ import {
   AdminFormFieldset,
   adminPrimaryButtonClass
 } from "@/components/admin-form-lock";
+import {
+  AdminTranslatedFields,
+  type AdminTranslatedField
+} from "@/components/admin-translated-fields";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { Field, inputClass } from "@/components/form-controls";
-import { LimitedInput } from "@/components/limited-text-control";
 import { ToastMessage } from "@/components/route-flash-toast";
 import {
   uploadImageAction,
@@ -26,6 +29,21 @@ const initialState: UploadImageState = {
   ok: false,
   message: ""
 };
+
+const imageTextFields: AdminTranslatedField[] = [
+  {
+    name: "title",
+    label: "Название",
+    maxLength: fieldLimits.image.title.max,
+    placeholder: "Обложка проекта"
+  },
+  {
+    name: "caption",
+    label: "Описание",
+    maxLength: fieldLimits.image.caption.max,
+    placeholder: "Что изображено или где использовать файл"
+  }
+];
 
 function validateFileInput(input: HTMLInputElement | null): boolean {
   if (!input) {
@@ -94,25 +112,11 @@ export function AdminImageUploadForm({ canWrite }: { canWrite: boolean }) {
             type="file"
           />
         </Field>
-        <Field
-          label="Название"
-          hint="Короткое имя для поиска в медиатеке, например: Обложка Botanica"
-        >
-          <LimitedInput
-            className={inputClass}
-            maxLength={fieldLimits.image.title.max}
-            name="title"
-            placeholder="Обложка проекта"
-          />
-        </Field>
-        <Field label="Описание">
-          <LimitedInput
-            className={inputClass}
-            maxLength={fieldLimits.image.caption.max}
-            name="caption"
-            placeholder="Что изображено или где использовать файл"
-          />
-        </Field>
+        <AdminTranslatedFields
+          entityType="image"
+          fields={imageTextFields}
+          russian={{ title: "", caption: "" }}
+        />
         <input name="sortOrder" type="hidden" value="100" />
         {state.message ? (
           <ToastMessage

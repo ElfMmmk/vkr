@@ -10,8 +10,13 @@ import {
   listAdminTags
 } from "@/lib/data/admin";
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
   const admin = await requireAdmin();
+  const params = await searchParams;
   const [pages, projects, services, tags, requests] = await Promise.all([
     listAdminPages(),
     listAdminProjects(),
@@ -25,6 +30,7 @@ export default async function AdminDashboardPage() {
   const newRequests = requests.filter((request) => request.status === "new").length;
   const canBrowseContent = admin.canManageContent;
   const canBrowseRequests = admin.canManageRequests;
+  const isManager = admin.role === "manager";
 
   const cards = [
     { href: "/admin/projects", label: "Проекты", value: projects.length, meta: `${publishedProjects} опубликовано` },
@@ -42,8 +48,23 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.18em] text-muted">Панель управления</p>
-        <h1 className="mt-2 text-4xl font-semibold">Обзор контента</h1>
+        <h1 className="mt-2 text-4xl font-semibold">
+          {admin.role === "manager" ? "Работа с заказами" : "Обзор контента"}
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
+          {isManager
+            ? "Здесь собраны новые обращения, заказы и уведомления, доступные менеджеру."
+            : "Здесь собраны материалы сайта, пользователи, обращения и основные показатели."}
+        </p>
       </div>
+      {params.notice === "content-access-denied" ? (
+        <div
+          className="border border-accent/30 bg-accent/10 px-4 py-3 text-sm leading-6 text-accent"
+          role="status"
+        >
+          Недостаточно прав для этого раздела. Для вашей роли доступны заказы, уведомления и аналитика.
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-5">
         {visibleCards.map((card) => (
           <Link

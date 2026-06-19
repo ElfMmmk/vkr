@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 
 import { isPublicAnalyticsPath } from "@/lib/analytics-routes";
+import {
+  sanitizeAnalyticsHref,
+  sanitizeAnalyticsReferrer,
+  sanitizeAnalyticsSearch
+} from "@/lib/analytics-sanitizer";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import type { AnalyticsEventType } from "@/lib/types";
 
@@ -43,17 +48,7 @@ function normalizePath(value: unknown): string | null {
 function normalizeHref(value: unknown): string {
   const rawHref = cleanText(value, maxHrefLength);
 
-  if (!rawHref) {
-    return "";
-  }
-
-  try {
-    const url = new URL(rawHref, "http://localhost");
-
-    return `${url.pathname}${url.search}`.slice(0, maxHrefLength);
-  } catch {
-    return rawHref;
-  }
+  return sanitizeAnalyticsHref(rawHref).slice(0, maxHrefLength);
 }
 
 function normalizeMetadata(value: unknown): Record<string, string> {
@@ -99,8 +94,11 @@ export function parseAnalyticsEventPayload(payload: unknown): ParsedAnalyticsEve
   return {
     eventType: type,
     path,
-    search: cleanText(record.search, maxSearchLength),
-    referrer: cleanText(record.referrer, maxReferrerLength),
+    search: sanitizeAnalyticsSearch(cleanText(record.search, maxSearchLength)).slice(0, maxSearchLength),
+    referrer: sanitizeAnalyticsReferrer(cleanText(record.referrer, maxReferrerLength)).slice(
+      0,
+      maxReferrerLength
+    ),
     href: type === "cta_click" ? normalizeHref(record.href) : "",
     label: type === "cta_click" ? cleanText(record.label, maxLabelLength) : "",
     metadata: normalizeMetadata(record.metadata)

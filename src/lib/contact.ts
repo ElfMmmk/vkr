@@ -1,7 +1,23 @@
 import { AsYouType, parsePhoneNumberFromString } from "libphonenumber-js";
 
+import type { Locale } from "@/lib/i18n";
+
 export const contactMethods = ["Telegram", "Email", "Телефон", "Другой способ"] as const;
 export type ContactMethod = typeof contactMethods[number];
+
+export function getContactMethodLabel(method: string, locale: Locale = "ru"): string {
+  if (locale === "en") {
+    if (method === "Телефон") {
+      return "Phone";
+    }
+
+    if (method === "Другой способ") {
+      return "Other";
+    }
+  }
+
+  return method;
+}
 
 type ContactValidationResult =
   | { ok: true; value: string }

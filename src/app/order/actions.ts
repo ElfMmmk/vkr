@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { formString, formStringArray } from "@/lib/form";
+import { normalizeLocale } from "@/lib/i18n";
+import { orderActionMessages } from "@/lib/localized-action-messages";
 import {
   cleanupOrderAttachmentStorage,
   getOrderAttachmentFiles,
@@ -48,6 +50,35 @@ export type OrderFormValues = {
 const MIN_FORM_FILL_MS = 2500;
 const REQUEST_THROTTLE_WINDOW_MS = 15 * 60 * 1000;
 const REQUEST_THROTTLE_LIMIT = 5;
+
+function localizeOrderFieldErrors(
+  issues: Array<{ path: PropertyKey[] }>,
+  messages: ReturnType<typeof orderActionMessages>
+): Record<string, string[]> {
+  const errorByField: Record<string, string> = {
+    clientName: messages.clientNameRequired,
+    contactMethod: messages.contactRequired,
+    contactValue: messages.contactRequired,
+    serviceId: messages.invalidService,
+    packageId: messages.invalidPackage,
+    addonIds: messages.invalidAddons,
+    referenceProjectId: messages.invalidReference,
+    resultDescription: messages.resultDescriptionRequired,
+    stylePreferences: messages.stylePreferencesRequired
+  };
+  const fieldErrors: Record<string, string[]> = {};
+
+  for (const issue of issues) {
+    const field = typeof issue.path[0] === "string" ? issue.path[0] : "";
+    const message = errorByField[field] ?? messages.requiredFields;
+
+    if (field && !fieldErrors[field]) {
+      fieldErrors[field] = [message];
+    }
+  }
+
+  return fieldErrors;
+}
 
 async function getRequestSourceHash(): Promise<string> {
   const headerStore = await headers();
@@ -105,6 +136,8 @@ export async function submitOrderAction(
   _previousState: OrderFormState,
   formData: FormData
 ): Promise<OrderFormState> {
+  const locale = normalizeLocale(formString(formData, "locale"));
+  const messages = orderActionMessages(locale);
   const honeypot = formString(formData, "website");
   const startedAt = Number(formString(formData, "formStartedAt"));
   const values = getSubmittedValues(formData);
@@ -115,7 +148,7 @@ export async function submitOrderAction(
 
   if (!Number.isFinite(startedAt) || Date.now() - startedAt < MIN_FORM_FILL_MS) {
     return {
-      message: "Форма отправлена слишком быстро. Проверьте данные и попробуйте ещё раз.",
+      message: messages.fastSubmit,
       values
     };
   }
@@ -138,8 +171,8 @@ export async function submitOrderAction(
 
   if (!parsed.success) {
     return {
-      message: "Заполните обязательные поля",
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      message: messages.requiredFields,
+      fieldErrors: localizeOrderFieldErrors(parsed.error.issues, messages),
       values
     };
   }
@@ -150,7 +183,7 @@ export async function submitOrderAction(
 
   if (!adminClient) {
     return {
-      message: "Сохранение заказа временно недоступно. Попробуйте позже.",
+      message: messages.unavailable,
       values
     };
   }
@@ -159,7 +192,7 @@ export async function submitOrderAction(
 
   if (await isRequestThrottled(sourceHash)) {
     return {
-      message: "Слишком много заявок за короткое время. Попробуйте позже.",
+      message: messages.throttled,
       values
     };
   }
@@ -177,9 +210,9 @@ export async function submitOrderAction(
 
   if (serviceError || !service || service.is_active !== true || typeof service.title !== "string") {
     return {
-      message: "Заполните обязательные поля",
+      message: messages.requiredFields,
       fieldErrors: {
-        serviceId: ["Выберите услугу из списка"]
+        serviceId: [messages.invalidService]
       },
       values
     };
@@ -194,9 +227,9 @@ export async function submitOrderAction(
 
   if (!selectedPackage) {
     return {
-      message: "Заполните обязательные поля",
+      message: messages.requiredFields,
       fieldErrors: {
-        packageId: ["Выберите пакет работ"]
+        packageId: [messages.invalidPackage]
       },
       values
     };
@@ -208,9 +241,9 @@ export async function submitOrderAction(
 
   if (selectedAddons.some((addon) => !addon)) {
     return {
-      message: "Проверьте выбранные дополнительные услуги",
+      message: messages.invalidAddons,
       fieldErrors: {
-        addonIds: ["Выберите дополнительные услуги для выбранной услуги"]
+        addonIds: [messages.invalidAddons]
       },
       values
     };
@@ -234,9 +267,9 @@ export async function submitOrderAction(
 
     if (!referenceProject || !belongsToService) {
       return {
-        message: "Выберите пример работы из списка услуги",
+        message: messages.invalidReference,
         fieldErrors: {
-          referenceProjectId: ["Выберите пример работы из списка услуги"]
+          referenceProjectId: [messages.invalidReference]
         },
         values
       };
@@ -310,17 +343,18 @@ export async function submitOrderAction(
 
   if (error) {
     return {
-      message: "Не удалось сохранить заказ. Попробуйте позже.",
+      message: messages.saveFailed,
       values
     };
   }
 
   const requestId = requestInsert.data.id;
   const attachmentUpload: Awaited<ReturnType<typeof uploadOrderAttachmentFiles>> = attachmentFiles.length
-    ? await uploadOrderAttachmentFiles(adminClient, {
-        clientUserId,
-        files: attachmentFiles,
-        requestId
+      ? await uploadOrderAttachmentFiles(adminClient, {
+          clientUserId,
+          files: attachmentFiles,
+          locale,
+          requestId
       })
     : { ok: true, attachments: [] };
 
@@ -348,7 +382,7 @@ export async function submitOrderAction(
       await adminClient.from("requests").delete().eq("id", requestId);
 
       return {
-        message: "Не удалось подготовить доступ к заявке. Попробуйте отправить форму ещё раз.",
+        message: messages.claimFailed,
         values
       };
     }

@@ -9,8 +9,15 @@ import {
   requireRoleAdmin,
   requireWritableAdmin
 } from "@/lib/auth";
+import {
+  isEntityTranslationEmpty,
+  parseEntityTranslationPayload,
+  type TranslationEntityType
+} from "@/lib/entity-translations";
+import { deleteEntityTranslations } from "@/lib/entity-translation-cleanup";
 import { fieldLimits } from "@/lib/field-limits";
 import { formBoolean, formString, formStringArray, parseJsonObject } from "@/lib/form";
+import { cleanupUploadedImage } from "@/lib/image-upload-cleanup";
 import { deleteOrderAttachmentFile } from "@/lib/order-attachment-storage";
 import {
   buildPackageRecommendationTags,
@@ -112,6 +119,50 @@ function redirectWithNotice(path: string, notice: string): never {
   redirect(`${url.pathname}${url.search}${url.hash}`);
 }
 
+async function saveEnglishTranslation(
+  client: ReturnType<typeof getSupabaseAdminOrThrow>,
+  entityType: TranslationEntityType,
+  entityId: string,
+  formData: FormData
+): Promise<void> {
+  const fields = parseEntityTranslationPayload(
+    entityType,
+    formString(formData, "englishTranslation")
+  );
+
+  if (isEntityTranslationEmpty(fields)) {
+    const { error } = await client
+      .from("entity_translations")
+      .delete()
+      .eq("entity_type", entityType)
+      .eq("entity_id", entityId)
+      .eq("locale", "en");
+
+    if (error) {
+      mutationError(error);
+    }
+
+    return;
+  }
+
+  const { error } = await client.from("entity_translations").upsert(
+    {
+      entity_type: entityType,
+      entity_id: entityId,
+      locale: "en",
+      fields,
+      is_public: true
+    },
+    {
+      onConflict: "entity_type,entity_id,locale"
+    }
+  );
+
+  if (error) {
+    mutationError(error);
+  }
+}
+
 export async function signOutAction(): Promise<void> {
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const client = await createSupabaseServerClient();
@@ -175,13 +226,25 @@ export async function saveServiceAction(formData: FormData): Promise<void> {
     is_active: parsed.isActive
   };
 
-  const result = id
-    ? await client.from("services").update(payload).eq("id", id)
-    : await client.from("services").insert(payload);
+  let serviceId = id;
 
-  if (result.error) {
-    mutationError(result.error);
+  if (id) {
+    const { error } = await client.from("services").update(payload).eq("id", id);
+
+    if (error) {
+      mutationError(error);
+    }
+  } else {
+    const { data, error } = await client.from("services").insert(payload).select("id").single();
+
+    if (error || !data) {
+      mutationError(error ?? new Error("Service was not saved"));
+    }
+
+    serviceId = data.id;
   }
+
+  await saveEnglishTranslation(client, "service", serviceId as string, formData);
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
@@ -191,17 +254,39 @@ export async function saveServiceAction(formData: FormData): Promise<void> {
 
 export async function deleteServiceAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
     return;
   }
 
-  const { error } = await getSupabaseAdminOrThrow().from("services").delete().eq("id", id);
+  const [packagesResult, addonsResult] = await Promise.all([
+    client.from("service_packages").select("id").eq("service_id", id),
+    client.from("service_addons").select("id").eq("service_id", id)
+  ]);
+
+  if (packagesResult.error || addonsResult.error) {
+    mutationError(packagesResult.error ?? addonsResult.error);
+  }
+
+  const { error } = await client.from("services").delete().eq("id", id);
 
   if (error) {
     mutationError(error);
   }
+
+  await deleteEntityTranslations(client, [
+    { entityType: "service", entityId: id },
+    ...(packagesResult.data ?? []).map((item) => ({
+      entityType: "service_package" as const,
+      entityId: item.id
+    })),
+    ...(addonsResult.data ?? []).map((item) => ({
+      entityType: "service_addon" as const,
+      entityId: item.id
+    }))
+  ]);
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
@@ -268,13 +353,29 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
     is_recommended: parsed.isRecommended,
     recommendation_tags: parsed.recommendationTags
   };
-  const result = id
-    ? await client.from("service_packages").update(payload).eq("id", id)
-    : await client.from("service_packages").insert(payload);
+  let packageId = id;
 
-  if (result.error) {
-    mutationError(result.error);
+  if (id) {
+    const { error } = await client.from("service_packages").update(payload).eq("id", id);
+
+    if (error) {
+      mutationError(error);
+    }
+  } else {
+    const { data, error } = await client
+      .from("service_packages")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      mutationError(error ?? new Error("Service package was not saved"));
+    }
+
+    packageId = data.id;
   }
+
+  await saveEnglishTranslation(client, "service_package", packageId as string, formData);
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
@@ -284,17 +385,22 @@ export async function saveServicePackageAction(formData: FormData): Promise<void
 
 export async function deleteServicePackageAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
     return;
   }
 
-  const { error } = await getSupabaseAdminOrThrow().from("service_packages").delete().eq("id", id);
+  const { error } = await client.from("service_packages").delete().eq("id", id);
 
   if (error) {
     mutationError(error);
   }
+
+  await deleteEntityTranslations(client, [
+    { entityType: "service_package", entityId: id }
+  ]);
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
@@ -338,13 +444,29 @@ export async function saveServiceAddonAction(formData: FormData): Promise<void> 
     display_order: parsed.displayOrder,
     is_active: parsed.isActive
   };
-  const result = id
-    ? await client.from("service_addons").update(payload).eq("id", id)
-    : await client.from("service_addons").insert(payload);
+  let addonId = id;
 
-  if (result.error) {
-    mutationError(result.error);
+  if (id) {
+    const { error } = await client.from("service_addons").update(payload).eq("id", id);
+
+    if (error) {
+      mutationError(error);
+    }
+  } else {
+    const { data, error } = await client
+      .from("service_addons")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      mutationError(error ?? new Error("Service add-on was not saved"));
+    }
+
+    addonId = data.id;
   }
+
+  await saveEnglishTranslation(client, "service_addon", addonId as string, formData);
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
@@ -354,17 +476,22 @@ export async function saveServiceAddonAction(formData: FormData): Promise<void> 
 
 export async function deleteServiceAddonAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
     return;
   }
 
-  const { error } = await getSupabaseAdminOrThrow().from("service_addons").delete().eq("id", id);
+  const { error } = await client.from("service_addons").delete().eq("id", id);
 
   if (error) {
     mutationError(error);
   }
+
+  await deleteEntityTranslations(client, [
+    { entityType: "service_addon", entityId: id }
+  ]);
 
   revalidatePath("/admin/services");
   revalidatePath("/services");
@@ -527,13 +654,25 @@ export async function saveTagAction(formData: FormData): Promise<void> {
     description: parsed.description
   };
 
-  const result = id
-    ? await client.from("tags").update(payload).eq("id", id)
-    : await client.from("tags").insert(payload);
+  let tagId = id;
 
-  if (result.error) {
-    mutationError(result.error);
+  if (id) {
+    const { error } = await client.from("tags").update(payload).eq("id", id);
+
+    if (error) {
+      mutationError(error);
+    }
+  } else {
+    const { data, error } = await client.from("tags").insert(payload).select("id").single();
+
+    if (error || !data) {
+      mutationError(error ?? new Error("Tag was not saved"));
+    }
+
+    tagId = data.id;
   }
+
+  await saveEnglishTranslation(client, "tag", tagId as string, formData);
 
   revalidatePath("/admin/tags");
   revalidatePath("/portfolio");
@@ -542,17 +681,20 @@ export async function saveTagAction(formData: FormData): Promise<void> {
 
 export async function deleteTagAction(formData: FormData): Promise<void> {
   await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
   const id = cleanId(formString(formData, "id"));
 
   if (!id) {
     return;
   }
 
-  const { error } = await getSupabaseAdminOrThrow().from("tags").delete().eq("id", id);
+  const { error } = await client.from("tags").delete().eq("id", id);
 
   if (error) {
     mutationError(error);
   }
+
+  await deleteEntityTranslations(client, [{ entityType: "tag", entityId: id }]);
 
   revalidatePath("/admin/tags");
   revalidatePath("/portfolio");
@@ -716,6 +858,8 @@ export async function saveProjectAction(formData: FormData): Promise<void> {
     }
   }
 
+  await saveEnglishTranslation(client, "project", projectId, formData);
+
   revalidatePath("/admin/projects");
   revalidatePath("/admin/images");
   revalidatePath("/portfolio");
@@ -743,6 +887,8 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
     mutationError(error);
   }
 
+  await deleteEntityTranslations(client, [{ entityType: "project", entityId: id }]);
+
   revalidatePath("/admin/projects");
   revalidatePath("/admin/images");
   revalidatePath("/portfolio");
@@ -768,21 +914,27 @@ async function savePageMutation(formData: FormData): Promise<void> {
     throw new Error("Blocks must be a valid JSON object.");
   }
 
-  const { error } = await client.from("pages").upsert(
-    {
-      page_key: pageKey,
-      title: parsed.title,
-      body: parsed.body,
-      blocks
-    },
-    {
-      onConflict: "page_key"
-    }
-  );
+  const { data, error } = await client
+    .from("pages")
+    .upsert(
+      {
+        page_key: pageKey,
+        title: parsed.title,
+        body: parsed.body,
+        blocks
+      },
+      {
+        onConflict: "page_key"
+      }
+    )
+    .select("id")
+    .single();
 
-  if (error) {
-    mutationError(error);
+  if (error || !data) {
+    mutationError(error ?? new Error("Page was not saved"));
   }
+
+  await saveEnglishTranslation(client, "page", data.id, formData);
 
   revalidatePath("/admin/pages");
   revalidatePath("/");
@@ -1100,17 +1252,21 @@ export async function uploadImageAction(
     const publicUrl = client.storage.from("portfolio-images").getPublicUrl(storagePath)
       .data.publicUrl;
 
-    const { error } = await client.from("images").insert({
-      storage_path: storagePath,
-      public_url: publicUrl,
-      title,
-      parent_type: "free",
-      parent_id: null,
-      caption: parsed.data.caption,
-      sort_order: parsed.data.sortOrder
-    });
+    const { data: image, error } = await client
+      .from("images")
+      .insert({
+        storage_path: storagePath,
+        public_url: publicUrl,
+        title,
+        parent_type: "free",
+        parent_id: null,
+        caption: parsed.data.caption,
+        sort_order: parsed.data.sortOrder
+      })
+      .select("id")
+      .single();
 
-    if (error) {
+    if (error || !image) {
       logAdminActionError("image metadata insert failed", error, {
         storagePath,
         contentType: file.type,
@@ -1126,6 +1282,33 @@ export async function uploadImageAction(
       return {
         ok: false,
         message: "Не удалось сохранить изображение в медиатеке. Попробуйте ещё раз."
+      };
+    }
+
+    try {
+      await saveEnglishTranslation(client, "image", image.id, formData);
+    } catch (translationError) {
+      logAdminActionError("image translation save failed", translationError, {
+        imageId: image.id,
+        storagePath
+      });
+
+      const cleanupErrors = await cleanupUploadedImage(client, {
+        imageId: image.id,
+        storagePath
+      });
+
+      for (const cleanupError of cleanupErrors) {
+        logAdminActionError(
+          `image upload rollback ${cleanupError.stage} cleanup failed`,
+          cleanupError.error,
+          { imageId: image.id, storagePath }
+        );
+      }
+
+      return {
+        ok: false,
+        message: "Не удалось сохранить перевод изображения. Попробуйте загрузить файл ещё раз."
       };
     }
 
@@ -1172,10 +1355,21 @@ export async function deleteImageAction(formData: FormData): Promise<void> {
     mutationError(error);
   }
 
+  await deleteEntityTranslations(client, [{ entityType: "image", entityId: id }]);
+
   const storagePath = typeof image?.storage_path === "string" ? image.storage_path : null;
 
   if (storagePath) {
-    await client.storage.from("portfolio-images").remove([storagePath]);
+    const { error: storageError } = await client.storage
+      .from("portfolio-images")
+      .remove([storagePath]);
+
+    if (storageError) {
+      logAdminActionError("deleted image storage cleanup failed", storageError, {
+        imageId: id,
+        storagePath
+      });
+    }
   }
 
   revalidatePath("/admin/images");
@@ -1201,6 +1395,40 @@ export async function markNotificationReadAction(formData: FormData): Promise<vo
 
   revalidatePath("/admin/notifications");
   redirectWithNotice(redirectTo, "notification-read");
+}
+
+export async function saveImageTextAction(formData: FormData): Promise<void> {
+  await requireWritableAdmin();
+  const client = getSupabaseAdminOrThrow();
+  const id = cleanId(formString(formData, "id"));
+
+  if (!id) {
+    return;
+  }
+
+  const parsed = imageUploadSchema.parse({
+    title: formString(formData, "title"),
+    caption: formString(formData, "caption"),
+    sortOrder: formString(formData, "sortOrder") || "100"
+  });
+  const { error } = await client
+    .from("images")
+    .update({
+      title: parsed.title,
+      caption: parsed.caption,
+      sort_order: parsed.sortOrder
+    })
+    .eq("id", id);
+
+  if (error) {
+    mutationError(error);
+  }
+
+  await saveEnglishTranslation(client, "image", id, formData);
+  revalidatePath("/admin/images");
+  revalidatePath("/admin/projects");
+  revalidatePath("/portfolio");
+  redirectWithNotice("/admin/images", "image-saved");
 }
 
 export async function updateUserRoleAction(formData: FormData): Promise<void> {

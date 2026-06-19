@@ -4,9 +4,11 @@ import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getPublicPage } from "@/lib/data/public";
+import { getLocale } from "@/lib/i18n-server";
 
 export default async function ContactsPage() {
-  const page = await getPublicPage("contacts");
+  const locale = await getLocale();
+  const page = await getPublicPage("contacts", locale);
 
   return (
     <>
@@ -28,16 +30,20 @@ export default async function ContactsPage() {
               </p>
             </div>
             <div className="border border-line bg-ink p-6 text-white">
-              <p className="text-sm uppercase tracking-[0.18em] text-white/60">Заявка</p>
-              <p className="mt-4 text-2xl font-semibold">Короткая форма для описания задачи</p>
+              <p className="text-sm uppercase tracking-[0.18em] text-white/60">
+                {locale === "en" ? "Request" : "Заявка"}
+              </p>
+              <p className="mt-4 text-2xl font-semibold">
+                {locale === "en" ? "A short form to describe your project" : "Короткая форма для описания задачи"}
+              </p>
               <div className="mt-6">
                 <ButtonLink
                   analyticsCta
-                  analyticsLabel="Перейти к форме"
+                  analyticsLabel={locale === "en" ? "Open request form" : "Перейти к форме"}
                   href="/order"
                   variant="secondary"
                 >
-                  Перейти к форме
+                  {locale === "en" ? "Open request form" : "Перейти к форме"}
                 </ButtonLink>
               </div>
             </div>

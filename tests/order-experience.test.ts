@@ -22,9 +22,17 @@ import {
   deleteOrderAttachmentFile,
   uploadOrderAttachmentFiles
 } from "@/lib/order-attachment-storage";
-import { recommendOrderSetup, type OrderQuizAnswers } from "@/lib/order-quiz";
+import {
+  quizAnswersToBrief,
+  recommendOrderSetup,
+  type OrderQuizAnswers
+} from "@/lib/order-quiz";
 import { findFirstInvalidStepBeforeTarget } from "@/lib/order-step-navigation";
 import { buildRequestTimeline } from "@/lib/request-timeline";
+import {
+  formatDurationRange,
+  formatPriceRange
+} from "@/lib/order-calculator";
 import {
   contractFeedbackRoleLabels,
   contractStatusLabels
@@ -198,6 +206,13 @@ describe("order experience helpers", () => {
     ]);
   });
 
+  it("formats public price and timing ranges for the selected locale", () => {
+    expect(formatPriceRange(25000, 45000, "en")).toBe("RUB 25,000 – RUB 45,000");
+    expect(formatDurationRange(10, 18, "en")).toBe("10 – 18 business days");
+    expect(formatPriceRange(null, null, "en")).toBe("Price to be confirmed");
+    expect(formatDurationRange(null, null, "en")).toBe("Timing to be confirmed");
+  });
+
   it("blocks forward step jumps until every previous order step is valid", () => {
     const stepIds = ["service", "extras", "brief", "contact", "review"] as const;
     const invalidStep = findFirstInvalidStepBeforeTarget(4, stepIds, (stepId) =>
@@ -307,6 +322,72 @@ describe("order experience helpers", () => {
     expect(first).toBe("Нужен логотип, брендбук");
     expect(second).toBe("Нужен логотип, брендбук");
     expect(appendBriefChip("", "минимализм")).toBe("минимализм");
+    expect(appendBriefChip("Нужен логотип.", "брендбук")).toBe("Нужен логотип. брендбук");
+    expect(appendBriefChip("Нужен логотип, ", "брендбук")).toBe("Нужен логотип, брендбук");
+    expect(appendBriefChip("Нужен логотип; ", "брендбук")).toBe("Нужен логотип, брендбук");
+  });
+
+  it("does not invent a contract resend when acceptance updates the contract", () => {
+    const request: OrderRequest = {
+      id: "request-accepted",
+      attachments: [],
+      clientName: "QA Client",
+      contactMethod: "Email",
+      contactValue: "qa@example.test",
+      serviceId: "service-1",
+      serviceTitle: "Identity",
+      packageId: "package-1",
+      packageTitle: "System",
+      packageDescription: "",
+      packagePriceFrom: 100,
+      packagePriceTo: 200,
+      packageDurationFromDays: 3,
+      packageDurationToDays: 5,
+      selectedAddons: [],
+      referenceProjectId: null,
+      referenceProjectTitle: "",
+      referenceProjectSlug: "",
+      resultDescription: "Detailed brief",
+      stylePreferences: "Minimal",
+      materials: "",
+      desiredDeadline: "",
+      estimatedPriceFrom: 100,
+      estimatedPriceTo: 200,
+      estimatedDurationFromDays: 3,
+      estimatedDurationToDays: 5,
+      comment: "",
+      status: "approved",
+      createdAt: "2026-06-06T10:00:00.000Z",
+      contract: {
+        id: "contract-accepted",
+        requestId: "request-accepted",
+        finalPrice: 180,
+        finalDurationDays: 4,
+        workScope: "Scope",
+        materials: "",
+        managerComment: "",
+        status: "accepted",
+        acceptedAt: "2026-06-06T12:00:00.000Z",
+        createdAt: "2026-06-06T11:00:00.000Z",
+        updatedAt: "2026-06-06T12:00:00.000Z",
+        feedback: [
+          {
+            id: "feedback-accepted",
+            contractId: "contract-accepted",
+            requestId: "request-accepted",
+            authorRole: "client",
+            message: "Please adjust the scope.",
+            createdAt: "2026-06-06T11:40:00.000Z"
+          }
+        ]
+      },
+      statusHistory: []
+    };
+
+    const titles = buildRequestTimeline(request).map((event) => event.title);
+
+    expect(titles).toContain("Условия приняты");
+    expect(titles).not.toContain("Условия обновлены и отправлены");
   });
 
   it("recommends an existing service and first active package from quiz answers", () => {
@@ -322,6 +403,9 @@ describe("order experience helpers", () => {
       serviceId: "svc-presentation",
       packageId: "pkg-presentation-start"
     });
+    expect(quizAnswersToBrief(answers, "en")).toBe(
+      "Task: a presentation for sales and presenting an offer; source materials are ready."
+    );
   });
 
   it("validates private order attachment file type, size and count", () => {

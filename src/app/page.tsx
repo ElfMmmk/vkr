@@ -50,7 +50,7 @@ export default async function HomePage() {
               </ButtonLink>
             </div>
           </div>
-          <FeaturedProjectRotator projects={featured} />
+          <FeaturedProjectRotator locale={locale} projects={featured} />
           <div className="border-t border-line pt-6 md:col-span-2">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {services.slice(0, 5).map((service) => (
@@ -98,7 +98,7 @@ export default async function HomePage() {
             </div>
             <div className="grid gap-8 md:grid-cols-3">
               {recentProjects.map((project, index) => (
-                <ProjectCard key={project.id} priority={index === 0} project={project} />
+                <ProjectCard key={project.id} locale={locale} priority={index === 0} project={project} />
               ))}
             </div>
           </div>

@@ -1,3 +1,6 @@
+import type { Locale } from "@/lib/i18n";
+import { attachmentActionMessages } from "@/lib/localized-action-messages";
+
 export const ORDER_ATTACHMENTS_BUCKET = "order-attachments";
 export const MAX_ORDER_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ORDER_ATTACHMENT_COUNT = 5;
@@ -24,27 +27,36 @@ export function getOrderAttachmentExtension(file: OrderAttachmentFileLike): stri
   return file.name.split(".").pop()?.toLowerCase() ?? "";
 }
 
-export function validateOrderAttachmentFile(file: OrderAttachmentFileLike): string | null {
+export function validateOrderAttachmentFile(
+  file: OrderAttachmentFileLike,
+  locale: Locale = "ru"
+): string | null {
   const extension = getOrderAttachmentExtension(file);
+  const messages = attachmentActionMessages(locale);
 
   if (file.size > MAX_ORDER_ATTACHMENT_BYTES) {
-    return "Файл должен быть не больше 10 МБ.";
+    return messages.tooLarge;
   }
 
   if (!allowedAttachmentTypes.has(file.type) || !allowedAttachmentExtensions.has(extension)) {
-    return "Поддерживаются только PDF, DOC, DOCX, TXT, JPEG, PNG и WebP.";
+    return messages.unsupportedType;
   }
 
   return null;
 }
 
-export function validateOrderAttachmentList(files: OrderAttachmentFileLike[]): string | null {
+export function validateOrderAttachmentList(
+  files: OrderAttachmentFileLike[],
+  locale: Locale = "ru"
+): string | null {
+  const messages = attachmentActionMessages(locale);
+
   if (files.length > MAX_ORDER_ATTACHMENT_COUNT) {
-    return "Можно приложить не больше 5 файлов.";
+    return messages.tooMany;
   }
 
   for (const file of files) {
-    const error = validateOrderAttachmentFile(file);
+    const error = validateOrderAttachmentFile(file, locale);
 
     if (error) {
       return error;

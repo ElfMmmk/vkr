@@ -7,12 +7,13 @@ import { BriefStep } from "@/components/order/brief-step";
 import { ContactStep } from "@/components/order/contact-step";
 import { ExtrasStep } from "@/components/order/extras-step";
 import { StepPanel } from "@/components/order/form-parts";
-import { orderSteps as steps, submitUnlockDelayMs } from "@/components/order/order-form-config";
+import { getOrderSteps, submitUnlockDelayMs } from "@/components/order/order-form-config";
 import { MobileOrderSummary, OrderSummaryAside } from "@/components/order/order-summary";
 import { ReviewStep } from "@/components/order/review-step";
 import { ServiceStep } from "@/components/order/service-step";
 import { StepNavigation } from "@/components/order/step-navigation";
 import { fieldLimits } from "@/lib/field-limits";
+import type { Locale } from "@/lib/i18n";
 import { normalizeAndValidateContact } from "@/lib/contact";
 import {
   LEGACY_ORDER_DRAFT_STORAGE_KEY,
@@ -49,12 +50,15 @@ function getDefaultPackage(service: Service | undefined) {
 export function OrderForm({
   projects,
   services,
-  selectedServiceSlug
+  selectedServiceSlug,
+  locale
 }: {
+  locale: Locale;
   projects: Project[];
   services: Service[];
   selectedServiceSlug?: string;
 }) {
+  const steps = getOrderSteps(locale);
   const initialState: OrderFormState = {};
   const initialService = services.find((service) => service.slug === selectedServiceSlug) ?? services[0];
   const initialPackage = getDefaultPackage(initialService);
@@ -249,31 +253,31 @@ export function OrderForm({
 
   function getStepError(stepId: OrderStepId): string | null {
     if (stepId === "service" && !selectedServiceId) {
-      return "Выберите услугу или пройдите подбор.";
+      return locale === "en" ? "Choose a service or use the recommendation." : "Выберите услугу или пройдите подбор.";
     }
 
     if (stepId === "service" && !selectedPackageId) {
-      return "Выберите пакет работ.";
+      return locale === "en" ? "Choose a work package." : "Выберите пакет работ.";
     }
 
     if (stepId === "brief") {
       if (resultDescription.trim().length < fieldLimits.order.resultDescription.min) {
-        return "Опишите ожидаемый результат чуть подробнее.";
+        return locale === "en" ? "Describe the expected result in more detail." : "Опишите ожидаемый результат чуть подробнее.";
       }
 
       if (stylePreferences.trim().length < fieldLimits.order.stylePreferences.min) {
-        return "Добавьте стиль или ориентир.";
+        return locale === "en" ? "Add a visual style or reference." : "Добавьте стиль или ориентир.";
       }
     }
 
     if (stepId === "contact") {
       if (!clientName.trim() || !contactValue.trim()) {
-        return "Укажите имя и контакт для связи.";
+        return locale === "en" ? "Provide your name and contact details." : "Укажите имя и контакт для связи.";
       }
 
       const contactResult = normalizeAndValidateContact(contactMethod, contactValue);
       if (!contactResult.ok) {
-        return contactResult.error;
+        return locale === "en" ? "Check the contact details." : contactResult.error;
       }
 
       setContactValue(contactResult.value);
@@ -324,20 +328,20 @@ export function OrderForm({
 
   function applyQuizRecommendation() {
     if (!canUseQuizAnswers(quizAnswers)) {
-      setLocalStepError("Ответьте на вопросы подбора.");
+      setLocalStepError(locale === "en" ? "Answer every recommendation question." : "Ответьте на вопросы подбора.");
       return;
     }
 
     const recommendation = recommendOrderSetup(quizAnswers, services);
 
     if (!recommendation) {
-      setLocalStepError("Не удалось подобрать услугу. Выберите её вручную.");
+      setLocalStepError(locale === "en" ? "No recommendation was found. Choose a service manually." : "Не удалось подобрать услугу. Выберите её вручную.");
       return;
     }
 
     applyService(recommendation.serviceId);
     setSelectedPackageId(recommendation.packageId);
-    setResultDescription((current) => appendBriefChip(current, quizAnswersToBrief(quizAnswers)));
+    setResultDescription((current) => appendBriefChip(current, quizAnswersToBrief(quizAnswers, locale)));
     setIsQuizOpen(false);
     setLocalStepError("");
   }
@@ -366,10 +370,10 @@ export function OrderForm({
       "vkr-last-order-summary",
       JSON.stringify({
         addons: selectedAddons.map((addon) => addon.title),
-        duration: estimate ? formatDurationRange(estimate.durationFromDays, estimate.durationToDays) : "",
+        duration: estimate ? formatDurationRange(estimate.durationFromDays, estimate.durationToDays, locale) : "",
         files: attachmentFiles.map((file) => file.name),
         packageTitle: selectedPackage?.title ?? "",
-        price: estimate ? formatPriceRange(estimate.priceFrom, estimate.priceTo) : "",
+        price: estimate ? formatPriceRange(estimate.priceFrom, estimate.priceTo, locale) : "",
         serviceTitle: selectedService?.title ?? ""
       })
     );
@@ -378,7 +382,7 @@ export function OrderForm({
   if (!services.length) {
     return (
       <div className="border border-line bg-paper p-5 text-sm leading-6 text-muted">
-        Сейчас нет активных услуг для оформления заказа.
+        {locale === "en" ? "No services are currently available for online ordering." : "Сейчас нет активных услуг для оформления заказа."}
       </div>
     );
   }
@@ -395,6 +399,7 @@ export function OrderForm({
       onSubmit={rememberSubmitSummary}
     >
       <input name="formStartedAt" ref={formStartedAtRef} type="hidden" />
+      <input name="locale" type="hidden" value={locale} />
       <input name="serviceTitle" type="hidden" value={selectedService?.title ?? ""} />
       <label aria-hidden="true" className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
         Website
@@ -405,6 +410,7 @@ export function OrderForm({
         <MobileOrderSummary
           addonTitles={selectedAddons.map((addon) => addon.title)}
           estimate={estimate}
+          locale={locale}
           packageTitle={selectedPackage?.title ?? ""}
           serviceTitle={selectedService?.title ?? ""}
         />
@@ -415,13 +421,14 @@ export function OrderForm({
           <StepNavigation
             activeStepId={activeStepId}
             activeStepIndex={activeStepIndex}
+            locale={locale}
             onSelectStep={selectStep}
             steps={steps}
           />
 
           <div className="border border-line bg-white p-5 md:p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-accent">
-              Шаг {activeStepIndex + 1} из {steps.length}
+              {locale === "en" ? "Step" : "Шаг"} {activeStepIndex + 1} {locale === "en" ? "of" : "из"} {steps.length}
             </p>
             <h2 className="mt-2 text-2xl font-semibold" id={`order-step-${activeStepId}`}>
               {steps[activeStepIndex].title}
@@ -438,6 +445,7 @@ export function OrderForm({
             <ServiceStep
               fieldErrors={state.fieldErrors}
               isQuizOpen={isQuizOpen}
+              locale={locale}
               onApplyQuizRecommendation={applyQuizRecommendation}
               onSelectQuizAnswer={(key, value) => {
                 setQuizAnswers((current) => ({
@@ -459,6 +467,7 @@ export function OrderForm({
           <StepPanel active={activeStepId === "extras"} id="extras">
             <ExtrasStep
               fieldErrors={state.fieldErrors}
+              locale={locale}
               onSelectReferenceProject={setReferenceProjectId}
               onToggleAddon={toggleAddon}
               referenceProjectId={referenceProjectId}
@@ -472,6 +481,7 @@ export function OrderForm({
             <BriefStep
               desiredDeadline={desiredDeadline}
               fieldErrors={state.fieldErrors}
+              locale={locale}
               materials={materials}
               resultDescription={resultDescription}
               setDesiredDeadline={setDesiredDeadline}
@@ -490,6 +500,7 @@ export function OrderForm({
               contactMethod={contactMethod}
               contactValue={contactValue}
               fieldErrors={state.fieldErrors}
+              locale={locale}
               setAttachmentError={setAttachmentError}
               setAttachmentFiles={setAttachmentFiles}
               setClientName={setClientName}
@@ -508,7 +519,12 @@ export function OrderForm({
               contactValue={contactValue}
               estimate={estimate}
               isSubmitDelayActive={isSubmitDelayActive}
-              message={state.message}
+              locale={locale}
+              message={
+                locale === "en" && state.message
+                  ? "The request could not be sent. Check the fields and try again."
+                  : state.message
+              }
               packageTitle={selectedPackage?.title ?? ""}
               serviceTitle={selectedService?.title ?? ""}
               setComment={setComment}
@@ -522,7 +538,7 @@ export function OrderForm({
               onClick={goBack}
               type="button"
             >
-              Назад
+              {locale === "en" ? "Back" : "Назад"}
             </button>
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
@@ -530,7 +546,7 @@ export function OrderForm({
                 onClick={clearDraft}
                 type="button"
               >
-                Очистить черновик
+                {locale === "en" ? "Clear draft" : "Очистить черновик"}
               </button>
               {activeStepId !== "review" ? (
                 <button
@@ -538,7 +554,7 @@ export function OrderForm({
                   onClick={goNext}
                   type="button"
                 >
-                  Далее
+                  {locale === "en" ? "Next" : "Далее"}
                 </button>
               ) : null}
             </div>
@@ -549,6 +565,7 @@ export function OrderForm({
           <OrderSummaryAside
             addonTitles={selectedAddons.map((addon) => addon.title)}
             estimate={estimate}
+            locale={locale}
             packageTitle={selectedPackage?.title ?? ""}
             serviceTitle={selectedService?.title ?? ""}
           />

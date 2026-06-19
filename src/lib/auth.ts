@@ -187,7 +187,7 @@ export async function requireContentAdmin(): Promise<AdminSession> {
   const admin = await requireAdmin();
 
   if (!admin.canManageContent) {
-    redirect("/admin");
+    redirect("/admin?notice=content-access-denied");
   }
 
   return admin;

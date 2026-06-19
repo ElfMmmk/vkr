@@ -1,14 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import type { Locale } from "@/lib/i18n";
 import type { Project } from "@/lib/types";
 
 type ProjectCardProps = {
   project: Project;
   priority?: boolean;
+  locale: Locale;
 };
 
-export function ProjectCard({ project, priority = false }: ProjectCardProps) {
+export function ProjectCard({ locale, project, priority = false }: ProjectCardProps) {
   return (
     <article className="group">
       <Link className="focus-ring block transition active:translate-y-px" href={`/portfolio/${project.slug}`}>
@@ -26,7 +28,7 @@ export function ProjectCard({ project, priority = false }: ProjectCardProps) {
             />
           ) : (
             <div className="grid h-full place-items-center px-4 text-center text-sm text-muted">
-              Обложка пока не добавлена
+              {locale === "en" ? "Cover not added yet" : "Обложка пока не добавлена"}
             </div>
           )}
         </div>
@@ -66,7 +68,7 @@ export function ProjectCard({ project, priority = false }: ProjectCardProps) {
           className="focus-ring shrink-0 text-sm text-accent transition hover:text-ink active:translate-y-px"
           href={`/portfolio/${project.slug}`}
         >
-          Открыть
+          {locale === "en" ? "Open" : "Открыть"}
         </Link>
       </div>
     </article>
